@@ -16,30 +16,19 @@ const logger = Logger.configure('auth')
 const COOKIE_EXPIRY_DAYS = 7
 
 /**
- * 環境変数から直接 Cookie を取得する。
- * アカウント別環境変数（TWITTER_AUTH_TOKEN_{USERNAME} / TWITTER_CT0_{USERNAME}）を優先し、
- * 存在しない場合は共通の TWITTER_AUTH_TOKEN / TWITTER_CT0 にフォールバックする。
- * 共通環境変数はマルチアカウント環境では全アカウントに同一 Cookie が使われるため
- * 単一アカウント用途での使用を推奨する。
+ * 環境変数からアカウント別 Cookie を取得する。
+ * TWITTER_AUTH_TOKEN_{USERNAME} / TWITTER_CT0_{USERNAME} を参照する。
  *
- * @param username アカウントのユーザー名（アカウント別変数の検索に使用）
+ * @param username アカウントのユーザー名
  * @returns Cookie または null
  */
 export function getCookiesFromEnv(
   username: string
 ): { authToken: string; ct0: string } | null {
-  // アカウント別環境変数を優先チェック（例: TWITTER_AUTH_TOKEN_MYUSER）
   // Twitter のユーザー名は [A-Za-z0-9_] のみのため toUpperCase() で十分
   const envSuffix = username.toUpperCase()
-  const accountAuthToken = process.env[`TWITTER_AUTH_TOKEN_${envSuffix}`]
-  const accountCt0 = process.env[`TWITTER_CT0_${envSuffix}`]
-  if (accountAuthToken && accountCt0) {
-    return { authToken: accountAuthToken, ct0: accountCt0 }
-  }
-
-  // 共通環境変数にフォールバック
-  const authToken = process.env.TWITTER_AUTH_TOKEN
-  const ct0 = process.env.TWITTER_CT0
+  const authToken = process.env[`TWITTER_AUTH_TOKEN_${envSuffix}`]
+  const ct0 = process.env[`TWITTER_CT0_${envSuffix}`]
   if (authToken && ct0) {
     return { authToken, ct0 }
   }
