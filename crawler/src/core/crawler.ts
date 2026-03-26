@@ -12,7 +12,7 @@ import {
   upsertTweetEntry,
   upsertBookmark,
 } from '../infra/database.js'
-import { Logger } from '../infra/logger.js'
+import { Logger } from '@book000/node-utils'
 
 const logger = Logger.configure('crawler')
 
@@ -46,7 +46,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
   running = true
   const jobId = createCrawlJob(db)
-  logger.log(`Crawl job #${jobId} started.`)
+  logger.info(`Crawl job #${jobId} started.`)
 
   try {
     // クロール実行のたびに設定ファイルを再読み込みする。
@@ -61,7 +61,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
     let successCount = 0
 
     for (const account of accounts) {
-      logger.log(`===== Account: ${account.username} =====`)
+      logger.info(`===== Account: ${account.username} =====`)
       try {
         const { authToken, ct0 } = await getAuthCookies(account)
         const client = await getBookmarksClient(authToken, ct0)
@@ -76,7 +76,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
         while (true) {
           page++
-          logger.log(
+          logger.info(
             `[${account.username}] Fetching page ${page}... (total so far: ${totalForAccount})`
           )
 
@@ -113,7 +113,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           }
 
           totalForAccount += addedThisPage
-          logger.log(
+          logger.info(
             `[${account.username}] Page ${page} done. ${addedThisPage} added. Total: ${totalForAccount}`
           )
 
@@ -126,7 +126,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           ).length
           const nextCursor = response.data.cursor.bottom?.value
           if (!nextCursor || processableTweetsCount === 0) {
-            logger.log(`[${account.username}] All bookmarks fetched.`)
+            logger.info(`[${account.username}] All bookmarks fetched.`)
             break
           }
           if (page >= MAX_PAGES) {
@@ -142,7 +142,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       } catch (error) {
         logger.error(
           `[${account.username}] Error occurred. Continuing to next account:`,
-          error
+          error instanceof Error ? error : new Error(String(error))
         )
       }
     }
@@ -151,7 +151,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       finishedAt: new Date().toISOString(),
       accountsSucceeded: successCount,
     })
-    logger.log(
+    logger.info(
       `Crawl job #${jobId} completed. ${successCount}/${accounts.length} accounts succeeded.`
     )
   } catch (error) {
@@ -160,7 +160,10 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       finishedAt: new Date().toISOString(),
       errorMessage: message,
     })
-    logger.error(`Crawl job #${jobId} failed:`, error)
+    logger.error(
+      `Crawl job #${jobId} failed:`,
+      error instanceof Error ? error : new Error(String(error))
+    )
   } finally {
     running = false
   }

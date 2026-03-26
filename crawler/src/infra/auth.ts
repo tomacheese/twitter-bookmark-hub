@@ -8,7 +8,7 @@ import { DATA_DIR } from '../shared/config.js'
 import { sleep } from '../shared/retry.js'
 import type { AccountConfig, CachedCookies } from '../shared/types.js'
 import { cycleTLSFetch } from './cycletls.js'
-import { Logger } from './logger.js'
+import { Logger } from '@book000/node-utils'
 
 const logger = Logger.configure('auth')
 
@@ -80,12 +80,15 @@ export function loadCachedCookies(username: string): CachedCookies | null {
     const cached = data as CachedCookies
     const expiryMs = COOKIE_EXPIRY_DAYS * 24 * 60 * 60 * 1000
     if (Date.now() - cached.savedAt > expiryMs) {
-      logger.log(`[${username}] Cookie cache expired. Re-logging in.`)
+      logger.info(`[${username}] Cookie cache expired. Re-logging in.`)
       return null
     }
     return cached
   } catch (error) {
-    logger.warn(`[${username}] Failed to read cookie cache:`, error)
+    logger.warn(
+      `[${username}] Failed to read cookie cache:`,
+      error instanceof Error ? error : new Error(String(error))
+    )
     return null
   }
 }
@@ -180,7 +183,7 @@ export async function loginWithRetry(
     const scraper = createScraper({ xpff: strategy.xpff })
 
     try {
-      logger.log(
+      logger.info(
         `[${account.username}] Login attempt ${attempt}/${maxAttempts} (identifier: ${strategy.identifierType}, xpff: ${strategy.xpff})...`
       )
       await scraper.login(
@@ -244,7 +247,7 @@ export async function getAuthCookies(
   // 環境変数から Cookie を取得 (手動設定用)
   const fromEnv = getCookiesFromEnv(account.username)
   if (fromEnv) {
-    logger.log(
+    logger.info(
       `[${account.username}] Using cookies from environment variables.`
     )
     return fromEnv
@@ -253,12 +256,12 @@ export async function getAuthCookies(
   // キャッシュファイルから Cookie を取得
   const cached = loadCachedCookies(account.username)
   if (cached) {
-    logger.log(`[${account.username}] Using cached cookies.`)
+    logger.info(`[${account.username}] Using cached cookies.`)
     return { authToken: cached.auth_token, ct0: cached.ct0 }
   }
 
   // twitter-scraper でログイン
-  logger.log(
+  logger.info(
     `[${account.username}] Logging in with twitter-scraper + CycleTLS...`
   )
   const scraper = await loginWithRetry(account)
@@ -278,6 +281,6 @@ export async function getAuthCookies(
   }
 
   saveCookies(account.username, authToken, ct0)
-  logger.log(`[${account.username}] Login successful. Cookies saved.`)
+  logger.info(`[${account.username}] Login successful. Cookies saved.`)
   return { authToken, ct0 }
 }
