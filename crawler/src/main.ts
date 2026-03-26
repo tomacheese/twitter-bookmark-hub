@@ -29,16 +29,16 @@ startScheduler(db)
 // プロセス終了時のクリーンアップ
 const shutdown = () => {
   logger.log('Shutting down...')
+  let exitCode = 0
   cleanupCycleTLS()
+    .catch((error: unknown) => {
+      console.error('Shutdown error:', error)
+      exitCode = 1
+    })
     .finally(() => {
       db.close()
       // eslint-disable-next-line unicorn/no-process-exit
-      process.exit(0)
-    })
-    .catch((error: unknown) => {
-      console.error('Shutdown error:', error)
-      // eslint-disable-next-line unicorn/no-process-exit
-      process.exit(1)
+      process.exit(exitCode)
     })
 }
 

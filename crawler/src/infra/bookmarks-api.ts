@@ -161,7 +161,7 @@ export function extractBookmarkEntry(
     if (cardName.includes('player')) {
       // 動画プレーヤーカード（YouTube 等）
       cardPlayerUrl = bvMap.get('player_url')?.stringValue ?? null
-    } else if (cardName.includes('summary') || !cardName.includes('app')) {
+    } else if (cardName.includes('summary')) {
       // リンクカード（summary / summary_large_image）
       const cardUrl = bvMap.get('card_url')?.stringValue
       if (cardUrl) {

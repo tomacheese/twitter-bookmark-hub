@@ -90,9 +90,14 @@ const fullDateTitle = computed(() => formatFullDate(properties.item.createdAt))
 /** ライトボックスに表示中の画像 URL */
 const lightboxUrl = ref<string | null>(null)
 
+/**
+ * 指定した画像 URL でライトボックスを開く
+ * @param url 表示する画像 URL（大きいサイズに変換される）
+ */
 function openLightbox(url: string) {
   lightboxUrl.value = upgradedImageUrl(url, 'large')
 }
+/** ライトボックスを閉じる */
 function closeLightbox() {
   lightboxUrl.value = null
 }
@@ -132,6 +137,11 @@ type TextSegment =
   | { type: 'url'; url: string; display: string }
   | { type: 'hashtag'; tag: string }
 
+/**
+ * URL エンティティから short URL → 展開 URL・表示 URL のマップを生成する
+ * @param urlEntities URL エンティティ一覧
+ * @returns short URL をキーとしたマップ
+ */
 function buildUrlMap(
   urlEntities: UrlEntity[]
 ): Map<string, { expanded: string; display: string }> {
@@ -348,6 +358,7 @@ const twitterAppUrl = computed(
           frameborder="0"
           allowfullscreen
           loading="lazy"
+          sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
           allow="
             accelerometer;
             autoplay;

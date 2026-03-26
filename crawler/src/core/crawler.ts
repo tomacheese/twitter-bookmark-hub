@@ -115,8 +115,14 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           )
 
           // 次ページのカーソルを取得
+          // プロモーション (広告) を除いた実ツイート数が 0 の場合は全件取得済みとみなす。
+          // addedThisPage だけでなく processableTweetsCount で判定することで、
+          // プロモーションのみのページで誤って早期終了するのを防ぐ。
+          const processableTweetsCount = tweets.filter(
+            (t) => !t.promotedMetadata
+          ).length
           const nextCursor = response.data.cursor.bottom?.value
-          if (!nextCursor || addedThisPage === 0) {
+          if (!nextCursor || processableTweetsCount === 0) {
             logger.log(`[${account.username}] All bookmarks fetched.`)
             break
           }

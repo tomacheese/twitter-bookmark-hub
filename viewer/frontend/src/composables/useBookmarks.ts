@@ -38,7 +38,15 @@ export function useBookmarks() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  watchEffect(() => {
+  watchEffect((onCleanup) => {
+    // フィルタ変更時に古いレスポンスが state を上書きするレース条件を防ぐため、
+    // クリーンアップ時にキャンセルフラグを立てる。
+    // オブジェクトプロパティにすることで TypeScript の制御フロー解析による
+    // 誤った "always truthy" 警告を回避する
+    const cancel = { value: false }
+    onCleanup(() => {
+      cancel.value = true
+    })
     ;(async () => {
       loading.value = true
       error.value = null
@@ -60,16 +68,25 @@ export function useBookmarks() {
         if (selectedAccount.value) params.account = selectedAccount.value
 
         const res = await fetchBookmarks(params)
-        items.value = res.items
-        total.value = res.total
+        if (!cancel.value) {
+          items.value = res.items
+          total.value = res.total
+        }
       } catch (error_) {
-        error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+        if (!cancel.value) {
+          error.value =
+            error_ instanceof Error ? error_.message : 'Unknown error'
+        }
       } finally {
-        loading.value = false
+        if (!cancel.value) {
+          loading.value = false
+        }
       }
     })().catch((error_: unknown) => {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
-      loading.value = false
+      if (!cancel.value) {
+        error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+        loading.value = false
+      }
     })
   })
 

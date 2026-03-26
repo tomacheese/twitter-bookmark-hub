@@ -14,7 +14,7 @@ const CRAWLER_URL = process.env.CRAWLER_URL ?? 'http://crawler:3001'
 export function crawlRoute(db: Database.Database): Hono {
   const app = new Hono()
 
-  /** GET /api/crawl/status - クロールステータスをローカル DB から取得する */
+  /** GET /api/crawl/status - クロールステータスをローカル DB から取得する。クロール未実行時は null を返す */
   app.get('/api/crawl/status', (c) => {
     const job = getLatestCrawlJob(db)
     return c.json(job)

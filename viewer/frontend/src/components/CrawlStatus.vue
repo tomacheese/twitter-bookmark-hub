@@ -5,7 +5,7 @@ const { status, triggering, triggerCrawl } = useCrawlStatus()
 
 /**
  * 日時文字列を相対時刻に変換する
- * @param dateStr - ISO 8601 形式の日時文字列
+ * @param dateString - ISO 8601 形式の日時文字列
  * @returns 相対時刻の文字列
  */
 function relativeTime(dateString: string): string {

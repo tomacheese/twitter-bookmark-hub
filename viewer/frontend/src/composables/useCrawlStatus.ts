@@ -15,6 +15,8 @@ export function useCrawlStatus() {
   async function refresh() {
     try {
       status.value = await fetchCrawlStatus()
+      // 成功時は過去のエラーをクリアする
+      error.value = null
     } catch (error_) {
       error.value = error_ instanceof Error ? error_.message : 'Unknown error'
     }
