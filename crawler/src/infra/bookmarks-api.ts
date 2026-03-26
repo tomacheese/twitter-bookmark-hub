@@ -178,11 +178,19 @@ export function extractBookmarkEntry(
           bvMap.get('thumbnail_image_original')?.imageValue ??
           bvMap.get('thumbnail_image')?.imageValue ??
           null
+        // vanity_url がない場合、cardUrl から hostname を取り出すが
+        // 不正な URL の場合は例外を避けるため cardUrl 自体をフォールバックにする
+        let vanityUrl: string
+        try {
+          vanityUrl =
+            bvMap.get('vanity_url')?.stringValue ?? new URL(cardUrl).hostname
+        } catch {
+          vanityUrl = bvMap.get('vanity_url')?.stringValue ?? cardUrl
+        }
         cardInfo = {
           cardType: isLarge ? 'summary_large_image' : 'summary',
           cardUrl,
-          vanityUrl:
-            bvMap.get('vanity_url')?.stringValue ?? new URL(cardUrl).hostname,
+          vanityUrl,
           title: bvMap.get('title')?.stringValue ?? '',
           description: bvMap.get('description')?.stringValue ?? '',
           thumbnailUrl: thumbImage?.url ?? null,

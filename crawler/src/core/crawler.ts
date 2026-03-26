@@ -19,6 +19,9 @@ const logger = Logger.configure('crawler')
 /** ブックマーク取得の 1 ページあたり件数 */
 const BOOKMARKS_PER_PAGE = 100
 
+/** 1 回のクロールで取得するページ数の上限（API 異常時の無限ループ防止） */
+const MAX_PAGES = 500
+
 /** クロール実行中フラグ */
 let running = false
 
@@ -124,6 +127,12 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           const nextCursor = response.data.cursor.bottom?.value
           if (!nextCursor || processableTweetsCount === 0) {
             logger.log(`[${account.username}] All bookmarks fetched.`)
+            break
+          }
+          if (page >= MAX_PAGES) {
+            logger.warn(
+              `[${account.username}] Reached MAX_PAGES (${MAX_PAGES}). Stopping to prevent infinite loop.`
+            )
             break
           }
           cursor = nextCursor

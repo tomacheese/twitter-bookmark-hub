@@ -29,7 +29,8 @@ export function getCookiesFromEnv(
   username: string
 ): { authToken: string; ct0: string } | null {
   // アカウント別環境変数を優先チェック（例: TWITTER_AUTH_TOKEN_MYUSER）
-  const envSuffix = username.toUpperCase().replaceAll(/\W/g, '_')
+  // Twitter のユーザー名は [A-Za-z0-9_] のみのため toUpperCase() で十分
+  const envSuffix = username.toUpperCase()
   const accountAuthToken = process.env[`TWITTER_AUTH_TOKEN_${envSuffix}`]
   const accountCt0 = process.env[`TWITTER_CT0_${envSuffix}`]
   if (accountAuthToken && accountCt0) {
