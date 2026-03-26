@@ -32,7 +32,8 @@ export function createServer(db: Database.Database): Hono {
   /** クロールステータス取得エンドポイント */
   app.get('/crawl/status', (c) => {
     const job = getLatestCrawlJob(db)
-    return c.json(job ?? { message: 'No crawl jobs found.' })
+    // ジョブが存在しない場合は null を返してレスポンス型を固定する
+    return c.json(job)
   })
 
   return app

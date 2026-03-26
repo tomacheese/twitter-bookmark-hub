@@ -107,7 +107,15 @@ export function extractBookmarkEntry(
     ? new Date(legacy.createdAt).toISOString()
     : undefined
 
-  if (!tweetId || !userId || !fullText || !screenName || !userName) {
+  // createdAt が取得できない場合は不正な日時を DB に保存しないよう null を返す
+  if (
+    !tweetId ||
+    !userId ||
+    !fullText ||
+    !createdAt ||
+    !screenName ||
+    !userName
+  ) {
     return null
   }
 
@@ -191,7 +199,7 @@ export function extractBookmarkEntry(
     userName,
     // UserLegacy.profileImageUrlHttps は必須フィールドのため optional chain 不要
     profileImageUrl: userLegacy.profileImageUrlHttps,
-    createdAt: createdAt ?? '',
+    createdAt,
     mediaItems,
     urlEntities,
     quotedTweet,

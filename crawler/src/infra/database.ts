@@ -326,7 +326,7 @@ export function createCrawlJob(db: Database.Database): number {
 export function updateCrawlJob(
   db: Database.Database,
   id: number,
-  status: string,
+  status: 'running' | 'success' | 'error',
   opts?: {
     finishedAt?: string
     errorMessage?: string

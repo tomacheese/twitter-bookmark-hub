@@ -24,7 +24,11 @@ export function crawlRoute(db: Database.Database): Hono {
   app.post('/api/crawl/trigger', async (c) => {
     try {
       const res = await fetch(`${CRAWLER_URL}/crawl`, { method: 'POST' })
-      const data: unknown = await res.json()
+      // Content-Type が JSON でない場合（エラーページ等）に res.json() が例外になるのを防ぐ
+      const contentType = res.headers.get('content-type') ?? ''
+      const data: unknown = contentType.includes('application/json')
+        ? await res.json()
+        : { message: await res.text() }
       return c.json(data, res.status as ContentfulStatusCode)
     } catch {
       return c.json({ error: 'Crawler service is unavailable.' }, 502)
