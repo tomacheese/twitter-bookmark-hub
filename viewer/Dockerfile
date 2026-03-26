@@ -65,6 +65,12 @@ RUN apk add --no-cache tzdata gcompat libc6-compat && \
 
 WORKDIR /app
 
+# プロジェクトのデフォルト環境変数（docker run -e や compose で上書き可能）
+ENV DATA_DIR=/data \
+    LOG_DIR=/data/logs \
+    VIEWER_PORT=3000 \
+    CRAWLER_URL=http://crawler:3001
+
 # backend-builder ステージで作成したスタンドアローンパッケージをコピー
 COPY --from=backend-builder /deploy .
 

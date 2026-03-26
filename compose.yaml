@@ -6,15 +6,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/data
-    environment:
-      DATA_DIR: /data
-      LOG_DIR: /data/logs
-      CRAWL_SCHEDULE: ${CRAWL_SCHEDULE:-0 * * * *}
-      CRAWLER_PORT: "3001"
-      CRAWL_ON_STARTUP: ${CRAWL_ON_STARTUP:-true}
-      PROXY_SERVER: ${PROXY_SERVER:-}
-      PROXY_USERNAME: ${PROXY_USERNAME:-}
-      PROXY_PASSWORD: ${PROXY_PASSWORD:-}
     ports:
       - "3001:3001"
     healthcheck:
@@ -30,11 +21,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/data
-    environment:
-      DATA_DIR: /data
-      LOG_DIR: /data/logs
-      CRAWLER_URL: http://crawler:3001
-      VIEWER_PORT: "3000"
     ports:
       - "3000:3000"
     depends_on:

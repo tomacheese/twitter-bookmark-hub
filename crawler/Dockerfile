@@ -44,6 +44,13 @@ RUN apk add --no-cache tzdata gcompat libc6-compat && \
 
 WORKDIR /app
 
+# プロジェクトのデフォルト環境変数（docker run -e や compose で上書き可能）
+ENV DATA_DIR=/data \
+    LOG_DIR=/data/logs \
+    CRAWLER_PORT=3001 \
+    CRAWL_SCHEDULE="0 * * * *" \
+    CRAWL_ON_STARTUP=true
+
 # builder ステージで作成したスタンドアローンパッケージをコピー
 COPY --from=builder /deploy .
 
