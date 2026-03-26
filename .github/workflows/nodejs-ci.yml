@@ -19,3 +19,7 @@ jobs:
     uses: book000/templates/.github/workflows/reusable-nodejs-ci-pnpm.yml@master
     with:
       directorys: "crawler, viewer/backend, viewer/frontend"
+      # viewer/backend や viewer/frontend のようなスラッシュを含むディレクトリ名では、
+      # デフォルトの {dir}/pnpm-lock.yaml が sed の区切り文字と衝突するため固定パスを指定する。
+      # lock-path の出力はワークフロー内で使用されないため、固定値でも動作に影響しない
+      lock-path: "pnpm-lock.yaml"
