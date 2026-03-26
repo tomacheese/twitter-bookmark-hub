@@ -1,0 +1,38 @@
+services:
+  crawler:
+    build:
+      context: ./crawler
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    environment:
+      DATA_DIR: /data
+      CRAWL_SCHEDULE: ${CRAWL_SCHEDULE:-0 * * * *}
+      CRAWLER_PORT: "3001"
+      CRAWL_ON_STARTUP: ${CRAWL_ON_STARTUP:-true}
+      PROXY_SERVER: ${PROXY_SERVER:-}
+      PROXY_USERNAME: ${PROXY_USERNAME:-}
+      PROXY_PASSWORD: ${PROXY_PASSWORD:-}
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  viewer:
+    build:
+      context: ./viewer
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    environment:
+      DATA_DIR: /data
+      CRAWLER_URL: http://crawler:3001
+      VIEWER_PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      crawler:
+        condition: service_healthy
