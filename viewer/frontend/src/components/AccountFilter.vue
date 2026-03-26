@@ -29,7 +29,11 @@ function select(username: string | null) {
       <li
         class="account-item"
         :class="{ active: props.selected === null }"
-        @click="select(null)">
+        role="button"
+        tabindex="0"
+        @click="select(null)"
+        @keydown.enter.prevent="select(null)"
+        @keydown.space.prevent="select(null)">
         <span class="account-name">すべて</span>
       </li>
       <li
@@ -37,7 +41,11 @@ function select(username: string | null) {
         :key="account.username"
         class="account-item"
         :class="{ active: props.selected === account.username }"
-        @click="select(account.username)">
+        role="button"
+        tabindex="0"
+        @click="select(account.username)"
+        @keydown.enter.prevent="select(account.username)"
+        @keydown.space.prevent="select(account.username)">
         <span class="account-name">@{{ account.username }}</span>
         <span class="account-badge">{{ account.bookmarkCount }}</span>
       </li>

@@ -30,8 +30,8 @@ export default [
       },
     },
     rules: {
-      // Vue コンポーネントは PascalCase の命名規則を使用する（kebab-case は不要）
-      'unicorn/filename-case': 'off',
+      // Vue コンポーネントは PascalCase の命名規則を使用する
+      'unicorn/filename-case': ['error', { case: 'pascalCase' }],
       // null は Vue の template 内および reactive state でよく使用するため許可する
       'unicorn/no-null': 'off',
       // props は Vue の慣例的な命名のため省略形の変換を許可する
@@ -43,10 +43,10 @@ export default [
     },
   },
   {
-    // composables ディレクトリはキャメルケースの命名規則を使用する
+    // composables ディレクトリは camelCase の命名規則を使用する（use プレフィックス慣例）
     files: ['**/composables/*.ts'],
     rules: {
-      'unicorn/filename-case': 'off',
+      'unicorn/filename-case': ['error', { case: 'camelCase' }],
     },
   },
 ]

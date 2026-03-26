@@ -24,6 +24,9 @@ export function createServer(db: Database.Database): Hono {
   app.route('/', accountsRoute(db))
   app.route('/', crawlRoute(db))
 
+  // 未マッチの /api/* リクエストは 404 を返し、SPA フォールバックに渡さない
+  app.all('/api/*', (c) => c.notFound())
+
   // 静的ファイル配信
   app.use('/*', serveStatic({ root: './public' }))
 

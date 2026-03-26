@@ -110,9 +110,20 @@ const showOpenMenu = ref(false)
 // ---- カードクリック ---------------------------------------------------------
 
 /**
+ * カードのアクティベート処理。
+ * PC: 別タブで Web を開く / モバイル: 選択メニューを表示する
+ */
+function activateCard() {
+  if (isTouchDevice) {
+    showOpenMenu.value = true
+  } else {
+    window.open(properties.item.tweetUrl, '_blank', 'noopener,noreferrer')
+  }
+}
+
+/**
  * カード本体クリック時の処理。
  * インタラクティブ要素へのクリックは無視する。
- * PC: 別タブで Web を開く / モバイル: 選択メニューを表示する
  */
 function onCardClick(event: MouseEvent) {
   const target = event.target as HTMLElement
@@ -122,11 +133,19 @@ function onCardClick(event: MouseEvent) {
     )
   )
     return
-  if (isTouchDevice) {
-    showOpenMenu.value = true
-  } else {
-    window.open(properties.item.tweetUrl, '_blank', 'noopener,noreferrer')
-  }
+  activateCard()
+}
+
+/**
+ * カード本体のキーボード操作ハンドラー。
+ * Enter / Space キーでカードをアクティベートする。
+ * フォーカスが子要素にある場合は無視する。
+ */
+function onCardKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  if (event.target !== event.currentTarget) return
+  event.preventDefault()
+  activateCard()
 }
 
 // ---- テキストパーサー -------------------------------------------------------
@@ -210,17 +229,45 @@ const quotedTextSegments = computed(() => {
 
 // ---- YouTube 埋め込み -------------------------------------------------------
 
+/** YouTube の embed を許可するホスト名一覧 */
+const YOUTUBE_EMBED_HOSTS = new Set(['youtube.com', 'www.youtube.com'])
+
 /**
- * cardPlayerUrl から YouTube の embed URL を生成する
+ * cardPlayerUrl から YouTube の embed URL を生成する。
+ * protocol と hostname を厳密に検証し、許可ホスト以外は null を返す。
  */
 const youtubeEmbedUrl = computed(() => {
-  const url = properties.item.cardPlayerUrl
-  if (!url) return null
-  if (url.includes('youtube.com/embed')) return url
-  const ytWatch = url.match(/youtube\.com\/watch\?v=([^&\s]+)/)
-  if (ytWatch) return `https://www.youtube.com/embed/${ytWatch[1]}`
-  const youtuBe = url.match(/youtu\.be\/([^?&\s]+)/)
-  if (youtuBe) return `https://www.youtube.com/embed/${youtuBe[1]}`
+  const raw = properties.item.cardPlayerUrl
+  if (!raw) return null
+
+  let parsed: URL
+  try {
+    parsed = new URL(raw)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== 'https:') return null
+
+  // すでに embed URL の場合はそのまま返す
+  if (
+    YOUTUBE_EMBED_HOSTS.has(parsed.hostname) &&
+    parsed.pathname.startsWith('/embed/')
+  ) {
+    return raw
+  }
+
+  // /watch?v= 形式
+  if (YOUTUBE_EMBED_HOSTS.has(parsed.hostname)) {
+    const videoId = parsed.searchParams.get('v')
+    if (videoId) return `https://www.youtube.com/embed/${videoId}`
+  }
+
+  // youtu.be 短縮 URL
+  if (parsed.hostname === 'youtu.be') {
+    const videoId = parsed.pathname.slice(1)
+    if (videoId) return `https://www.youtube.com/embed/${videoId}`
+  }
+
   return null
 })
 
@@ -264,7 +311,11 @@ const twitterAppUrl = computed(
 </script>
 
 <template>
-  <article class="tweet" @click="onCardClick">
+  <article
+    class="tweet"
+    tabindex="0"
+    @click="onCardClick"
+    @keydown="onCardKeydown">
     <!-- 左カラム: アバター -->
     <div class="tweet-avatar-col">
       <div
