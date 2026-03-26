@@ -32,11 +32,13 @@ export default [
     rules: {
       // Vue コンポーネントは PascalCase の命名規則を使用する
       'unicorn/filename-case': ['error', { case: 'pascalCase' }],
-      // null は Vue の template 内および reactive state でよく使用するため許可する
+      // null は Vue テンプレートおよびリアクティブ state で「未選択」を表す慣用的な値として使用する
+      // unicorn は null より undefined を好むが、Vue の v-model や Optional Chaining と
+      // の相性を考慮して .vue ファイルに限り無効化する
       'unicorn/no-null': 'off',
-      // props は Vue の慣例的な命名のため省略形の変換を許可する
-      'unicorn/prevent-abbreviations': 'off',
-      // <script setup> の型チェックルールを緩和する（型情報なしの場合に備える）
+      // vue-eslint-parser が生成する仮想ファイルには型情報が不完全なため、
+      // TypeScript の unsafe 系ルールを .vue ファイルに限り無効化する
+      // @see https://github.com/vuejs/vue-eslint-parser/issues/104
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',

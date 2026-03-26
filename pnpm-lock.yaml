@@ -32,6 +32,9 @@ importers:
       node-cron:
         specifier: ^3.0.3
         version: 3.0.3
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
       twitter-openapi-typescript:
         specifier: 0.0.55
         version: 0.0.55
@@ -60,9 +63,6 @@ importers:
       run-z:
         specifier: 2.1.0
         version: 2.1.0
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -96,6 +96,9 @@ importers:
       hono:
         specifier: ^4.7.7
         version: 4.12.9
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
     devDependencies:
       '@book000/eslint-config':
         specifier: 1.13.24
@@ -115,9 +118,6 @@ importers:
       run-z:
         specifier: 2.1.0
         version: 2.1.0
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3

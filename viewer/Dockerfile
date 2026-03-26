@@ -1,13 +1,16 @@
 # ---- Stage 1: フロントエンドのビルド ----
 FROM node:24-alpine AS frontend-builder
 
+# pnpm のホームディレクトリを設定し PATH に追加する
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME/bin:$PATH"
+ENV PATH="$PNPM_HOME:$PATH"
 
-RUN npm install -g corepack@latest && corepack enable
+# corepack は Node.js 24 に同梱済みのため npm install 不要
+RUN corepack enable
 
 WORKDIR /app/frontend
 
+# ロックファイルをコピーしてパッケージをフェッチ（レイヤーキャッシュ最適化）
 COPY viewer/frontend/package.json viewer/frontend/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm fetch
 RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm install --offline --frozen-lockfile
@@ -15,37 +18,54 @@ RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm install --offlin
 COPY viewer/frontend/ ./
 RUN pnpm build
 
-# ---- Stage 2: バックエンド + 静的ファイル ----
-FROM node:24-alpine
+# ---- Stage 2: ネイティブモジュールのビルドとデプロイパッケージの作成 ----
+FROM node:24-alpine AS backend-builder
 
+# pnpm のホームディレクトリを設定し PATH に追加する
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME/bin:$PATH"
+ENV PATH="$PNPM_HOME:$PATH"
 
-RUN apk add --no-cache tzdata python3 make g++ && \
-    cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-    echo "Asia/Tokyo" > /etc/timezone && \
-    npm install -g corepack@latest && \
+# ネイティブモジュール（better-sqlite3）のコンパイルに必要なツールをインストール
+# corepack は Node.js 24 に同梱済みのため npm install 不要
+RUN apk add --no-cache python3 make g++ gcompat libc6-compat && \
     corepack enable
 
 WORKDIR /app
 
-# ワークスペースの依存解決に必要なファイルをコピー
+# ワークスペースの依存解決に必要なファイルをコピー（レイヤーキャッシュ最適化）
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY crawler/package.json ./crawler/
 COPY viewer/frontend/package.json ./viewer/frontend/
 COPY viewer/backend/package.json ./viewer/backend/
 
+# ロックファイルからパッケージをストアにフェッチ（ネットワーク層をキャッシュ）
 RUN --mount=type=cache,id=pnpm-backend,target=/pnpm/store pnpm fetch
 
 # shared パッケージのソースをコピー（workspace リンクに必要）
 COPY shared/ ./shared/
 
+# backend の全依存パッケージをインストール（ネイティブモジュールをここでコンパイル）
 RUN --mount=type=cache,id=pnpm-backend,target=/pnpm/store pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-backend
 
-COPY viewer/backend/tsconfig.json ./viewer/backend/
-COPY viewer/backend/src/ ./viewer/backend/src/
+# backend のソースとフロントエンドのビルド成果物をコピー
+COPY viewer/backend/ ./viewer/backend/
 COPY --from=frontend-builder /app/frontend/dist ./viewer/backend/public
 
-WORKDIR /app/viewer/backend
-CMD ["pnpm", "start"]
+# devDependencies を除いた本番環境用スタンドアローンパッケージを作成する
+RUN pnpm --filter twitter-bookmark-hub-backend deploy /deploy
+
+# ---- Stage 3: ランタイム ----
+FROM node:24-alpine
+
+# タイムゾーンの設定とネイティブモジュールの実行に必要なライブラリをインストール
+RUN apk add --no-cache tzdata gcompat libc6-compat && \
+    cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
+    echo "Asia/Tokyo" > /etc/timezone
+
+WORKDIR /app
+
+# backend-builder ステージで作成したスタンドアローンパッケージをコピー
+COPY --from=backend-builder /deploy .
+
+CMD ["node_modules/.bin/tsx", "src/main.ts"]

@@ -1,32 +1,50 @@
-FROM node:24-alpine
+# ---- Stage 1: ネイティブモジュールのビルドとデプロイパッケージの作成 ----
+FROM node:24-alpine AS builder
 
+# pnpm のホームディレクトリを設定し PATH に追加する
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME/bin:$PATH"
+ENV PATH="$PNPM_HOME:$PATH"
 
-RUN apk add --no-cache tzdata python3 make g++ gcompat libc6-compat && \
-    cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-    echo "Asia/Tokyo" > /etc/timezone && \
-    npm install -g corepack@latest && \
+# ネイティブモジュール（better-sqlite3）のコンパイルに必要なツールをインストール
+# corepack は Node.js 24 に同梱済みのため npm install 不要
+RUN apk add --no-cache python3 make g++ gcompat libc6-compat && \
     corepack enable
 
 WORKDIR /app
 
-# ワークスペースの依存解決に必要なファイルをコピー
+# ワークスペースの依存解決に必要なファイルをコピー（レイヤーキャッシュ最適化）
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY crawler/package.json ./crawler/
 COPY viewer/frontend/package.json ./viewer/frontend/
 COPY viewer/backend/package.json ./viewer/backend/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
+# ロックファイルからパッケージをストアにフェッチ（ネットワーク層をキャッシュ）
+RUN --mount=type=cache,id=pnpm-crawler,target=/pnpm/store pnpm fetch
 
 # shared パッケージのソースをコピー（workspace リンクに必要）
 COPY shared/ ./shared/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-crawler
+# crawler の全依存パッケージをインストール（ネイティブモジュールをここでコンパイル）
+RUN --mount=type=cache,id=pnpm-crawler,target=/pnpm/store pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-crawler
 
-COPY crawler/tsconfig.json ./crawler/
-COPY crawler/src/ ./crawler/src/
+# crawler のソースをコピー
+COPY crawler/ ./crawler/
 
-WORKDIR /app/crawler
-CMD ["pnpm", "start"]
+# devDependencies を除いた本番環境用スタンドアローンパッケージを作成する
+RUN pnpm --filter twitter-bookmark-hub-crawler deploy /deploy
+
+# ---- Stage 2: ランタイム ----
+FROM node:24-alpine
+
+# タイムゾーンの設定とネイティブモジュールの実行に必要なライブラリをインストール
+RUN apk add --no-cache tzdata gcompat libc6-compat && \
+    cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
+    echo "Asia/Tokyo" > /etc/timezone
+
+WORKDIR /app
+
+# builder ステージで作成したスタンドアローンパッケージをコピー
+COPY --from=builder /deploy .
+
+CMD ["node_modules/.bin/tsx", "src/main.ts"]
