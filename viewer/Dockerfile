@@ -8,11 +8,11 @@ RUN npm install -g corepack@latest && corepack enable
 
 WORKDIR /app/frontend
 
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+COPY viewer/frontend/package.json viewer/frontend/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm fetch
 RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm install --offline --frozen-lockfile
 
-COPY frontend/ ./
+COPY viewer/frontend/ ./
 RUN pnpm build
 
 # ---- Stage 2: バックエンド + 静的ファイル ----
@@ -29,11 +29,23 @@ RUN apk add --no-cache tzdata python3 make g++ && \
 
 WORKDIR /app
 
-COPY backend/package.json backend/pnpm-lock.yaml ./
+# ワークスペースの依存解決に必要なファイルをコピー
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY shared/package.json ./shared/
+COPY crawler/package.json ./crawler/
+COPY viewer/frontend/package.json ./viewer/frontend/
+COPY viewer/backend/package.json ./viewer/backend/
+
 RUN --mount=type=cache,id=pnpm-backend,target=/pnpm/store pnpm fetch
-RUN --mount=type=cache,id=pnpm-backend,target=/pnpm/store pnpm install --offline --frozen-lockfile
 
-COPY backend/ ./
-COPY --from=frontend-builder /app/frontend/dist ./public
+# shared パッケージのソースをコピー（workspace リンクに必要）
+COPY shared/ ./shared/
 
+RUN --mount=type=cache,id=pnpm-backend,target=/pnpm/store pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-backend
+
+COPY viewer/backend/tsconfig.json ./viewer/backend/
+COPY viewer/backend/src/ ./viewer/backend/src/
+COPY --from=frontend-builder /app/frontend/dist ./viewer/backend/public
+
+WORKDIR /app/viewer/backend
 CMD ["pnpm", "start"]
