@@ -1,0 +1,73 @@
+{
+  "name": "twitter-bookmark-hub",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:0-24",
+  "remoteUser": "node",
+  "otherPortsAttributes": {
+    "onAutoForward": "silent"
+  },
+  "forwardPorts": [3000, 3001],
+  "portsAttributes": {
+    "3000": { "label": "Viewer" },
+    "3001": { "label": "Crawler API" }
+  },
+  "postCreateCommand": "sudo npm install -g corepack@latest && sudo corepack enable && (cd crawler && corepack install && pnpm install) && (cd viewer/backend && corepack install && pnpm install) && (cd viewer/frontend && corepack install && pnpm install)",
+  "waitFor": "postStartCommand",
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-crawler-node_modules,target=${containerWorkspaceFolder}/crawler/node_modules,type=volume",
+    "source=${localWorkspaceFolderBasename}-backend-node_modules,target=${containerWorkspaceFolder}/viewer/backend/node_modules,type=volume",
+    "source=${localWorkspaceFolderBasename}-frontend-node_modules,target=${containerWorkspaceFolder}/viewer/frontend/node_modules,type=volume",
+    "source=pnpm-store,target=/pnpm/store,type=volume"
+  ],
+  "customizations": {
+    "extensions": [
+      "esbenp.prettier-vscode",
+      "Vue.volar",
+      "dbaeumer.vscode-eslint"
+    ],
+    "settings": {
+      "[typescript]": {
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "never"
+        },
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      },
+      "[vue]": {
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "never"
+        },
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      },
+      "editor.formatOnSave": true,
+      "git.branchProtection": [
+        "main",
+        "master"
+      ]
+    },
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "Vue.volar",
+        "dbaeumer.vscode-eslint"
+      ],
+      "settings": {
+        "[typescript]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "never"
+          },
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[vue]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "never"
+          },
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "editor.formatOnSave": true,
+        "git.branchProtection": [
+          "main",
+          "master"
+        ]
+      }
+    }
+  }
+}
