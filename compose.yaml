@@ -1,7 +1,8 @@
 services:
   crawler:
     build:
-      context: ./crawler
+      context: .
+      dockerfile: crawler/Dockerfile
     restart: unless-stopped
     volumes:
       - ./data:/data
@@ -23,7 +24,8 @@ services:
 
   viewer:
     build:
-      context: ./viewer
+      context: .
+      dockerfile: viewer/Dockerfile
     restart: unless-stopped
     volumes:
       - ./data:/data

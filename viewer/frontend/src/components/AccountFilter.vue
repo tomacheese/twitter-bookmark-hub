@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AccountInfo } from '../api'
 
-const properties = defineProps<{
+defineProps<{
   /** アカウント一覧 */
   accounts: AccountInfo[]
   /** 現在選択中のアカウント（null は「すべて」） */
@@ -28,7 +28,7 @@ function select(username: string | null) {
     <ul class="account-list">
       <li
         class="account-item"
-        :class="{ active: properties.selected === null }"
+        :class="{ active: selected === null }"
         role="button"
         tabindex="0"
         @click="select(null)"
@@ -37,10 +37,10 @@ function select(username: string | null) {
         <span class="account-name">すべて</span>
       </li>
       <li
-        v-for="account in properties.accounts"
+        v-for="account in accounts"
         :key="account.username"
         class="account-item"
-        :class="{ active: properties.selected === account.username }"
+        :class="{ active: selected === account.username }"
         role="button"
         tabindex="0"
         @click="select(account.username)"
