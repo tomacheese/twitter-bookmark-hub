@@ -1,0 +1,35 @@
+import { Hono } from 'hono'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
+import type Database from 'better-sqlite3'
+import { getLatestCrawlJob } from '../infra/database.js'
+
+/** クローラーサービスの URL */
+const CRAWLER_URL = process.env.CRAWLER_URL ?? 'http://crawler:3001'
+
+/**
+ * クロール API ルートを作成する
+ * @param db - Database インスタンス
+ * @returns Hono アプリケーション
+ */
+export function crawlRoute(db: Database.Database): Hono {
+  const app = new Hono()
+
+  /** GET /api/crawl/status - クロールステータスをローカル DB から取得する */
+  app.get('/api/crawl/status', (c) => {
+    const job = getLatestCrawlJob(db)
+    return c.json(job)
+  })
+
+  /** POST /api/crawl/trigger - クロールを開始する */
+  app.post('/api/crawl/trigger', async (c) => {
+    try {
+      const res = await fetch(`${CRAWLER_URL}/crawl`, { method: 'POST' })
+      const data: unknown = await res.json()
+      return c.json(data, res.status as ContentfulStatusCode)
+    } catch {
+      return c.json({ error: 'Crawler service is unavailable.' }, 502)
+    }
+  })
+
+  return app
+}
