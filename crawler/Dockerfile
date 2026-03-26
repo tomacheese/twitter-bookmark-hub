@@ -32,8 +32,7 @@ RUN --mount=type=cache,id=pnpm-crawler,target=/pnpm/store pnpm install --offline
 COPY crawler/ ./crawler/
 
 # devDependencies を除いた本番環境用スタンドアローンパッケージを作成する
-# --legacy: pnpm v10 以降で inject-workspace-packages なし環境での deploy に必要
-RUN pnpm --filter twitter-bookmark-hub-crawler deploy --legacy /deploy
+RUN pnpm --filter twitter-bookmark-hub-crawler deploy /deploy
 
 # ---- Stage 2: ランタイム ----
 FROM node:24-alpine
