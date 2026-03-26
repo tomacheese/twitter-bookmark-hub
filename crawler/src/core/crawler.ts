@@ -1,17 +1,17 @@
 import type Database from 'better-sqlite3'
-import { loadConfig } from '../shared/config.js'
-import { withRetry } from '../shared/retry.js'
-import { getAuthCookies } from '../infra/auth.js'
+import { loadConfig } from '../shared/config'
+import { withRetry } from '../shared/retry'
+import { getAuthCookies } from '../infra/auth'
 import {
   extractBookmarkEntry,
   getBookmarksClient,
-} from '../infra/bookmarks-api.js'
+} from '../infra/bookmarks-api'
 import {
   createCrawlJob,
   updateCrawlJob,
   upsertTweetEntry,
   upsertBookmark,
-} from '../infra/database.js'
+} from '../infra/database'
 import { Logger } from '@book000/node-utils'
 
 const logger = Logger.configure('crawler')

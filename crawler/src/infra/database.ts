@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import type { BookmarkEntry } from '../shared/types.js'
+import type { BookmarkEntry } from '../shared/types'
 
 /**
  * データベースを初期化する。

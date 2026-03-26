@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type Database from 'better-sqlite3'
-import { getBookmarks } from '../infra/database.js'
-import type { BookmarksResponse } from '../shared/types.js'
+import { getBookmarks } from '../infra/database'
+import type { BookmarksResponse } from '../shared/types'
 
 /**
  * ブックマーク API ルートを作成する

@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import { Hono } from 'hono'
-import { isRunning, runCrawl } from './core/crawler.js'
-import { getLatestCrawlJob } from './infra/database.js'
+import { isRunning, runCrawl } from './core/crawler'
+import { getLatestCrawlJob } from './infra/database'
 
 /**
  * HTTP API サーバーを作成する。

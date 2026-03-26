@@ -1,12 +1,12 @@
 import dns from 'node:dns'
 import path from 'node:path'
 import { serve } from '@hono/node-server'
-import { DATA_DIR } from './shared/config.js'
-import { initDatabase } from './infra/database.js'
-import { cleanupCycleTLS } from './infra/cycletls.js'
+import { DATA_DIR } from './shared/config'
+import { initDatabase } from './infra/database'
+import { cleanupCycleTLS } from './infra/cycletls'
 import { Logger } from '@book000/node-utils'
-import { createServer } from './server.js'
-import { startScheduler } from './scheduler.js'
+import { createServer } from './server'
+import { startScheduler } from './scheduler'
 
 // IPv6 環境で Twitter へのログインが DenyLoginSubtask で拒否される問題を回避するため、
 // DNS 解決順序を IPv4 優先に設定する

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import type Database from 'better-sqlite3'
-import { getAccounts } from '../infra/database.js'
+import { getAccounts } from '../infra/database'
 
 /**
  * アカウント API ルートを作成する

@@ -1,8 +1,8 @@
 import path from 'node:path'
 import { serve } from '@hono/node-server'
-import { openDatabase } from './infra/database.js'
-import { createServer } from './server.js'
-import { Logger } from './infra/logger.js'
+import { openDatabase } from './infra/database'
+import { createServer } from './server'
+import { Logger } from './infra/logger'
 
 const logger = Logger.configure('main')
 

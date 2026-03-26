@@ -4,10 +4,10 @@ import {
   Scraper,
   randomizeBrowserProfile,
 } from '@the-convocation/twitter-scraper'
-import { DATA_DIR } from '../shared/config.js'
-import { sleep } from '../shared/retry.js'
-import type { AccountConfig, CachedCookies } from '../shared/types.js'
-import { cycleTLSFetch } from './cycletls.js'
+import { DATA_DIR } from '../shared/config'
+import { sleep } from '../shared/retry'
+import type { AccountConfig, CachedCookies } from '../shared/types'
+import { cycleTLSFetch } from './cycletls'
 import { Logger } from '@book000/node-utils'
 
 const logger = Logger.configure('auth')

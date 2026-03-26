@@ -9,8 +9,8 @@ import type {
   MediaItem,
   QuotedTweet,
   UrlEntity,
-} from '../shared/types.js'
-import { cycleTLSFetch } from './cycletls.js'
+} from '../shared/types'
+import { cycleTLSFetch } from './cycletls'
 
 /**
  * レガシーエンティティから URL エンティティを抽出する

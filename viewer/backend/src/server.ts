@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { serveStatic } from '@hono/node-server/serve-static'
 import type Database from 'better-sqlite3'
-import { bookmarksRoute } from './routes/bookmarks.js'
-import { accountsRoute } from './routes/accounts.js'
-import { crawlRoute } from './routes/crawl.js'
+import { bookmarksRoute } from './routes/bookmarks'
+import { accountsRoute } from './routes/accounts'
+import { crawlRoute } from './routes/crawl'
 
 /**
  * Hono サーバーを作成する

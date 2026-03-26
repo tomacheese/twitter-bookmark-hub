@@ -7,7 +7,7 @@ import type {
   MediaItem,
   QuotedTweet,
   UrlEntity,
-} from '../shared/types.js'
+} from '../shared/types'
 
 /** ブックマーク取得時のパラメータ */
 interface GetBookmarksParams {

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type Database from 'better-sqlite3'
-import { getLatestCrawlJob } from '../infra/database.js'
+import { getLatestCrawlJob } from '../infra/database'
 
 /** クローラーサービスの URL */
 const CRAWLER_URL = process.env.CRAWLER_URL ?? 'http://crawler:3001'

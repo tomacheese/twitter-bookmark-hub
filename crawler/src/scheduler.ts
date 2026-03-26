@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3'
 import cron from 'node-cron'
-import { runCrawl } from './core/crawler.js'
+import { runCrawl } from './core/crawler'
 import { Logger } from '@book000/node-utils'
 
 const logger = Logger.configure('scheduler')

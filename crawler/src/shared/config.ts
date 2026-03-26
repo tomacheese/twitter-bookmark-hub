@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { AppConfig } from './types.js'
+import type { AppConfig } from './types'
 
 /** データディレクトリのパス (環境変数 DATA_DIR またはデフォルト /data) */
 export const DATA_DIR = process.env.DATA_DIR ?? '/data'
