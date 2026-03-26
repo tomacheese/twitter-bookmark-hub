@@ -19,7 +19,6 @@
     "@the-convocation/twitter-scraper": "0.22.1",
     "better-sqlite3": "^11.10.0",
     "cycletls": "2.0.5",
-    "headers-polyfill": "5.0.1",
     "hono": "^4.7.7",
     "node-cron": "^3.0.3",
     "twitter-openapi-typescript": "0.0.55"

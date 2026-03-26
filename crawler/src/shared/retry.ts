@@ -1,3 +1,7 @@
+import { Logger } from '@book000/node-utils'
+
+const logger = Logger.configure('retry')
+
 /**
  * 指定ミリ秒だけ待機する。
  * @param ms 待機時間 (ミリ秒)
@@ -27,8 +31,8 @@ async function waitForRateLimit(
   const resetDate = new Date(
     Number.isNaN(resetAt) ? Date.now() + delay : resetAt
   )
-  console.warn(
-    `[withRetry] ${operationName}: Rate limit (${status}). Waiting until ${resetDate.toLocaleString()} (${Math.ceil(delay / 1000)}s)...`
+  logger.warn(
+    `${operationName}: Rate limit (${status}). Waiting until ${resetDate.toLocaleString()} (${Math.ceil(delay / 1000)}s)...`
   )
   await sleep(delay)
 }
@@ -72,8 +76,8 @@ export async function withRetry<T>(
       // maxRateLimitRetries を超えた場合はエラーをスローして無限ループを防ぐ
       if ((status === 429 || status === 403) && response) {
         if (rateLimitRetries >= maxRateLimitRetries) {
-          console.error(
-            `[withRetry] ${operationName}: Rate limit retries exceeded (${maxRateLimitRetries}). Giving up.`
+          logger.error(
+            `${operationName}: Rate limit retries exceeded (${maxRateLimitRetries}). Giving up.`
           )
           throw error
         }
@@ -88,8 +92,8 @@ export async function withRetry<T>(
 
       retries++
       const delay = Math.min(baseDelayMs * Math.pow(2, retries - 1), 30_000)
-      console.warn(
-        `[withRetry] ${operationName}: Failed (attempt ${retries}/${maxRetries}, status=${status ?? 'unknown'}). Retrying in ${delay / 1000}s...`
+      logger.warn(
+        `${operationName}: Failed (attempt ${retries}/${maxRetries}, status=${status ?? 'unknown'}). Retrying in ${delay / 1000}s...`
       )
       await sleep(delay)
     }

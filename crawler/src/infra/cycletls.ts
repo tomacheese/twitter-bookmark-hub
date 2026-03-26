@@ -1,6 +1,5 @@
 import initCycleTLS, { type CycleTLSClient } from 'cycletls'
 import { cycleTLSExit } from '@the-convocation/twitter-scraper/cycletls'
-import { Headers } from 'headers-polyfill'
 
 // ===== CycleTLS シングルトン =====
 

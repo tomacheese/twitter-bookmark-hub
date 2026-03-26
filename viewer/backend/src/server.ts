@@ -14,7 +14,7 @@ export function createServer(db: Database.Database): Hono {
   const app = new Hono()
 
   // video.twimg.com のホットリンク保護を回避するために Referer を送らないよう指示する
-  app.use('*', async (c, next) => {
+  app.use(async (c, next) => {
     await next()
     c.header('Referrer-Policy', 'no-referrer')
   })
