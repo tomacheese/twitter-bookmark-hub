@@ -8,6 +8,7 @@ services:
       - ./data:/data
     environment:
       DATA_DIR: /data
+      LOG_DIR: /data/logs
       CRAWL_SCHEDULE: ${CRAWL_SCHEDULE:-0 * * * *}
       CRAWLER_PORT: "3001"
       CRAWL_ON_STARTUP: ${CRAWL_ON_STARTUP:-true}
@@ -31,6 +32,7 @@ services:
       - ./data:/data
     environment:
       DATA_DIR: /data
+      LOG_DIR: /data/logs
       CRAWLER_URL: http://crawler:3001
       VIEWER_PORT: "3000"
     ports:
