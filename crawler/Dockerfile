@@ -35,7 +35,7 @@ COPY crawler/ ./crawler/
 RUN pnpm --filter twitter-bookmark-hub-crawler deploy /deploy
 
 # ---- Stage 2: ランタイム ----
-FROM node:24-alpine
+FROM node:24-alpine AS runner
 
 # タイムゾーンの設定とネイティブモジュールの実行に必要なライブラリをインストール
 RUN apk add --no-cache tzdata gcompat libc6-compat && \
