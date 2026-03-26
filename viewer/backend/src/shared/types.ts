@@ -1,50 +1,17 @@
-/** リンクカード情報（OGP 相当） */
-export interface CardInfo {
-  cardType: 'summary' | 'summary_large_image'
-  cardUrl: string
-  vanityUrl: string
-  title: string
-  description: string
-  thumbnailUrl: string | null
-}
+import type {
+  CardInfo,
+  MediaItem,
+  UrlEntity,
+  QuotedTweet,
+} from '@twitter-bookmark-hub/shared'
 
-/** メディアアイテム（写真・動画・GIF） */
-export interface MediaItem {
-  /** メディア種別 */
-  type: 'photo' | 'video' | 'animated_gif'
-  /** サムネイル画像 URL */
-  thumbUrl: string
-  /** 動画 URL */
-  videoUrl?: string
-}
-
-/** URL エンティティ（t.co → 展開 URL のマッピング） */
-export interface UrlEntity {
-  /** t.co 短縮 URL */
-  url: string
-  /** 展開後の URL */
-  expandedUrl: string
-  /** 表示用 URL（ドメイン + パス短縮） */
-  displayUrl: string
-}
-
-/** 引用ツイート情報 */
-export interface QuotedTweet {
-  /** ツイート ID */
-  tweetId: string
-  /** ツイート本文 */
-  fullText: string
-  /** スクリーンネーム */
-  screenName: string
-  /** 表示名 */
-  userName: string
-  /** プロフィール画像 URL */
-  profileImageUrl: string | null
-  /** メディアアイテム一覧 */
-  mediaItems: MediaItem[]
-  /** URL エンティティ */
-  urlEntities: UrlEntity[]
-}
+export type {
+  CardInfo,
+  MediaItem,
+  UrlEntity,
+  QuotedTweet,
+  CrawlJobStatus,
+} from '@twitter-bookmark-hub/shared'
 
 /** ブックマーク一覧 API のレスポンスアイテム */
 export interface BookmarkItem {
@@ -96,22 +63,4 @@ export interface AccountInfo {
   username: string
   /** ブックマーク件数 */
   bookmarkCount: number
-}
-
-/** クロールジョブ状態 */
-export interface CrawlJobStatus {
-  /** ジョブ ID */
-  id: number
-  /** 開始日時 */
-  startedAt: string
-  /** 終了日時 */
-  finishedAt: string | null
-  /** ジョブステータス */
-  status: 'running' | 'success' | 'error'
-  /** エラーメッセージ */
-  errorMessage: string | null
-  /** 対象アカウント総数 */
-  accountsTotal: number | null
-  /** 成功アカウント数 */
-  accountsSucceeded: number | null
 }
