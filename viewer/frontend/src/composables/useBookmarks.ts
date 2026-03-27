@@ -1,4 +1,4 @@
-import { ref, watchEffect } from 'vue'
+import { ref, watch, watchEffect } from 'vue'
 import { fetchBookmarks } from '../api'
 import type { BookmarkItem } from '../api'
 
@@ -28,6 +28,15 @@ export function useBookmarks() {
   const rawSortOrder = localStorage.getItem(LS_SORT_ORDER)
   const sortOrder = ref<'desc' | 'asc'>(rawSortOrder === 'asc' ? 'asc' : 'desc')
 
+  /** sortBy 変更時に localStorage へ保存 */
+  watch(sortBy, (val) => {
+    localStorage.setItem(LS_SORT_BY, val)
+  })
+  /** sortOrder 変更時に localStorage へ保存 */
+  watch(sortOrder, (val) => {
+    localStorage.setItem(LS_SORT_ORDER, val)
+  })
+
   /** 蓄積されたブックマーク一覧（無限スクロールで追記） */
   const items = ref<BookmarkItem[]>([])
   const total = ref(0)
@@ -36,6 +45,12 @@ export function useBookmarks() {
 
   /** まだ読み込めるページが残っているか */
   const hasMore = ref(true)
+
+  /**
+   * フィルタ変更時に `loadMore` の in-flight リクエストを無効化するフラグ。
+   * watchEffect の onCleanup で true にセットされ、新しい effect 開始時に false にリセットされる。
+   */
+  let loadMoreCancelled = false
 
   /**
    * 現在のフィルタ条件からリクエストパラメータを生成する。
@@ -64,12 +79,15 @@ export function useBookmarks() {
     const params = buildParams(1)
 
     // フィルタ変更時に古いレスポンスが state を上書きするレース条件を防ぐため、
-    // クリーンアップ時にキャンセルフラグを立てる
+    // クリーンアップ時にキャンセルフラグを立てる。loadMore の in-flight リクエストも同様にキャンセルする
     const cancel = { value: false }
     onCleanup(() => {
       cancel.value = true
+      loadMoreCancelled = true
     })
 
+    // 新しいフィルタでの取得開始時に loadMore キャンセルフラグをリセットする
+    loadMoreCancelled = false
     page.value = 1
     hasMore.value = true
     loading.value = true
@@ -91,7 +109,10 @@ export function useBookmarks() {
       })
   })
 
-  /** 次のページを追加で読み込む（無限スクロール用） */
+  /**
+   * 次のページを追加で読み込む（無限スクロール用）。
+   * フィルタ変更後に in-flight のリクエストがある場合はキャンセルされる。
+   */
   function loadMore() {
     if (loading.value || !hasMore.value) return
     const nextPage = page.value + 1
@@ -102,41 +123,23 @@ export function useBookmarks() {
     const params = buildParams(nextPage)
     fetchBookmarks(params)
       .then((res) => {
+        if (loadMoreCancelled) return
         items.value = [...items.value, ...res.items]
         total.value = res.total
         hasMore.value = items.value.length < res.total
       })
       .catch((error_: unknown) => {
+        if (loadMoreCancelled) return
         error.value = error_ instanceof Error ? error_.message : 'Unknown error'
       })
       .finally(() => {
-        loading.value = false
+        if (!loadMoreCancelled) loading.value = false
       })
   }
 
   /** ソート順を切り替える（desc ⇔ asc） */
   function toggleSortOrder() {
     sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
-  }
-
-  /**
-   * ソートキーを変更する。
-   * watchEffect がフィルタ変更を検知してリストをリセット・再取得する。
-   * @param val - 新しいソートキー
-   */
-  function setSortBy(val: 'bookmarked_at' | 'created_at') {
-    sortBy.value = val
-    localStorage.setItem(LS_SORT_BY, val)
-  }
-
-  /**
-   * ソート順を変更する。
-   * watchEffect がフィルタ変更を検知してリストをリセット・再取得する。
-   * @param val - 新しいソート順
-   */
-  function setSortOrder(val: 'asc' | 'desc') {
-    sortOrder.value = val
-    localStorage.setItem(LS_SORT_ORDER, val)
   }
 
   return {
@@ -155,7 +158,5 @@ export function useBookmarks() {
     hasMore,
     loadMore,
     toggleSortOrder,
-    setSortBy,
-    setSortOrder,
   }
 }

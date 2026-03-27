@@ -28,6 +28,7 @@ let observer: IntersectionObserver | null = null
 /**
  * センチネル要素が画面内に入ったら load-more イベントを発火する。
  * 読み込み中・これ以上データがない場合は発火しない。
+ * @param entries - IntersectionObserver から渡される交差情報の配列
  */
 function onIntersect(entries: IntersectionObserverEntry[]) {
   const entry = entries[0]
