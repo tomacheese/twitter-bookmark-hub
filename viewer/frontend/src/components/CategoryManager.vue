@@ -136,9 +136,9 @@ async function handleDelete(id: number) {
  * 新規作成フォームでのキーボード入力処理
  * Enter キーでキーワードを追加する
  */
-function onNewKeywordKeydown(event_: KeyboardEvent) {
-  if (event_.key === 'Enter') {
-    event_.preventDefault()
+function onNewKeywordKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    event.preventDefault()
     addNewKeyword(newKeyword.value)
   }
 }
@@ -147,9 +147,9 @@ function onNewKeywordKeydown(event_: KeyboardEvent) {
  * 編集フォームでのキーボード入力処理
  * Enter キーでキーワードを追加する
  */
-function onEditKeywordKeydown(event_: KeyboardEvent) {
-  if (event_.key === 'Enter') {
-    event_.preventDefault()
+function onEditKeywordKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    event.preventDefault()
     addEditKeyword(editKeyword.value)
   }
 }

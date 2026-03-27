@@ -42,8 +42,8 @@ const proxyHandler = async (c: Context) => {
       status: upstream.status,
       headers: { 'Content-Type': contentType },
     })
-  } catch (error_) {
-    if (error_ instanceof Error && error_.name === 'TimeoutError') {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
       return c.json({ error: 'Analyzer service timed out' }, 504)
     }
     return c.json({ error: 'Analyzer service unavailable' }, 502)
