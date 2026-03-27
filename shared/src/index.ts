@@ -4,5 +4,8 @@ export type {
   MediaItem,
   UrlEntity,
   QuotedTweet,
+  BookmarkItem,
+  BookmarksResponse,
+  AccountInfo,
   CrawlJobStatus,
 } from './types'

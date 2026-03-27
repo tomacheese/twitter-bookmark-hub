@@ -35,7 +35,7 @@ jobs:
       targets: >-
         [
           { imageName: "tomacheese/twitter-bookmark-hub-crawler", context: ".", file: "crawler/Dockerfile", packageName: "twitter-bookmark-hub-crawler" },
-          { imageName: "tomacheese/twitter-bookmark-hub-viewer", context: ".", file: "viewer/Dockerfile", packageName: "twitter-bookmark-hub-viewer" }
+          { imageName: "tomacheese/twitter-bookmark-hub-viewer", context: ".", file: "viewer/Dockerfile", packageName: "twitter-bookmark-hub-backend" }
         ]
       # registry: registry.hub.docker.com # default: ghcr.io
       # platforms: linux/amd64 # default: linux/amd64,linux/arm64

@@ -1,129 +1,27 @@
+import type {
+  CardInfo,
+  MediaItem,
+  UrlEntity,
+  QuotedTweet,
+  BookmarkItem,
+  BookmarksResponse,
+  AccountInfo,
+  CrawlJobStatus,
+} from '@twitter-bookmark-hub/shared'
+
+export type {
+  CardInfo,
+  MediaItem,
+  UrlEntity,
+  QuotedTweet,
+  BookmarkItem,
+  BookmarksResponse,
+  AccountInfo,
+  CrawlJobStatus,
+}
+
 /** API のベース URL */
 const BASE = '/api'
-
-/** リンクカード情報（OGP 相当） */
-export interface CardInfo {
-  /** カード種別 */
-  cardType: 'summary' | 'summary_large_image'
-  /** カードのリンク URL */
-  cardUrl: string
-  /** 表示用ドメイン */
-  vanityUrl: string
-  /** カードタイトル */
-  title: string
-  /** カード説明文 */
-  description: string
-  /** サムネイル画像 URL（存在しない場合は null） */
-  thumbnailUrl: string | null
-}
-
-/** メディアアイテム（写真・動画・GIF） */
-export interface MediaItem {
-  /** メディア種別 */
-  type: 'photo' | 'video' | 'animated_gif'
-  /** サムネイル画像 URL */
-  thumbUrl: string
-  /** 動画 URL（video / animated_gif の場合のみ） */
-  videoUrl?: string
-}
-
-/** URL エンティティ（t.co → 展開 URL のマッピング） */
-export interface UrlEntity {
-  /** t.co 短縮 URL */
-  url: string
-  /** 展開後の URL */
-  expandedUrl: string
-  /** 表示用 URL */
-  displayUrl: string
-}
-
-/** 引用ツイート情報 */
-export interface QuotedTweet {
-  /** ツイート ID */
-  tweetId: string
-  /** ツイート本文 */
-  fullText: string
-  /** スクリーンネーム（@除く） */
-  screenName: string
-  /** 表示名 */
-  userName: string
-  /** プロフィール画像 URL（存在しない場合は null） */
-  profileImageUrl: string | null
-  /** メディアアイテム一覧 */
-  mediaItems: MediaItem[]
-  /** URL エンティティ一覧 */
-  urlEntities: UrlEntity[]
-}
-
-/** ブックマークアイテム */
-export interface BookmarkItem {
-  /** ツイート ID */
-  tweetId: string
-  /** ツイート本文 */
-  fullText: string
-  /** スクリーンネーム（@除く） */
-  screenName: string
-  /** 表示名 */
-  userName: string
-  /** プロフィール画像 URL（存在しない場合は null） */
-  profileImageUrl: string | null
-  /** ツイート投稿日時（ISO 8601） */
-  createdAt: string
-  /** ブックマーク登録日時（ISO 8601） */
-  bookmarkedAt: string
-  /** ツイートの URL */
-  tweetUrl: string
-  /** メディアアイテム一覧 */
-  mediaItems: MediaItem[]
-  /** このツイートをブックマークしているアカウントのユーザー名一覧 */
-  bookmarkedBy: string[]
-  /** URL エンティティ一覧 */
-  urlEntities: UrlEntity[]
-  /** 引用ツイート情報（存在しない場合は null） */
-  quotedTweet: QuotedTweet | null
-  /** 動画プレーヤーカードの URL（存在しない場合は null） */
-  cardPlayerUrl: string | null
-  /** リンクカード情報（存在しない場合は null） */
-  cardInfo: CardInfo | null
-}
-
-/** ブックマーク一覧レスポンス */
-export interface BookmarksResponse {
-  /** ブックマークアイテム一覧 */
-  items: BookmarkItem[]
-  /** 総件数 */
-  total: number
-  /** 現在のページ番号 */
-  page: number
-  /** 1 ページあたりの件数 */
-  limit: number
-}
-
-/** アカウント情報 */
-export interface AccountInfo {
-  /** ユーザー名（@除く） */
-  username: string
-  /** ブックマーク件数 */
-  bookmarkCount: number
-}
-
-/** クロールジョブのステータス */
-export interface CrawlJobStatus {
-  /** ジョブ ID */
-  id: number
-  /** 開始日時（ISO 8601） */
-  startedAt: string
-  /** 終了日時（ISO 8601）。実行中は null */
-  finishedAt: string | null
-  /** ジョブのステータス */
-  status: 'running' | 'success' | 'error'
-  /** エラーメッセージ（エラー時のみ） */
-  errorMessage: string | null
-  /** 処理対象アカウント数 */
-  accountsTotal: number | null
-  /** 成功したアカウント数 */
-  accountsSucceeded: number | null
-}
 
 /**
  * ブックマーク一覧を取得する
