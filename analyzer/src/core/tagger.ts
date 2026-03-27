@@ -30,10 +30,8 @@ const ENGLISH_STOP_WORDS = new Set(engStopWords)
  * `AI`, `PC`, `UI` のような全大文字 2 文字略語はそのフィルタを通過して保持される。
  */
 const EXTRA_NOISE_BLOCKLIST = new Set([
-  // URL 断片（URL 除去後に残る可能性）
-  'https',
-  'http',
-  'ftp',
+  // URL 断片（URL 除去後も稀に残る）
+  // ※ https/http/ftp はコーパス上で 0 件のためデッドコード扱いで登録しない
   'www',
   // stopword ライブラリ未収録の英語汎用語・副詞
   'just',
