@@ -22,6 +22,7 @@
     "@book000/eslint-config": "1.14.0",
     "@types/node": "^25.5.0",
     "@typescript-eslint/parser": "^8.57.2",
+    "@vite-pwa/assets-generator": "^1.0.2",
     "@vitejs/plugin-vue": "^5.2.3",
     "eslint": "10.1.0",
     "eslint-plugin-vue": "^10.8.0",
@@ -30,7 +31,10 @@
     "run-z": "2.1.0",
     "typescript": "5.9.3",
     "vite": "^6.3.4",
+    "vite-plugin-pwa": "^1.2.0",
     "vue-eslint-parser": "^10.4.0",
-    "vue-tsc": "^2.2.8"
+    "vue-tsc": "^2.2.8",
+    "workbox-build": "^7.4.0",
+    "workbox-window": "^7.4.0"
   }
 }
