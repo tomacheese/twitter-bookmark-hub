@@ -11,8 +11,6 @@ import BookmarkList from './components/BookmarkList.vue'
 import Settings from './views/Settings.vue'
 
 const {
-  page,
-  limit,
   selectedAccount,
   selectedCategory,
   selectedTag,
@@ -20,11 +18,10 @@ const {
   sortBy,
   sortOrder,
   items,
-  total,
   loading,
   error,
-  nextPage,
-  prevPage,
+  hasMore,
+  loadMore,
   toggleSortOrder,
 } = useBookmarks()
 
@@ -89,15 +86,16 @@ function onHashChange() {
   if (isShowingMain) {
     const tag = parseTagFromHash()
     if (selectedTag.value !== tag) {
+      // watchEffect がフィルタ変更を検知してリストをリセット・再取得する
       selectedTag.value = tag
-      page.value = 1
     }
   }
 }
 
 onMounted(() => {
   globalThis.addEventListener('hashchange', onHashChange)
-  // 初回マウント時にハッシュからタグフィルタを復元する（直リンク対応）
+  // 初回マウント時にハッシュからタグフィルタを復元する（直リンク対応）。
+  // タグをセットすると watchEffect がフィルタ変更を検知して再取得する
   const tag = parseTagFromHash()
   if (tag) {
     selectedTag.value = tag
@@ -126,21 +124,21 @@ function navigateTo(view: 'main' | 'settings') {
 }
 
 /**
- * アカウント選択を更新し、ページを 1 に戻す
+ * アカウント選択を更新する。
+ * useBookmarks 内の watchEffect がフィルタ変更を検知してリストをリセットする。
  * @param account - 選択されたアカウント名（null は「すべて」）
  */
 function onAccountChange(account: string | null) {
   selectedAccount.value = account
-  page.value = 1
 }
 
 /**
- * カテゴリ選択を更新し、ページを 1 に戻す
+ * カテゴリ選択を更新する。
+ * useBookmarks 内の watchEffect がフィルタ変更を検知してリストをリセットする。
  * @param categoryId - 選択されたカテゴリ ID（null は「すべて」）
  */
 function onCategoryChange(categoryId: number | null) {
   selectedCategory.value = categoryId
-  page.value = 1
 }
 
 /**
@@ -220,14 +218,9 @@ function clearTagFilter() {
             v-model="searchQuery"
             type="text"
             class="search-input"
-            placeholder="ブックマークを検索"
-            @input="page = 1" />
+            placeholder="ブックマークを検索" />
           <!-- ソートキー選択 -->
-          <select
-            v-model="sortBy"
-            class="sort-select"
-            title="ソート条件"
-            @change="page = 1">
+          <select v-model="sortBy" class="sort-select" title="ソート条件">
             <option value="bookmarked_at">発見日</option>
             <option value="created_at">投稿日</option>
           </select>
@@ -261,11 +254,8 @@ function clearTagFilter() {
           :items="items"
           :loading="loading"
           :error="error"
-          :page="page"
-          :total="total"
-          :limit="limit"
-          @next="nextPage"
-          @prev="prevPage"
+          :has-more="hasMore"
+          @load-more="loadMore"
           @tag-click="onTagClick" />
       </main>
     </div>
