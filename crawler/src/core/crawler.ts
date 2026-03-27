@@ -168,9 +168,16 @@ export async function runCrawl(db: Database.Database): Promise<void> {
                 globalPosition
               )
               // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
+              // 引用ツイート本文・カードタイトルも結合してタグ精度を高める
               const tweetId = entry.tweetId
-              const fullText = entry.fullText
-              analyzeQueue.push(() => analyzeAndSave(db, tweetId, fullText))
+              const analyzeText = [
+                entry.fullText,
+                entry.quotedTweet?.fullText,
+                entry.cardInfo?.title,
+              ]
+                .filter(Boolean)
+                .join('\n')
+              analyzeQueue.push(() => analyzeAndSave(db, tweetId, analyzeText))
               globalPosition++
               addedThisPage++
             }
