@@ -40,7 +40,7 @@ export function analyzeRoute(
 
   /**
    * POST /analyze/prune-noise - IDF ベースのノイズタグを一括削除する
-   * クエリパラメータ: threshold (デフォルト: 0.1)
+   * クエリパラメータ: threshold (デフォルト: 0.25)
    * レスポンス: { deleted: number, threshold: number, totalTweets: number }
    */
   app.post('/analyze/prune-noise', (c) => {

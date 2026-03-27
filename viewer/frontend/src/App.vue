@@ -48,14 +48,17 @@ const sidebarOpen = ref(false)
 
 /**
  * URL ハッシュからタグパラメータを解析する。
- * 例: `#/?tag=Vue` → `"Vue"`、`#/` → `null`
- * @returns タグ名、またはタグパラメータがない場合は null
+ * 例: `#/?tag=Vue` → `"Vue"`、`#/` → `null`、`#/?tag=` → `null`
+ * 空文字は null として扱い、「セット済みだが空」という不整合状態を防ぐ。
+ * @returns タグ名、またはタグパラメータがない・空の場合は null
  */
 function parseTagFromHash(): string | null {
   const hash = globalThis.location.hash
   const queryStart = hash.indexOf('?')
   if (queryStart === -1) return null
-  return new URLSearchParams(hash.slice(queryStart + 1)).get('tag')
+  const tag = new URLSearchParams(hash.slice(queryStart + 1)).get('tag')
+  // 空文字は null に正規化する（#/?tag= のような不正な URL への対処）
+  return tag === '' ? null : tag
 }
 
 /**
@@ -75,12 +78,15 @@ const currentView = ref<'main' | 'settings'>(resolveView())
 /**
  * hashchange イベントハンドラ。
  * ブラウザの戻る/進む操作に対応するため、ハッシュからフィルタ状態を復元する。
+ * analyzer が無効な場合は `#/settings` でもテンプレートはメイン画面を表示するため、
+ * 実際の表示状態（`analyzerEnabled` も考慮）でタグ復元を判断する。
  */
 function onHashChange() {
   const newView = resolveView()
   currentView.value = newView
-  // メインビュー遷移時のみタグフィルタをハッシュから復元する
-  if (newView === 'main') {
+  // analyzer が無効なら settings URL でも実際にはメイン画面を表示している
+  const isShowingMain = newView === 'main' || !analyzerEnabled.value
+  if (isShowingMain) {
     const tag = parseTagFromHash()
     if (selectedTag.value !== tag) {
       selectedTag.value = tag
