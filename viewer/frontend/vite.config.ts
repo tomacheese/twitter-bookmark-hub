@@ -24,50 +24,25 @@ export default defineConfig({
             src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any',
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
           },
         ],
       },
       workbox: {
-        // API リクエストはキャッシュしない
-        navigateFallback: null,
+        // ナビゲーションフォールバックを有効にし、オフライン時でも SPA が動作するよう index.html を返す
+        // /api/* はサービスワーカーのフォールバック対象から除外する
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
-            // 静的アセットをキャッシュ
-            urlPattern: /^https:\/\/.*\.(js|css|woff2?|png|jpg|jpeg|svg|ico)$/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'static-assets',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 日
-              },
-            },
-          },
-          {
-            // ビデオサムネイルをキャッシュ（video.twimg.com）
-            urlPattern: /^https:\/\/video\.twimg\.com\/.*/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'twitter-videos',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 日
-              },
-            },
-          },
-          {
-            // 画像をキャッシュ（pbs.twimg.com）
+            // Twitter 画像をキャッシュ（pbs.twimg.com）
+            // 静的アセットルールより前に定義し、Twitter 画像が正しいキャッシュに格納されるようにする
             urlPattern: /^https:\/\/pbs\.twimg\.com\/.*/,
             handler: 'CacheFirst',
             options: {
@@ -75,6 +50,18 @@ export default defineConfig({
               expiration: {
                 maxEntries: 200,
                 maxAgeSeconds: 60 * 60 * 24 * 7, // 7 日
+              },
+            },
+          },
+          {
+            // 静的アセットをキャッシュ（JS・CSS・フォント・画像等）
+            urlPattern: /^https:\/\/.*\.(js|css|woff2?|png|jpg|jpeg|svg|ico)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'static-assets',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 日
               },
             },
           },
