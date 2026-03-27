@@ -63,6 +63,7 @@ const EXTRA_NOISE_BLOCKLIST = new Set([
  * - 代名詞（誰か 等）→ 文脈によっては pos_detail_1='一般' に分類されるため JAPANESE_GENERIC_NOUNS で対処
  * - サ変接続語で「〜する/なる」型の行為語（確認・利用・参考 等）→ isUsedAsVerbalNoun() で対処
  * - `〜的に` 副詞形（個人・基本・定期 等）→ isUsedAsAdverbialTeki() で対処
+ * - 形式名詞（おかげ・とこ 等）→ isUsedAsFormalNoun() で対処
  * - カタカナ断片（ワーク・フロー等）→ mergeConsecutiveKatakanaTokens() で再結合済み
  * - 2 文字・非全大文字 ASCII（wi・fi・ac・io 等）→ extractNouns() の長さフィルタで対処
  * ─────────────────────────────────────────────────────────────────────
@@ -102,6 +103,16 @@ const JAPANESE_GENERIC_NOUNS = new Set([
   // --- 3. 修辞的・非トピック語 ---
   '人類', // "全人類やりましょう" 型の修辞的用法
   '人間', // 修辞的・哲学的汎用語
+])
+
+/**
+ * 形式名詞として使われる語のセット。
+ * これらは単独では意味を持たず、直前の動詞・助動詞・「の」と文法的に結びついて使われる。
+ * isUsedAsFormalNoun() と組み合わせてコンテキストベースで除外する。
+ */
+const FORMAL_NOUNS = new Set([
+  'おかげ', // 「〜のおかげで」「〜できたおかげ」型：恩恵の依存関係を表す形式名詞
+  'とこ', // 「〜したとこ」「〜してるとこ」型：ところ の口語形（形式名詞的用法）
 ])
 
 /**
@@ -237,6 +248,33 @@ function isUsedAsAdverbialTeki(
     k < tokens.length &&
     tokens[k].pos === '助詞' &&
     tokens[k].surface_form === 'に'
+  )
+}
+
+/**
+ * 形式名詞として使われているかを判定する。
+ *
+ * 形式名詞は具体的な意味を持たず、直前の語と文法的に結びついて使われる名詞。
+ * 以下のいずれかが直前のトークンの場合に形式名詞と判定する:
+ * - 動詞（「したとこ」「できたおかげ」等）
+ * - 助動詞（「だったとこ」「なかったおかげ」等）
+ * - 助詞「の」（「みんなのおかげ」「いいとこ」等）
+ * - トークン先頭（前文脈への指示：「おかげで助かった」等）
+ *
+ * @param tokens - トークン列
+ * @param index - 判定対象トークンのインデックス
+ * @returns 形式名詞的用法なら true
+ */
+function isUsedAsFormalNoun(tokens: KuromojiToken[], index: number): boolean {
+  let j = index - 1
+  while (j >= 0 && isSpaceToken(tokens[j])) j--
+  // 先頭に来た場合も形式名詞扱い（前文脈への指示・依存関係）
+  if (j < 0) return true
+  const prev = tokens[j]
+  return (
+    prev.pos === '動詞' ||
+    prev.pos === '助動詞' ||
+    (prev.pos === '助詞' && prev.surface_form === 'の')
   )
 }
 
@@ -494,6 +532,10 @@ export function extractNouns(
     // 名詞が「〜的に」の形で副詞的に使われている場合は除外
     // （"個人的に", "基本的に", "定期的に", "効率的に" 等）
     if (isUsedAsAdverbialTeki(tokens, i)) continue
+
+    // 形式名詞（おかげ・とこ 等）が文法的用法で使われている場合は除外
+    // 直前が動詞・助動詞・助詞「の」のいずれかである場合に除外する
+    if (FORMAL_NOUNS.has(word) && isUsedAsFormalNoun(tokens, i)) continue
 
     // アルゴリズムで除去できない代名詞・スラング・断片等を除外
     if (JAPANESE_GENERIC_NOUNS.has(word)) continue
