@@ -5,18 +5,35 @@ FROM node:24-alpine AS frontend-builder
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
+# ネイティブモジュールのコンパイルに必要なツールをインストール
+# @twitter-bookmark-hub/shared が workspace:* 参照のためルート workspace 全体をフェッチする際に
+# better-sqlite3 など他パッケージの install スクリプトが実行されるため必要
 # corepack は Node.js 24 に同梱済みのため npm install 不要
-RUN corepack enable
+RUN apk add --no-cache python3 make g++ gcompat libc6-compat && \
+    corepack enable
 
-WORKDIR /app/frontend
+WORKDIR /app
 
-# ロックファイルをコピーしてパッケージをフェッチ（レイヤーキャッシュ最適化）
-COPY viewer/frontend/package.json viewer/frontend/pnpm-lock.yaml ./
+# ワークスペースの依存解決に必要なファイルをコピー（レイヤーキャッシュ最適化）
+# @twitter-bookmark-hub/shared が workspace:* 参照のため、ルートの設定ファイルが必要
+COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY shared/package.json ./shared/
+COPY crawler/package.json ./crawler/
+COPY viewer/frontend/package.json ./viewer/frontend/
+COPY viewer/backend/package.json ./viewer/backend/
+
+# ロックファイルからパッケージをストアにフェッチ（ネットワーク層をキャッシュ）
 RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm fetch
-RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm install --offline --frozen-lockfile
 
-COPY viewer/frontend/ ./
-RUN pnpm build
+# shared パッケージのソースをコピー（workspace リンクに必要）
+COPY shared/ ./shared/
+
+# frontend の全依存パッケージをインストール
+RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-frontend
+
+# frontend のソースをコピーしてビルド
+COPY viewer/frontend/ ./viewer/frontend/
+RUN pnpm --filter twitter-bookmark-hub-frontend build
 
 # ---- Stage 2: ネイティブモジュールのビルドとデプロイパッケージの作成 ----
 FROM node:24-alpine AS backend-builder
@@ -50,7 +67,7 @@ RUN --mount=type=cache,id=pnpm-backend,target=/pnpm/store pnpm install --offline
 
 # backend のソースとフロントエンドのビルド成果物をコピー
 COPY viewer/backend/ ./viewer/backend/
-COPY --from=frontend-builder /app/frontend/dist ./viewer/backend/public
+COPY --from=frontend-builder /app/viewer/frontend/dist ./viewer/backend/public
 
 # devDependencies を除いた本番環境用スタンドアローンパッケージを作成する
 RUN pnpm --filter twitter-bookmark-hub-backend deploy /deploy
