@@ -142,7 +142,10 @@ export function extractNouns(
   tokenizer: KuromojiTokenizer,
   text: string
 ): string[] {
-  const tokens = mergeConsecutiveEnglishTokens(tokenizer.tokenize(text))
+  // URL（https?://... の形式）を除去してから形態素解析する
+  // t.co のような短縮 URL のパス部分がノイズトークンになるのを防ぐ
+  const cleanedText = text.replaceAll(/https?:\/\/\S+/g, '')
+  const tokens = mergeConsecutiveEnglishTokens(tokenizer.tokenize(cleanedText))
   const seen = new Set<string>()
   const nouns: string[] = []
 
