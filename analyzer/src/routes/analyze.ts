@@ -4,7 +4,7 @@ import type { KuromojiTokenizer } from '../core/tagger'
 import type { AnalyzeResponse } from '@twitter-bookmark-hub/shared'
 import { extractNouns } from '../core/tagger'
 import { matchCategories } from '../core/categorizer'
-import { getCategoryKeywords } from '../infra/database'
+import { getCategoryKeywords, pruneNoiseTags } from '../infra/database'
 
 /**
  * 分析 API ルートを作成する
@@ -36,6 +36,22 @@ export function analyzeRoute(
 
     const response: AnalyzeResponse = { tags, categories }
     return c.json(response)
+  })
+
+  /**
+   * POST /analyze/prune-noise - IDF ベースのノイズタグを一括削除する
+   * クエリパラメータ: threshold (デフォルト: 0.1)
+   * レスポンス: { deleted: number, threshold: number, totalTweets: number }
+   */
+  app.post('/analyze/prune-noise', (c) => {
+    const rawThreshold = Number(c.req.query('threshold') ?? '0.25')
+    const threshold =
+      Number.isFinite(rawThreshold) && rawThreshold > 0 && rawThreshold < 1
+        ? rawThreshold
+        : 0.25
+
+    const deleted = pruneNoiseTags(db, threshold)
+    return c.json({ deleted, threshold })
   })
 
   return app

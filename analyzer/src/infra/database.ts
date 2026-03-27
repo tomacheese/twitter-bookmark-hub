@@ -134,6 +134,53 @@ export function getCategoryKeywords(
 }
 
 /**
+ * IDF（逆文書頻度）ベースのノイズタグを一括削除する。
+ * 解析済みツイート総数に対して threshold 以上の割合に出現するタグは
+ * 汎用語とみなして tweet_tags から削除し、孤立した tags レコードも削除する。
+ *
+ * @param db - Database インスタンス
+ * @param threshold - 出現割合の閾値（例: 0.1 = 全ツイートの 10% 以上に出現したら除去）
+ * @returns 削除した tweet_tags レコード数
+ */
+export function pruneNoiseTags(
+  db: Database.Database,
+  threshold: number
+): number {
+  // tweet_tags に登録されたツイート総数（タグ付き = 解析済みツイート）
+  const totalRow = db
+    .prepare('SELECT COUNT(DISTINCT tweet_id) AS cnt FROM tweet_tags')
+    .get() as { cnt: number }
+  const totalTweets = totalRow.cnt
+  if (totalTweets === 0) return 0
+
+  // ノイズ判定の最低出現件数（threshold 未満なら除去対象としない）
+  const minDocCount = Math.ceil(totalTweets * threshold)
+  if (minDocCount < 2) return 0
+
+  // threshold 以上の割合に出現するタグの tweet_tags レコードを削除する
+  const result = db
+    .prepare(
+      `
+      DELETE FROM tweet_tags
+      WHERE tag_id IN (
+        SELECT tag_id
+        FROM tweet_tags
+        GROUP BY tag_id
+        HAVING COUNT(DISTINCT tweet_id) >= ?
+      )
+      `
+    )
+    .run(minDocCount)
+
+  // 孤立した tags レコードを削除する
+  db.prepare(
+    'DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM tweet_tags)'
+  ).run()
+
+  return result.changes
+}
+
+/**
  * 頻出タグ一覧を取得する。
  *
  * @param db - Database インスタンス

@@ -19,6 +19,44 @@ import { Logger } from '@book000/node-utils'
 const logger = Logger.configure('crawler')
 
 /**
+ * クロール後に analyzer へ IDF ノイズプルーニングを依頼する。
+ * ANALYZER_URL が設定されていない場合は何もしない。
+ * プルーニングの失敗はログに記録するが、クロール全体は続行する。
+ *
+ * @param threshold IDF 閾値（デフォルト 0.1）
+ */
+async function pruneNoiseTagsViaAnalyzer(threshold = 0.1): Promise<void> {
+  const analyzerUrl = process.env.ANALYZER_URL
+  if (!analyzerUrl) return
+
+  try {
+    const response = await fetch(
+      `${analyzerUrl}/analyze/prune-noise?threshold=${threshold}`,
+      {
+        method: 'POST',
+        signal: AbortSignal.timeout(30_000),
+      }
+    )
+    if (!response.ok) {
+      logger.warn(`Prune-noise returned non-OK status: ${response.status}`)
+      return
+    }
+    const result = (await response.json()) as {
+      deleted?: number
+      threshold?: number
+    }
+    logger.info(
+      `Prune-noise completed: deleted ${result.deleted ?? 0} tweet_tags entries (threshold=${result.threshold ?? threshold})`
+    )
+  } catch (error) {
+    logger.warn(
+      'Failed to prune noise tags:',
+      error instanceof Error ? error : new Error(String(error))
+    )
+  }
+}
+
+/**
  * analyzer に分析を依頼し、結果をデータベースに保存する。
  * ANALYZER_URL が設定されていない場合は何もしない。
  * 分析の失敗はログに記録するが、クロール全体は続行する。
@@ -232,6 +270,9 @@ export async function runCrawl(db: Database.Database): Promise<void> {
     logger.info(
       `Crawl job #${jobId} completed. ${successCount}/${accounts.length} accounts succeeded.`
     )
+
+    // 全アカウントの分析完了後、IDF ベースのノイズタグを除去する（閾値 25%）
+    await pruneNoiseTagsViaAnalyzer(0.25)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     updateCrawlJob(db, jobId, 'error', {
