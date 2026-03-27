@@ -14,6 +14,12 @@ const NOUN_DETAIL_ALLOWLIST = new Set([
 ])
 
 /**
+ * URL 由来のノイズトークンを除外するブロックリスト（小文字で比較）。
+ * kuromoji が URL を形態素分解した際に名詞として出力する断片を除外する。
+ */
+const URL_NOISE_BLOCKLIST = new Set(['https', 'http', 'ftp', 'co', 'www'])
+
+/**
  * kuromoji IPAdic 形態素の最低限の型定義。
  * @patdx/kuromoji には型宣言ファイルがないため独自に定義する。
  */
@@ -152,6 +158,12 @@ export function extractNouns(
 
     // 1 文字の単語は除外（ノイズが多い）
     if (word.length <= 1) continue
+
+    // 文字（英数字・仮名・漢字）を含まない記号のみトークンは除外（"://" 等）
+    if (!/[a-zA-Z0-9\u3040-\u9FFF]/.test(word)) continue
+
+    // URL 由来のノイズトークンは除外
+    if (URL_NOISE_BLOCKLIST.has(word.toLowerCase())) continue
 
     if (!seen.has(word)) {
       seen.add(word)
