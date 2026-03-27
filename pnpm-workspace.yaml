@@ -3,3 +3,4 @@ packages:
   - crawler
   - viewer/backend
   - viewer/frontend
+  - analyzer

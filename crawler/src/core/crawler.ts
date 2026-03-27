@@ -11,10 +11,62 @@ import {
   updateCrawlJob,
   upsertTweetEntry,
   upsertBookmark,
+  upsertTweetTags,
+  upsertTweetCategories,
 } from '../infra/database'
 import { Logger } from '@book000/node-utils'
 
 const logger = Logger.configure('crawler')
+
+/**
+ * analyzer に分析を依頼し、結果をデータベースに保存する。
+ * ANALYZER_URL が設定されていない場合は何もしない。
+ * 分析の失敗はログに記録するが、クロール全体は続行する。
+ *
+ * @param db Database インスタンス
+ * @param tweetId ツイート ID
+ * @param text 分析対象テキスト
+ */
+async function analyzeAndSave(
+  db: Database.Database,
+  tweetId: string,
+  text: string
+): Promise<void> {
+  const analyzerUrl = process.env.ANALYZER_URL
+  if (!analyzerUrl) return
+
+  try {
+    const response = await fetch(`${analyzerUrl}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tweetId, text }),
+    })
+
+    if (!response.ok) {
+      logger.warn(
+        `Analyzer returned non-OK status for tweet ${tweetId}: ${response.status}`
+      )
+      return
+    }
+
+    const result = (await response.json()) as {
+      tags?: string[]
+      categories?: { id: number; confidence: number }[]
+    }
+
+    if (Array.isArray(result.tags)) {
+      upsertTweetTags(db, tweetId, result.tags)
+    }
+    if (Array.isArray(result.categories)) {
+      upsertTweetCategories(db, tweetId, result.categories)
+    }
+  } catch (error) {
+    logger.warn(
+      `Failed to analyze tweet ${tweetId}:`,
+      error instanceof Error ? error : new Error(String(error))
+    )
+  }
+}
 
 /** ブックマーク取得の 1 ページあたり件数 */
 const BOOKMARKS_PER_PAGE = 100
@@ -107,6 +159,8 @@ export async function runCrawl(db: Database.Database): Promise<void> {
                 crawledAt,
                 globalPosition
               )
+              // ANALYZER_URL が設定されている場合は analyzer に分析を依頼する
+              await analyzeAndSave(db, entry.tweetId, entry.fullText)
               globalPosition++
               addedThisPage++
             }

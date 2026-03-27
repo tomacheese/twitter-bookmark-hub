@@ -23,6 +23,8 @@ interface GetBookmarksParams {
   sortBy?: 'bookmarked_at' | 'created_at'
   /** ソート順 (desc: 新しい順 / asc: 古い順) */
   sort?: 'asc' | 'desc'
+  /** カテゴリ ID でフィルタ */
+  categoryId?: number
 }
 
 /** ブックマーク取得結果 */
@@ -95,6 +97,22 @@ function parseUrlEntities(raw: string | null): UrlEntity[] {
 }
 
 /**
+ * tweet_categories テーブルが存在するかどうかを確認する。
+ * analyzer がオプショナルなため、テーブルが存在しない場合がある。
+ *
+ * @param db - Database インスタンス
+ * @returns テーブルが存在すれば true
+ */
+export function hasCategoriesTable(db: Database.Database): boolean {
+  const row = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='tweet_categories'"
+    )
+    .get()
+  return row !== undefined
+}
+
+/**
  * ブックマーク一覧を取得する
  * @param db - Database インスタンス
  * @param params - 取得パラメータ
@@ -112,6 +130,12 @@ export function getBookmarks(
     sort = 'desc',
     sortBy = 'bookmarked_at',
   } = params
+
+  // tweet_categories テーブルが存在しない場合は categoryId フィルタを無視する
+  const categoriesTableExists = hasCategoriesTable(db)
+  const effectiveCategoryId = categoriesTableExists
+    ? params.categoryId
+    : undefined
 
   // ソートキーと方向を決定する（SQL インジェクション防止のためホワイトリスト方式）
   //
@@ -147,6 +171,12 @@ export function getBookmarks(
       'EXISTS (SELECT 1 FROM bookmarks b2 WHERE b2.tweet_id = t.tweet_id AND b2.account_username = ?)'
     )
     bindValues.push(account)
+  }
+  if (effectiveCategoryId !== undefined) {
+    conditions.push(
+      'EXISTS (SELECT 1 FROM tweet_categories tc WHERE tc.tweet_id = t.tweet_id AND tc.category_id = ?)'
+    )
+    bindValues.push(effectiveCategoryId)
   }
 
   const whereClause =
@@ -344,6 +374,55 @@ export function getAccounts(db: Database.Database): AccountInfo[] {
 
   return rows.map((row) => ({
     username: row.username,
+    bookmarkCount: row.bookmark_count,
+  }))
+}
+
+/**
+ * カテゴリ一覧を取得する（viewer/backend 用、ブックマーク件数付き）。
+ *
+ * @param db - Database インスタンス
+ * @returns カテゴリ情報の配列
+ */
+export function getCategories(db: Database.Database): {
+  id: number
+  name: string
+  color: string
+  keywords: string[]
+  createdAt: string
+  bookmarkCount: number
+}[] {
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        c.id,
+        c.name,
+        c.color,
+        c.keywords,
+        c.created_at,
+        COUNT(DISTINCT tc.tweet_id) AS bookmark_count
+      FROM categories c
+      LEFT JOIN tweet_categories tc ON c.id = tc.category_id
+      GROUP BY c.id
+      ORDER BY c.id
+      `
+    )
+    .all() as {
+    id: number
+    name: string
+    color: string
+    keywords: string
+    created_at: string
+    bookmark_count: number
+  }[]
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    color: row.color,
+    keywords: JSON.parse(row.keywords) as string[],
+    createdAt: row.created_at,
     bookmarkCount: row.bookmark_count,
   }))
 }

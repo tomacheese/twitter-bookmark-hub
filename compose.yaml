@@ -8,6 +8,8 @@ services:
       - ./data:/data
     ports:
       - "3001:3001"
+    environment:
+      - ANALYZER_URL=${ANALYZER_URL:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
       interval: 30s
@@ -23,6 +25,23 @@ services:
       - ./data:/data
     ports:
       - "3000:3000"
+    environment:
+      - ANALYZER_URL=${ANALYZER_URL:-}
     depends_on:
       crawler:
         condition: service_healthy
+
+  analyzer:
+    profiles:
+      - analyzer
+    build:
+      context: .
+      dockerfile: analyzer/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

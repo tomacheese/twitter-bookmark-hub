@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useBookmarks } from './composables/useBookmarks'
 import { useAccounts } from './composables/useAccounts'
+import { useFeatures } from './composables/useFeatures'
+import { useCategories } from './composables/useCategories'
 import CrawlStatus from './components/CrawlStatus.vue'
 import AccountFilter from './components/AccountFilter.vue'
+import CategoryFilter from './components/CategoryFilter.vue'
 import BookmarkList from './components/BookmarkList.vue'
+import Settings from './views/Settings.vue'
 
 const {
   page,
   limit,
   selectedAccount,
+  selectedCategory,
   searchQuery,
   sortBy,
   sortOrder,
@@ -23,9 +28,57 @@ const {
 } = useBookmarks()
 
 const { accounts } = useAccounts()
+const { analyzerEnabled } = useFeatures()
+const { categories, loadCategories } = useCategories()
+
+/** analyzer が有効になったらカテゴリを取得する（初回のみ） */
+const analyzerWatched = ref(false)
+onMounted(() => {
+  const interval = setInterval(() => {
+    if (analyzerEnabled.value && !analyzerWatched.value) {
+      analyzerWatched.value = true
+      loadCategories().catch(() => {})
+      clearInterval(interval)
+    }
+  }, 100)
+  // 5 秒後にタイムアウト
+  setTimeout(() => clearInterval(interval), 5000)
+})
 
 /** サイドバーの開閉状態（初期は閉じた状態） */
 const sidebarOpen = ref(false)
+
+/**
+ * ハッシュからビュー名を導出するヘルパー
+ * @returns 現在のビュー名
+ */
+function resolveView(): 'main' | 'settings' {
+  return globalThis.location.hash === '#/settings' ? 'settings' : 'main'
+}
+
+/** 現在のビュー（ハッシュルーティング） */
+const currentView = ref<'main' | 'settings'>(resolveView())
+
+/** hashchange イベントハンドラ */
+function onHashChange() {
+  currentView.value = resolveView()
+}
+
+onMounted(() => {
+  globalThis.addEventListener('hashchange', onHashChange)
+})
+
+onUnmounted(() => {
+  globalThis.removeEventListener('hashchange', onHashChange)
+})
+
+/**
+ * ビューを切り替える
+ * @param view - 遷移先ビュー名
+ */
+function navigateTo(view: 'main' | 'settings') {
+  globalThis.location.hash = view === 'settings' ? '#/settings' : '#/'
+}
 
 /**
  * アカウント選択を更新し、ページを 1 に戻す
@@ -33,6 +86,15 @@ const sidebarOpen = ref(false)
  */
 function onAccountChange(account: string | null) {
   selectedAccount.value = account
+  page.value = 1
+}
+
+/**
+ * カテゴリ選択を更新し、ページを 1 に戻す
+ * @param categoryId - 選択されたカテゴリ ID（null は「すべて」）
+ */
+function onCategoryChange(categoryId: number | null) {
+  selectedCategory.value = categoryId
   page.value = 1
 }
 </script>
@@ -52,18 +114,40 @@ function onAccountChange(account: string | null) {
           <span class="hamburger-line" />
           <span class="hamburger-line" />
         </button>
-        <h1 class="header-title">Twitter Bookmark Hub</h1>
+        <h1 class="header-title">
+          <a href="#/" class="title-link">Twitter Bookmark Hub</a>
+        </h1>
       </div>
-      <CrawlStatus />
+      <div class="header-right">
+        <CrawlStatus />
+        <!-- analyzer が有効な場合のみ設定リンクを表示 -->
+        <button
+          v-if="analyzerEnabled"
+          class="nav-btn"
+          :class="{ active: currentView === 'settings' }"
+          @click="navigateTo(currentView === 'settings' ? 'main' : 'settings')">
+          {{ currentView === 'settings' ? '← 戻る' : '⚙ 設定' }}
+        </button>
+      </div>
     </header>
 
-    <div class="layout">
+    <!-- 設定ページ -->
+    <Settings v-if="currentView === 'settings'" />
+
+    <!-- メインページ -->
+    <div v-else class="layout">
       <!-- サイドバー -->
       <aside class="sidebar" :class="{ 'sidebar-closed': !sidebarOpen }">
         <AccountFilter
           :accounts="accounts"
           :selected="selectedAccount"
           @update:selected="onAccountChange" />
+        <!-- analyzer が有効かつカテゴリがある場合のみ表示 -->
+        <CategoryFilter
+          v-if="analyzerEnabled && categories.length > 0"
+          :categories="categories"
+          :selected="selectedCategory"
+          @update:selected="onCategoryChange" />
       </aside>
 
       <!-- メインコンテンツ: サイドバーが閉じていれば横幅いっぱいに広げる -->
@@ -164,9 +248,40 @@ body {
   gap: 10px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .header-title {
   font-size: 20px;
   font-weight: 800;
+}
+
+.title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nav-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.nav-btn:hover,
+.nav-btn.active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* サイドバー開閉ボタン */

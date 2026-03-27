@@ -2,6 +2,9 @@ import type {
   BookmarksResponse,
   AccountInfo,
   CrawlJobStatus,
+  FeaturesResponse,
+  CategoryItem,
+  TagItem,
 } from '@twitter-bookmark-hub/shared'
 
 export type {
@@ -13,6 +16,9 @@ export type {
   BookmarksResponse,
   AccountInfo,
   CrawlJobStatus,
+  FeaturesResponse,
+  CategoryItem,
+  TagItem,
 } from '@twitter-bookmark-hub/shared'
 
 /** API のベース URL */
@@ -56,6 +62,7 @@ export async function fetchBookmarks(params: {
   account?: string
   sort?: 'asc' | 'desc'
   sortBy?: 'bookmarked_at' | 'created_at'
+  category?: number
 }): Promise<BookmarksResponse> {
   const query = new URLSearchParams()
   if (params.page != null) query.set('page', String(params.page))
@@ -64,6 +71,7 @@ export async function fetchBookmarks(params: {
   if (params.account) query.set('account', params.account)
   if (params.sort) query.set('sort', params.sort)
   if (params.sortBy) query.set('sort_by', params.sortBy)
+  if (params.category != null) query.set('category', String(params.category))
 
   const res = await fetch(`${BASE}/bookmarks?${query.toString()}`)
   if (!res.ok) return throwResponseError(res, 'Failed to fetch bookmarks')
@@ -98,4 +106,82 @@ export async function triggerCrawl(): Promise<{ message: string }> {
   const res = await fetch(`${BASE}/crawl/trigger`, { method: 'POST' })
   if (!res.ok) return throwResponseError(res, 'Failed to trigger crawl')
   return res.json() as Promise<{ message: string }>
+}
+
+/**
+ * 有効な機能フラグを取得する
+ * @returns 機能フラグ
+ */
+export async function fetchFeatures(): Promise<FeaturesResponse> {
+  const res = await fetch(`${BASE}/features`)
+  if (!res.ok) return throwResponseError(res, 'Failed to fetch features')
+  return res.json() as Promise<FeaturesResponse>
+}
+
+/**
+ * カテゴリ一覧を取得する
+ * @returns カテゴリアイテムの配列
+ */
+export async function fetchCategories(): Promise<CategoryItem[]> {
+  const res = await fetch(`${BASE}/categories`)
+  if (!res.ok) return throwResponseError(res, 'Failed to fetch categories')
+  return res.json() as Promise<CategoryItem[]>
+}
+
+/**
+ * カテゴリを作成する
+ * @param data - カテゴリデータ
+ * @returns 作成されたカテゴリ
+ */
+export async function createCategory(data: {
+  name: string
+  color: string
+  keywords: string[]
+}): Promise<CategoryItem> {
+  const res = await fetch(`${BASE}/categories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) return throwResponseError(res, 'Failed to create category')
+  return res.json() as Promise<CategoryItem>
+}
+
+/**
+ * カテゴリを更新する
+ * @param id - カテゴリ ID
+ * @param data - 更新データ
+ * @returns 更新されたカテゴリ
+ */
+export async function updateCategory(
+  id: number,
+  data: { name: string; color: string; keywords: string[] }
+): Promise<CategoryItem> {
+  const res = await fetch(`${BASE}/categories/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) return throwResponseError(res, 'Failed to update category')
+  return res.json() as Promise<CategoryItem>
+}
+
+/**
+ * カテゴリを削除する
+ * @param id - カテゴリ ID
+ */
+export async function deleteCategory(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/categories/${id}`, { method: 'DELETE' })
+  if (!res.ok) return throwResponseError(res, 'Failed to delete category')
+}
+
+/**
+ * 頻出タグ一覧を取得する
+ * @param limit - 上限件数（デフォルト 50）
+ * @returns タグアイテムの配列
+ */
+export async function fetchTags(limit = 50): Promise<TagItem[]> {
+  const res = await fetch(`${BASE}/tags?limit=${limit}`)
+  if (!res.ok) return throwResponseError(res, 'Failed to fetch tags')
+  return res.json() as Promise<TagItem[]>
 }

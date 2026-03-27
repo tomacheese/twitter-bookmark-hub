@@ -299,3 +299,67 @@ export function getLatestCrawlJob(
     .get() as Record<string, unknown> | undefined
   return row ?? null
 }
+
+/**
+ * タグ名を upsert し、ツイートとタグの関連を保存する。
+ * 既存の関連は削除してから再挿入する。
+ *
+ * @param db Database インスタンス
+ * @param tweetId ツイート ID
+ * @param tagNames タグ名（名詞）の配列
+ */
+export function upsertTweetTags(
+  db: Database.Database,
+  tweetId: string,
+  tagNames: string[]
+): void {
+  if (tagNames.length === 0) return
+
+  // タグ名を upsert して ID を取得する
+  const upsertTag = db.prepare(
+    'INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET name = excluded.name RETURNING id'
+  )
+
+  // 既存の関連を削除する
+  db.prepare('DELETE FROM tweet_tags WHERE tweet_id = ?').run(tweetId)
+
+  const insertTweetTag = db.prepare(
+    'INSERT OR IGNORE INTO tweet_tags (tweet_id, tag_id) VALUES (?, ?)'
+  )
+
+  db.transaction(() => {
+    for (const name of tagNames) {
+      const row = upsertTag.get(name) as { id: number } | undefined
+      if (row) {
+        insertTweetTag.run(tweetId, row.id)
+      }
+    }
+  })()
+}
+
+/**
+ * ツイートとカテゴリの関連を保存する。
+ * 既存の関連は削除してから再挿入する。
+ *
+ * @param db Database インスタンス
+ * @param tweetId ツイート ID
+ * @param categories カテゴリ ID と信頼度スコアの配列
+ */
+export function upsertTweetCategories(
+  db: Database.Database,
+  tweetId: string,
+  categories: { id: number; confidence: number }[]
+): void {
+  db.prepare('DELETE FROM tweet_categories WHERE tweet_id = ?').run(tweetId)
+  if (categories.length === 0) return
+
+  const insertTweetCategory = db.prepare(
+    'INSERT OR IGNORE INTO tweet_categories (tweet_id, category_id, confidence) VALUES (?, ?, ?)'
+  )
+
+  db.transaction(() => {
+    for (const cat of categories) {
+      insertTweetCategory.run(tweetId, cat.id, cat.confidence)
+    }
+  })()
+}
