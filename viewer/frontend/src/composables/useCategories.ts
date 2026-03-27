@@ -8,15 +8,17 @@ import {
 } from '../api'
 import type { CategoryItem, TagItem } from '../api'
 
+// モジュールスコープの状態（シングルトン）
+// App と Settings/CategoryManager で同じインスタンスを共有する
+const categories = ref<CategoryItem[]>([])
+const tags = ref<TagItem[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
+
 /**
  * カテゴリ一覧の取得・作成・更新・削除を管理する composable
  */
 export function useCategories() {
-  const categories = ref<CategoryItem[]>([])
-  const tags = ref<TagItem[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-
   /** カテゴリ一覧を取得する */
   async function loadCategories() {
     loading.value = true

@@ -34,12 +34,30 @@ export function categoriesRoute(db: Database.Database): Hono {
 
     const name = body.name.trim();
     const color = typeof body.color === "string" ? body.color : "#6B7280";
-    const keywords = Array.isArray(body.keywords) ? body.keywords : [];
+    // string のみ抽出し、trim・空文字除外・重複排除を行う
+    const keywords = [
+      ...new Set(
+        (Array.isArray(body.keywords) ? body.keywords : [])
+          .filter((kw): kw is string => typeof kw === "string")
+          .map((kw) => kw.trim())
+          .filter((kw) => kw.length > 0),
+      ),
+    ];
 
-    const id = createCategory(db, name, color, keywords);
-    const categories = getCategories(db);
-    const created = categories.find((cat) => cat.id === id);
-    return c.json(created, 201);
+    try {
+      const id = createCategory(db, name, color, keywords);
+      const categories = getCategories(db);
+      const created = categories.find((cat) => cat.id === id);
+      return c.json(created, 201);
+    } catch (error_) {
+      if (
+        error_ instanceof Error &&
+        error_.message.includes("UNIQUE constraint failed")
+      ) {
+        return c.json({ error: "Category name already exists" }, 409);
+      }
+      throw error_;
+    }
   });
 
   /** PUT /categories/:id - カテゴリを更新する */
@@ -61,9 +79,27 @@ export function categoriesRoute(db: Database.Database): Hono {
 
     const name = body.name.trim();
     const color = typeof body.color === "string" ? body.color : "#6B7280";
-    const keywords = Array.isArray(body.keywords) ? body.keywords : [];
+    // string のみ抽出し、trim・空文字除外・重複排除を行う
+    const keywords = [
+      ...new Set(
+        (Array.isArray(body.keywords) ? body.keywords : [])
+          .filter((kw): kw is string => typeof kw === "string")
+          .map((kw) => kw.trim())
+          .filter((kw) => kw.length > 0),
+      ),
+    ];
 
-    updateCategory(db, id, name, color, keywords);
+    try {
+      updateCategory(db, id, name, color, keywords);
+    } catch (error_) {
+      if (
+        error_ instanceof Error &&
+        error_.message.includes("UNIQUE constraint failed")
+      ) {
+        return c.json({ error: "Category name already exists" }, 409);
+      }
+      throw error_;
+    }
     const categories = getCategories(db);
     const updated = categories.find((cat) => cat.id === id);
     if (!updated) {

@@ -313,8 +313,6 @@ export function upsertTweetTags(
   tweetId: string,
   tagNames: string[]
 ): void {
-  if (tagNames.length === 0) return
-
   // タグ名を upsert して ID を取得する
   const upsertTag = db.prepare(
     'INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET name = excluded.name RETURNING id'
@@ -329,6 +327,7 @@ export function upsertTweetTags(
   )
 
   // 削除と挿入をトランザクション内で原子的に実行する
+  // tagNames が空配列の場合も既存タグを削除して関連をリセットする
   db.transaction(() => {
     deleteTweetTags.run(tweetId)
     for (const name of tagNames) {

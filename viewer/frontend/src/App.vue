@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useBookmarks } from './composables/useBookmarks'
 import { useAccounts } from './composables/useAccounts'
 import { useFeatures } from './composables/useFeatures'
@@ -31,19 +31,16 @@ const { accounts } = useAccounts()
 const { analyzerEnabled } = useFeatures()
 const { categories, loadCategories } = useCategories()
 
-/** analyzer が有効になったらカテゴリを取得する（初回のみ） */
-const analyzerWatched = ref(false)
-onMounted(() => {
-  const interval = setInterval(() => {
-    if (analyzerEnabled.value && !analyzerWatched.value) {
-      analyzerWatched.value = true
+/** analyzer が有効になったらカテゴリを取得する（初回のみ、unmount 時に自動解除） */
+watch(
+  analyzerEnabled,
+  (enabled) => {
+    if (enabled) {
       loadCategories().catch(() => {})
-      clearInterval(interval)
     }
-  }, 100)
-  // 5 秒後にタイムアウト
-  setTimeout(() => clearInterval(interval), 5000)
-})
+  },
+  { immediate: true }
+)
 
 /** サイドバーの開閉状態（初期は閉じた状態） */
 const sidebarOpen = ref(false)
@@ -131,8 +128,8 @@ function onCategoryChange(categoryId: number | null) {
       </div>
     </header>
 
-    <!-- 設定ページ -->
-    <Settings v-if="currentView === 'settings'" />
+    <!-- 設定ページ（analyzer 有効時のみ表示） -->
+    <Settings v-if="currentView === 'settings' && analyzerEnabled" />
 
     <!-- メインページ -->
     <div v-else class="layout">

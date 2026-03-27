@@ -145,6 +145,8 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
           const tweets = response.data.data
           let addedThisPage = 0
+          // ページ内の analyzer 呼び出しをまとめて並列実行する
+          const analyzePromises: Promise<void>[] = []
 
           for (const tweetResult of tweets) {
             // プロモーション (広告) ツイートは除外
@@ -161,12 +163,17 @@ export async function runCrawl(db: Database.Database): Promise<void> {
                 crawledAt,
                 globalPosition
               )
-              // ANALYZER_URL が設定されている場合は analyzer に分析を依頼する
-              await analyzeAndSave(db, entry.tweetId, entry.fullText)
+              // ANALYZER_URL が設定されている場合は analyzer に分析を依頼する（並列）
+              analyzePromises.push(
+                analyzeAndSave(db, entry.tweetId, entry.fullText)
+              )
               globalPosition++
               addedThisPage++
             }
           }
+
+          // ページ内の全ツイートの分析を並列で待つ
+          await Promise.all(analyzePromises)
 
           totalForAccount += addedThisPage
           logger.info(
