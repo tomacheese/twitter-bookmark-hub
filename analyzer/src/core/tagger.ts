@@ -63,7 +63,7 @@ const EXTRA_NOISE_BLOCKLIST = new Set([
  * - 代名詞（誰か 等）→ 文脈によっては pos_detail_1='一般' に分類されるため JAPANESE_GENERIC_NOUNS で対処
  * - サ変接続語で「〜する/なる」型の行為語（確認・利用・参考 等）→ isUsedAsVerbalNoun() で対処
  * - `〜的に` 副詞形（個人・基本・定期 等）→ isUsedAsAdverbialTeki() で対処
- * - 形式名詞（おかげ・とこ 等）→ isUsedAsFormalNoun() で対処
+ * - ひらがな表記の形式名詞（おかげ・とこ・ゆえ 等）→ extractNouns() のひらがな + isUsedAsFormalNoun() で対処
  * - カタカナ断片（ワーク・フロー等）→ mergeConsecutiveKatakanaTokens() で再結合済み
  * - 2 文字・非全大文字 ASCII（wi・fi・ac・io 等）→ extractNouns() の長さフィルタで対処
  * ─────────────────────────────────────────────────────────────────────
@@ -103,16 +103,6 @@ const JAPANESE_GENERIC_NOUNS = new Set([
   // --- 3. 修辞的・非トピック語 ---
   '人類', // "全人類やりましょう" 型の修辞的用法
   '人間', // 修辞的・哲学的汎用語
-])
-
-/**
- * 形式名詞として使われる語のセット。
- * これらは単独では意味を持たず、直前の動詞・助動詞・「の」と文法的に結びついて使われる。
- * isUsedAsFormalNoun() と組み合わせてコンテキストベースで除外する。
- */
-const FORMAL_NOUNS = new Set([
-  'おかげ', // 「〜のおかげで」「〜できたおかげ」型：恩恵の依存関係を表す形式名詞
-  'とこ', // 「〜したとこ」「〜してるとこ」型：ところ の口語形（形式名詞的用法）
 ])
 
 /**
@@ -533,9 +523,11 @@ export function extractNouns(
     // （"個人的に", "基本的に", "定期的に", "効率的に" 等）
     if (isUsedAsAdverbialTeki(tokens, i)) continue
 
-    // 形式名詞（おかげ・とこ 等）が文法的用法で使われている場合は除外
-    // 直前が動詞・助動詞・助詞「の」のいずれかである場合に除外する
-    if (FORMAL_NOUNS.has(word) && isUsedAsFormalNoun(tokens, i)) continue
+    // ひらがな表記の名詞が動詞・助動詞・助詞「の」に後続する場合は形式名詞と見なして除外。
+    // 日本語の内容語は漢字・カタカナ表記が基本のため、ひらがな名詞が後続位置に来た場合は
+    // おかげ・とこ・ゆえ・せい 等の文法的機能語（形式名詞）である可能性が高い。
+    if (/^[\u3040-\u309F]+$/.test(word) && isUsedAsFormalNoun(tokens, i))
+      continue
 
     // アルゴリズムで除去できない代名詞・スラング・断片等を除外
     if (JAPANESE_GENERIC_NOUNS.has(word)) continue
