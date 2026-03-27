@@ -49,14 +49,14 @@ export function categoriesRoute(db: Database.Database): Hono {
       const categories = getCategories(db)
       const created = categories.find((cat) => cat.id === id)
       return c.json(created, 201)
-    } catch (error_) {
+    } catch (error) {
       if (
-        error_ instanceof Error &&
-        error_.message.includes('UNIQUE constraint failed')
+        error instanceof Error &&
+        error.message.includes('UNIQUE constraint failed')
       ) {
         return c.json({ error: 'Category name already exists' }, 409)
       }
-      throw error_
+      throw error
     }
   })
 
@@ -91,14 +91,14 @@ export function categoriesRoute(db: Database.Database): Hono {
 
     try {
       updateCategory(db, id, name, color, keywords)
-    } catch (error_) {
+    } catch (error) {
       if (
-        error_ instanceof Error &&
-        error_.message.includes('UNIQUE constraint failed')
+        error instanceof Error &&
+        error.message.includes('UNIQUE constraint failed')
       ) {
         return c.json({ error: 'Category name already exists' }, 409)
       }
-      throw error_
+      throw error
     }
     const categories = getCategories(db)
     const updated = categories.find((cat) => cat.id === id)

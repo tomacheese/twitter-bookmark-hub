@@ -51,8 +51,9 @@ const EXTRA_NOISE_BLOCKLIST = new Set([
  *    （例: 自分 → 名詞/一般、ガチ → 名詞/固有名詞）
  *
  * 2. **サ変接続語のうちコンテキスト検出が効かないもの**: isUsedAsVerbalNoun() は
- *    「直後に する/できる/させる」パターンしか検出できない。助詞を介した
- *    「〜に参考する」「〜との関係」型は false negative になる語
+ *    「直後に する系動詞」と「〜に + なる/する」の 2 パターンを検出するが、
+ *    格助詞「が/を/との」を介した用法（「〜との関係」「反応が来た」等）は
+ *    false negative になる語
  *
  * 3. **意味不明スラング・記号**: 特定の SNS 文化依存語で上記以外に分類できないもの
  *
@@ -145,10 +146,11 @@ export function initTokenizer(): Promise<KuromojiTokenizer> {
 }
 
 /**
- * kuromoji が空白を記号トークンとして出力するかどうかを判定する。
+ * トークンが kuromoji の記号/空白トークン（pos='記号'、pos_detail_1='空白'）かどうかを判定する。
+ * kuromoji は単語間の空白を独立した記号/空白トークンとして出力する。
  *
  * @param token - kuromoji トークン
- * @returns 空白トークンなら true
+ * @returns 記号/空白トークンなら true
  */
 function isSpaceToken(token: KuromojiToken): boolean {
   return token.pos === '記号' && token.pos_detail_1 === '空白'

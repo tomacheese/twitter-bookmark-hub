@@ -615,7 +615,7 @@ const twitterAppUrl = computed(
           :style="{ borderColor: cat.color, color: cat.color }">
           {{ cat.name }}
         </span>
-        <!-- タグピル: クリックでタグフィルタを適用する -->
+        <!-- タグバッジ: クリックでタグフィルタを適用する -->
         <button
           v-for="tag in item.tags"
           :key="tag"
@@ -1129,7 +1129,7 @@ const twitterAppUrl = computed(
   white-space: nowrap;
 }
 
-/* タグピル: グレー背景・クリック可能 */
+/* タグバッジ: グレー背景・クリック可能 */
 .label-tag {
   display: inline-block;
   padding: 2px 8px;
