@@ -234,7 +234,14 @@ export function extractNouns(
 ): string[] {
   // URL（https?://... の形式）を除去してから形態素解析する
   // t.co のような短縮 URL のパス部分がノイズトークンになるのを防ぐ
-  const cleanedText = text.replaceAll(/https?:\/\/\S+/g, '')
+  // HTML エンティティ（&gt; &lt; &amp; 等）もデコードしてから解析する
+  const cleanedText = text
+    .replaceAll(/https?:\/\/\S+/g, '')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'")
   const tokens = mergeConsecutiveEnglishTokens(tokenizer.tokenize(cleanedText))
 
   // 候補語の出現情報（最初の出現インデックスと出現回数）を収集する
