@@ -598,6 +598,24 @@ const twitterAppUrl = computed(
         </div>
       </div>
 
+      <!-- タグ・カテゴリ -->
+      <div
+        v-if="item.categories.length > 0 || item.tags.length > 0"
+        class="tweet-labels">
+        <!-- カテゴリバッジ -->
+        <span
+          v-for="cat in item.categories"
+          :key="cat.id"
+          class="label-category"
+          :style="{ borderColor: cat.color, color: cat.color }">
+          {{ cat.name }}
+        </span>
+        <!-- タグピル -->
+        <span v-for="tag in item.tags" :key="tag" class="label-tag">
+          {{ tag }}
+        </span>
+      </div>
+
       <!-- フッター: ブックマーク済みアカウント -->
       <div class="tweet-footer">
         <div class="bookmarked-by">
@@ -1077,6 +1095,40 @@ const twitterAppUrl = computed(
 .quoted-media .media-image,
 .quoted-media .media-video {
   max-height: 200px;
+}
+
+/* ============================================================
+   タグ・カテゴリ
+   ============================================================ */
+.tweet-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* カテゴリバッジ: カテゴリカラーのボーダー付き */
+.label-category {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* タグピル: グレー背景 */
+.label-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
 }
 
 /* ============================================================

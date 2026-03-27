@@ -73,6 +73,9 @@ async function analyzeAndSave(
 /** ブックマーク取得の 1 ページあたり件数 */
 const BOOKMARKS_PER_PAGE = 100
 
+/** ページ内の analyzer 呼び出しの最大同時実行数（過負荷防止） */
+const ANALYZER_CONCURRENCY = 10
+
 /** 1 回のクロールで取得するページ数の上限（API 異常時の無限ループ防止） */
 const MAX_PAGES = 500
 
@@ -146,7 +149,8 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           const tweets = response.data.data
           let addedThisPage = 0
           // ページ内の analyzer 呼び出しをまとめて並列実行する
-          const analyzePromises: Promise<void>[] = []
+          // ANALYZER_URL が設定されている場合は analyze 対象を収集する（thunk にして後から制限付き並列実行）
+          const analyzeQueue: (() => Promise<void>)[] = []
 
           for (const tweetResult of tweets) {
             // プロモーション (広告) ツイートは除外
@@ -163,17 +167,21 @@ export async function runCrawl(db: Database.Database): Promise<void> {
                 crawledAt,
                 globalPosition
               )
-              // ANALYZER_URL が設定されている場合は analyzer に分析を依頼する（並列）
-              analyzePromises.push(
-                analyzeAndSave(db, entry.tweetId, entry.fullText)
-              )
+              // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
+              const tweetId = entry.tweetId
+              const fullText = entry.fullText
+              analyzeQueue.push(() => analyzeAndSave(db, tweetId, fullText))
               globalPosition++
               addedThisPage++
             }
           }
 
-          // ページ内の全ツイートの分析を並列で待つ
-          await Promise.all(analyzePromises)
+          // ページ内の全ツイートの分析を並列で待つ（同時実行数を ANALYZER_CONCURRENCY に制限）
+          for (let i = 0; i < analyzeQueue.length; i += ANALYZER_CONCURRENCY) {
+            await Promise.all(
+              analyzeQueue.slice(i, i + ANALYZER_CONCURRENCY).map((fn) => fn())
+            )
+          }
 
           totalForAccount += addedThisPage
           logger.info(

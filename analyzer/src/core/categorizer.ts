@@ -3,9 +3,9 @@
  */
 export interface CategoryMatch {
   /** カテゴリ ID */
-  id: number;
+  id: number
   /** 信頼度スコア（0.0〜1.0） */
-  confidence: number;
+  confidence: number
 }
 
 /**
@@ -18,28 +18,28 @@ export interface CategoryMatch {
  */
 export function matchCategories(
   tags: string[],
-  categories: { id: number; keywords: string[] }[],
+  categories: { id: number; keywords: string[] }[]
 ): CategoryMatch[] {
-  if (tags.length === 0 || categories.length === 0) return [];
+  if (tags.length === 0 || categories.length === 0) return []
 
-  const tagSet = new Set(tags.map((t) => t.toLowerCase()));
-  const matches: CategoryMatch[] = [];
+  const tagSet = new Set(tags.map((t) => t.toLowerCase()))
+  const matches: CategoryMatch[] = []
 
   for (const category of categories) {
-    if (category.keywords.length === 0) continue;
+    if (category.keywords.length === 0) continue
 
     const matchedCount = category.keywords.filter((kw) =>
-      tagSet.has(kw.toLowerCase()),
-    ).length;
+      tagSet.has(kw.toLowerCase())
+    ).length
 
-    if (matchedCount === 0) continue;
+    if (matchedCount === 0) continue
 
     const confidence = Math.min(
       1,
-      Math.max(0.1, matchedCount / category.keywords.length),
-    );
-    matches.push({ id: category.id, confidence });
+      Math.max(0.1, matchedCount / category.keywords.length)
+    )
+    matches.push({ id: category.id, confidence })
   }
 
-  return matches.toSorted((a, b) => b.confidence - a.confidence);
+  return matches.toSorted((a, b) => b.confidence - a.confidence)
 }

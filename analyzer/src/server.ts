@@ -1,9 +1,9 @@
-import { Hono } from "hono";
-import type Database from "better-sqlite3";
-import type { KuromojiTokenizer } from "./core/tagger";
-import { analyzeRoute } from "./routes/analyze";
-import { categoriesRoute } from "./routes/categories";
-import { tagsRoute } from "./routes/tags";
+import { Hono } from 'hono'
+import type Database from 'better-sqlite3'
+import type { KuromojiTokenizer } from './core/tagger'
+import { analyzeRoute } from './routes/analyze'
+import { categoriesRoute } from './routes/categories'
+import { tagsRoute } from './routes/tags'
 
 /**
  * Hono サーバーを作成する
@@ -13,17 +13,17 @@ import { tagsRoute } from "./routes/tags";
  */
 export function createServer(
   db: Database.Database,
-  tokenizer: KuromojiTokenizer,
+  tokenizer: KuromojiTokenizer
 ): Hono {
-  const app = new Hono();
+  const app = new Hono()
 
-  app.route("/", analyzeRoute(db, tokenizer));
-  app.route("/", categoriesRoute(db));
-  app.route("/", tagsRoute(db));
+  app.route('/', analyzeRoute(db, tokenizer))
+  app.route('/', categoriesRoute(db))
+  app.route('/', tagsRoute(db))
 
-  app.get("/health", (c) =>
-    c.json({ status: "ok", timestamp: new Date().toISOString() }),
-  );
+  app.get('/health', (c) =>
+    c.json({ status: 'ok', timestamp: new Date().toISOString() })
+  )
 
-  return app;
+  return app
 }

@@ -50,8 +50,13 @@ export function useCategories() {
     color: string
     keywords: string[]
   }): Promise<void> {
-    await apiCreateCategory(data)
-    await loadCategories()
+    error.value = null
+    try {
+      await apiCreateCategory(data)
+      await loadCategories()
+    } catch (error_) {
+      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    }
   }
 
   /**
@@ -63,8 +68,13 @@ export function useCategories() {
     id: number,
     data: { name: string; color: string; keywords: string[] }
   ): Promise<void> {
-    await apiUpdateCategory(id, data)
-    await loadCategories()
+    error.value = null
+    try {
+      await apiUpdateCategory(id, data)
+      await loadCategories()
+    } catch (error_) {
+      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    }
   }
 
   /**
@@ -72,8 +82,13 @@ export function useCategories() {
    * @param id - カテゴリ ID
    */
   async function removeCategory(id: number): Promise<void> {
-    await apiDeleteCategory(id)
-    await loadCategories()
+    error.value = null
+    try {
+      await apiDeleteCategory(id)
+      await loadCategories()
+    } catch (error_) {
+      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    }
   }
 
   return {

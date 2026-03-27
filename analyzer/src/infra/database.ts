@@ -1,6 +1,6 @@
-import Database from "better-sqlite3";
-import { SCHEMA_DDL } from "@twitter-bookmark-hub/shared";
-import type { CategoryItem, TagItem } from "@twitter-bookmark-hub/shared";
+import Database from 'better-sqlite3'
+import { SCHEMA_DDL } from '@twitter-bookmark-hub/shared'
+import type { CategoryItem, TagItem } from '@twitter-bookmark-hub/shared'
 
 /**
  * データベースを開く。
@@ -10,12 +10,12 @@ import type { CategoryItem, TagItem } from "@twitter-bookmark-hub/shared";
  * @returns Database インスタンス
  */
 export function openDatabase(dbPath: string): Database.Database {
-  const db = new Database(dbPath);
-  db.pragma("journal_mode=WAL");
-  db.pragma("busy_timeout=5000");
-  db.pragma("foreign_keys=ON");
-  db.exec(SCHEMA_DDL);
-  return db;
+  const db = new Database(dbPath)
+  db.pragma('journal_mode=WAL')
+  db.pragma('busy_timeout=5000')
+  db.pragma('foreign_keys=ON')
+  db.exec(SCHEMA_DDL)
+  return db
 }
 
 /**
@@ -40,16 +40,16 @@ export function getCategories(db: Database.Database): CategoryItem[] {
       LEFT JOIN tweet_categories tc ON c.id = tc.category_id
       GROUP BY c.id
       ORDER BY c.id
-      `,
+      `
     )
     .all() as {
-    id: number;
-    name: string;
-    color: string;
-    keywords: string;
-    created_at: string;
-    bookmark_count: number;
-  }[];
+    id: number
+    name: string
+    color: string
+    keywords: string
+    created_at: string
+    bookmark_count: number
+  }[]
 
   return rows.map((row) => ({
     id: row.id,
@@ -58,7 +58,7 @@ export function getCategories(db: Database.Database): CategoryItem[] {
     keywords: JSON.parse(row.keywords) as string[],
     createdAt: row.created_at,
     bookmarkCount: row.bookmark_count,
-  }));
+  }))
 }
 
 /**
@@ -74,12 +74,12 @@ export function createCategory(
   db: Database.Database,
   name: string,
   color: string,
-  keywords: string[],
+  keywords: string[]
 ): number {
   const result = db
-    .prepare("INSERT INTO categories (name, color, keywords) VALUES (?, ?, ?)")
-    .run(name, color, JSON.stringify(keywords));
-  return Number(result.lastInsertRowid);
+    .prepare('INSERT INTO categories (name, color, keywords) VALUES (?, ?, ?)')
+    .run(name, color, JSON.stringify(keywords))
+  return Number(result.lastInsertRowid)
 }
 
 /**
@@ -96,11 +96,11 @@ export function updateCategory(
   id: number,
   name: string,
   color: string,
-  keywords: string[],
+  keywords: string[]
 ): void {
   db.prepare(
-    "UPDATE categories SET name = ?, color = ?, keywords = ? WHERE id = ?",
-  ).run(name, color, JSON.stringify(keywords), id);
+    'UPDATE categories SET name = ?, color = ?, keywords = ? WHERE id = ?'
+  ).run(name, color, JSON.stringify(keywords), id)
 }
 
 /**
@@ -110,7 +110,7 @@ export function updateCategory(
  * @param id - カテゴリ ID
  */
 export function deleteCategory(db: Database.Database, id: number): void {
-  db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+  db.prepare('DELETE FROM categories WHERE id = ?').run(id)
 }
 
 /**
@@ -120,17 +120,17 @@ export function deleteCategory(db: Database.Database, id: number): void {
  * @returns id と keywords の配列
  */
 export function getCategoryKeywords(
-  db: Database.Database,
+  db: Database.Database
 ): { id: number; keywords: string[] }[] {
-  const rows = db.prepare("SELECT id, keywords FROM categories").all() as {
-    id: number;
-    keywords: string;
-  }[];
+  const rows = db.prepare('SELECT id, keywords FROM categories').all() as {
+    id: number
+    keywords: string
+  }[]
 
   return rows.map((row) => ({
     id: row.id,
     keywords: JSON.parse(row.keywords) as string[],
-  }));
+  }))
 }
 
 /**
@@ -150,13 +150,13 @@ export function getTopTags(db: Database.Database, limit: number): TagItem[] {
       GROUP BY t.id
       ORDER BY count DESC
       LIMIT ?
-      `,
+      `
     )
-    .all(limit) as { id: number; name: string; count: number }[];
+    .all(limit) as { id: number; name: string; count: number }[]
 
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
     count: row.count,
-  }));
+  }))
 }

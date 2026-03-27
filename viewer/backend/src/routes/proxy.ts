@@ -16,7 +16,10 @@ const proxyHandler = async (c: Context) => {
 
   // /api/categories → /categories のようにプレフィックスを除去する
   const path = c.req.path.replace(/^\/api/, '')
-  const url = `${analyzerUrl}${path}${c.req.url.includes('?') ? '?' + new URL(c.req.url).searchParams.toString() : ''}`
+  const search = c.req.url.includes('?')
+    ? `?${new URL(c.req.url).searchParams.toString()}`
+    : ''
+  const url = `${analyzerUrl}${path}${search}`
 
   const init: RequestInit = {
     method: c.req.method,

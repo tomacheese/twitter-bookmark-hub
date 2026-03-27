@@ -89,6 +89,17 @@ export interface BookmarkItem {
   cardPlayerUrl: string | null
   /** リンクカード情報（OGP 相当） */
   cardInfo: CardInfo | null
+  /** analyzer が付与したタグ一覧（analyzer が無効の場合は空配列） */
+  tags: string[]
+  /** analyzer が付与したカテゴリ一覧（analyzer が無効の場合は空配列） */
+  categories: Array<{
+    /** カテゴリ ID */
+    id: number
+    /** カテゴリ名 */
+    name: string
+    /** UI 表示用カラーコード */
+    color: string
+  }>
 }
 
 /** ブックマーク一覧 API のレスポンス */

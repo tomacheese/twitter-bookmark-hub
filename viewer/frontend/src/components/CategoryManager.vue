@@ -85,10 +85,13 @@ async function handleCreate() {
     color: newColor.value,
     keywords: newKeywords.value,
   })
-  newName.value = ''
-  newColor.value = '#3B82F6'
-  newKeywords.value = []
-  showCreateForm.value = false
+  // エラーがなければフォームをリセットして閉じる
+  if (!error.value) {
+    newName.value = ''
+    newColor.value = '#3B82F6'
+    newKeywords.value = []
+    showCreateForm.value = false
+  }
 }
 
 /**
@@ -115,7 +118,10 @@ async function handleUpdate() {
     color: editColor.value,
     keywords: editKeywords.value,
   })
-  editingId.value = null
+  // エラーがなければ編集モードを終了する
+  if (!error.value) {
+    editingId.value = null
+  }
 }
 
 /**
