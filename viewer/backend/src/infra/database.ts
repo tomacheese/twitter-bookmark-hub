@@ -23,6 +23,10 @@ interface GetBookmarksParams {
   sortBy?: 'bookmarked_at' | 'created_at'
   /** ソート順 (desc: 新しい順 / asc: 古い順) */
   sort?: 'asc' | 'desc'
+  /** カテゴリ ID でフィルタ */
+  categoryId?: number
+  /** タグ名でフィルタ（完全一致） */
+  tag?: string
 }
 
 /** ブックマーク取得結果 */
@@ -95,6 +99,75 @@ function parseUrlEntities(raw: string | null): UrlEntity[] {
 }
 
 /**
+ * DB から取得した JSON 文字列をタグ名の配列にパースする。
+ *
+ * @param raw - DB から取得した JSON 文字列または null
+ * @returns タグ名の配列
+ */
+function parseTags(raw: string | null): string[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown[]
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((item): item is string => typeof item === 'string')
+  } catch {
+    return []
+  }
+}
+
+/**
+ * DB から取得した JSON 文字列をカテゴリ情報の配列にパースする。
+ *
+ * @param raw - DB から取得した JSON 文字列または null
+ * @returns カテゴリ情報の配列
+ */
+function parseCategories(
+  raw: string | null
+): { id: number; name: string; color: string }[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown[]
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(
+      (item): item is { id: number; name: string; color: string } =>
+        item !== null &&
+        typeof item === 'object' &&
+        'id' in item &&
+        'name' in item &&
+        'color' in item
+    )
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 指定テーブルが SQLite に存在するかどうかを確認する。
+ * analyzer がオプショナルなため、タグ・カテゴリテーブルが存在しない場合がある。
+ *
+ * @param db - Database インスタンス
+ * @param tableName - テーブル名
+ * @returns テーブルが存在すれば true
+ */
+function tableExists(db: Database.Database, tableName: string): boolean {
+  const row = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+    .get(tableName)
+  return row !== undefined
+}
+
+/**
+ * tweet_categories テーブルが存在するかどうかを確認する。
+ * analyzer がオプショナルなため、テーブルが存在しない場合がある。
+ *
+ * @param db - Database インスタンス
+ * @returns テーブルが存在すれば true
+ */
+export function hasCategoriesTable(db: Database.Database): boolean {
+  return tableExists(db, 'tweet_categories')
+}
+
+/**
  * ブックマーク一覧を取得する
  * @param db - Database インスタンス
  * @param params - 取得パラメータ
@@ -112,6 +185,13 @@ export function getBookmarks(
     sort = 'desc',
     sortBy = 'bookmarked_at',
   } = params
+
+  // tweet_tags / tweet_categories テーブルが存在しない場合はサブクエリを省略する
+  const tagsTableExists = tableExists(db, 'tweet_tags')
+  const categoriesTableExists = hasCategoriesTable(db)
+  const effectiveCategoryId = categoriesTableExists
+    ? params.categoryId
+    : undefined
 
   // ソートキーと方向を決定する（SQL インジェクション防止のためホワイトリスト方式）
   //
@@ -147,6 +227,18 @@ export function getBookmarks(
       'EXISTS (SELECT 1 FROM bookmarks b2 WHERE b2.tweet_id = t.tweet_id AND b2.account_username = ?)'
     )
     bindValues.push(account)
+  }
+  if (effectiveCategoryId !== undefined) {
+    conditions.push(
+      'EXISTS (SELECT 1 FROM tweet_categories tc WHERE tc.tweet_id = t.tweet_id AND tc.category_id = ?)'
+    )
+    bindValues.push(effectiveCategoryId)
+  }
+  if (params.tag && tagsTableExists) {
+    conditions.push(
+      'EXISTS (SELECT 1 FROM tweet_tags tt JOIN tags tg ON tt.tag_id = tg.id WHERE tt.tweet_id = t.tweet_id AND tg.name = ?)'
+    )
+    bindValues.push(params.tag)
   }
 
   const whereClause =
@@ -226,7 +318,27 @@ export function getBookmarks(
         ))
         FROM url_entities ue
         WHERE ue.tweet_id = t.quoted_tweet_id
-      ) AS qt_url_entities
+      ) AS qt_url_entities${
+        tagsTableExists
+          ? `,
+      (
+        SELECT json_group_array(tg.name)
+        FROM tweet_tags tt
+        JOIN tags tg ON tt.tag_id = tg.id
+        WHERE tt.tweet_id = t.tweet_id
+      ) AS tweet_tags_json`
+          : ''
+      }${
+        categoriesTableExists
+          ? `,
+      (
+        SELECT json_group_array(json_object('id', c.id, 'name', c.name, 'color', c.color))
+        FROM tweet_categories tc
+        JOIN categories c ON tc.category_id = c.id
+        WHERE tc.tweet_id = t.tweet_id
+      ) AS tweet_categories_json`
+          : ''
+      }
     FROM tweets t
     INNER JOIN users u ON t.user_id = u.user_id
     INNER JOIN bookmarks b ON t.tweet_id = b.tweet_id
@@ -265,6 +377,8 @@ export function getBookmarks(
     qt_profile_image_url: string | null
     qt_media_items: string | null
     qt_url_entities: string | null
+    tweet_tags_json?: string | null
+    tweet_categories_json?: string | null
   }[]
 
   const items: BookmarkItem[] = rows.map((row) => {
@@ -319,6 +433,8 @@ export function getBookmarks(
       quotedTweet,
       cardPlayerUrl,
       cardInfo,
+      tags: parseTags(row.tweet_tags_json ?? null),
+      categories: parseCategories(row.tweet_categories_json ?? null),
     }
   })
 

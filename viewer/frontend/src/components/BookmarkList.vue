@@ -22,6 +22,8 @@ const emit = defineEmits<{
   next: []
   /** 前のページへ */
   prev: []
+  /** タグがクリックされた */
+  'tag-click': [tag: string]
 }>()
 </script>
 
@@ -40,7 +42,11 @@ const emit = defineEmits<{
 
     <!-- カード一覧 -->
     <template v-else>
-      <BookmarkCard v-for="item in items" :key="item.tweetId" :item="item" />
+      <BookmarkCard
+        v-for="item in items"
+        :key="item.tweetId"
+        :item="item"
+        @tag-click="(tag) => emit('tag-click', tag)" />
     </template>
 
     <!-- ページネーション -->

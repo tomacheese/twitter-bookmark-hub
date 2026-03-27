@@ -12,6 +12,11 @@ const properties = defineProps<{
   item: BookmarkItem
 }>()
 
+const emit = defineEmits<{
+  /** タグをクリックしたときに発火する */
+  'tag-click': [tag: string]
+}>()
+
 // ---- アバター ---------------------------------------------------------------
 
 /**
@@ -598,6 +603,29 @@ const twitterAppUrl = computed(
         </div>
       </div>
 
+      <!-- タグ・カテゴリ -->
+      <div
+        v-if="item.categories.length > 0 || item.tags.length > 0"
+        class="tweet-labels">
+        <!-- カテゴリバッジ -->
+        <span
+          v-for="cat in item.categories"
+          :key="cat.id"
+          class="label-category"
+          :style="{ borderColor: cat.color, color: cat.color }">
+          {{ cat.name }}
+        </span>
+        <!-- タグバッジ: クリックでタグフィルタを適用する -->
+        <button
+          v-for="tag in item.tags"
+          :key="tag"
+          class="label-tag"
+          :title="`「${tag}」で検索`"
+          @click.stop="emit('tag-click', tag)">
+          {{ tag }}
+        </button>
+      </div>
+
       <!-- フッター: ブックマーク済みアカウント -->
       <div class="tweet-footer">
         <div class="bookmarked-by">
@@ -1077,6 +1105,51 @@ const twitterAppUrl = computed(
 .quoted-media .media-image,
 .quoted-media .media-video {
   max-height: 200px;
+}
+
+/* ============================================================
+   タグ・カテゴリ
+   ============================================================ */
+.tweet-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* カテゴリバッジ: カテゴリカラーのボーダー付き */
+.label-category {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* タグバッジ: グレー背景・クリック可能 */
+.label-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: none;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.label-tag:hover {
+  background: rgba(29, 155, 240, 0.1);
+  color: var(--color-accent);
 }
 
 /* ============================================================

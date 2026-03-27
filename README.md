@@ -48,6 +48,19 @@ cp .env.example .env
 docker compose up -d
 ```
 
+### 4. Analyzer の有効化 (任意)
+
+analyzer は形態素解析によるタグ抽出とカテゴリ自動分類を行うオプション機能です。
+`analyzer` プロファイルを指定して起動します。
+
+```bash
+# .env に ANALYZER_URL を設定する
+echo "ANALYZER_URL=http://analyzer:3002" >> .env
+
+# analyzer プロファイルを有効にして起動
+docker compose --profile analyzer up -d
+```
+
 ## アクセス
 
 | サービス | URL |
@@ -66,12 +79,14 @@ docker compose up -d
 | `PROXY_SERVER` | - | プロキシサーバー |
 | `PROXY_USERNAME` | - | プロキシ認証ユーザー名 |
 | `PROXY_PASSWORD` | - | プロキシ認証パスワード |
+| `ANALYZER_URL` | - | analyzer サービスの URL（設定時にクロール後に自動分析を実行する） |
 
 ### viewer
 
 | 変数名 | デフォルト | 説明 |
 |--------|-----------|------|
 | `CRAWLER_URL` | `http://crawler:3001` | crawler サービスの URL |
+| `ANALYZER_URL` | - | analyzer サービスの URL（設定時に analyzer 機能が有効になる） |
 
 ## Crawler API
 

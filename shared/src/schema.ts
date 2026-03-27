@@ -73,4 +73,33 @@ export const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_url_entities_tweet_id  ON url_entities(tweet_id);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_account      ON bookmarks(account_username);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_last_seen    ON bookmarks(last_seen_at);
+
+  CREATE TABLE IF NOT EXISTS tags (
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT    NOT NULL UNIQUE
+  );
+
+  CREATE TABLE IF NOT EXISTS tweet_tags (
+    tweet_id TEXT    NOT NULL REFERENCES tweets(tweet_id) ON DELETE CASCADE,
+    tag_id   INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (tweet_id, tag_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS categories (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT    NOT NULL UNIQUE,
+    color      TEXT    NOT NULL DEFAULT '#6B7280',
+    keywords   TEXT    NOT NULL DEFAULT '[]',
+    created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS tweet_categories (
+    tweet_id    TEXT    NOT NULL REFERENCES tweets(tweet_id) ON DELETE CASCADE,
+    category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    confidence  REAL    NOT NULL DEFAULT 1.0,
+    PRIMARY KEY (tweet_id, category_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_tweet_tags_tag_id           ON tweet_tags(tag_id);
+  CREATE INDEX IF NOT EXISTS idx_tweet_categories_cat_id     ON tweet_categories(category_id);
 `

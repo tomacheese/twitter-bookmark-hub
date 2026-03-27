@@ -89,6 +89,17 @@ export interface BookmarkItem {
   cardPlayerUrl: string | null
   /** リンクカード情報（OGP 相当） */
   cardInfo: CardInfo | null
+  /** analyzer が付与したタグ一覧（analyzer が無効の場合は空配列） */
+  tags: string[]
+  /** analyzer が付与したカテゴリ一覧（analyzer が無効の場合は空配列） */
+  categories: Array<{
+    /** カテゴリ ID */
+    id: number
+    /** カテゴリ名 */
+    name: string
+    /** UI 表示用カラーコード */
+    color: string
+  }>
 }
 
 /** ブックマーク一覧 API のレスポンス */
@@ -109,6 +120,51 @@ export interface AccountInfo {
   username: string
   /** ブックマーク件数 */
   bookmarkCount: number
+}
+
+/** タグアイテム（形態素解析で抽出された名詞） */
+export interface TagItem {
+  /** タグ ID */
+  id: number
+  /** タグ名（抽出された名詞） */
+  name: string
+  /** このタグが付いたツイート数 */
+  count: number
+}
+
+/** カテゴリアイテム（ユーザー定義のカテゴリ） */
+export interface CategoryItem {
+  /** カテゴリ ID */
+  id: number
+  /** カテゴリ名 */
+  name: string
+  /** UI 表示用カラーコード */
+  color: string
+  /** マッチングキーワード一覧 */
+  keywords: string[]
+  /** 作成日時 (ISO 8601) */
+  createdAt: string
+  /** このカテゴリに属するブックマーク件数 */
+  bookmarkCount?: number
+}
+
+/** analyzer の POST /analyze レスポンス */
+export interface AnalyzeResponse {
+  /** 抽出されたタグ（名詞）一覧 */
+  tags: string[]
+  /** マッチしたカテゴリと信頼度スコア */
+  categories: Array<{
+    /** カテゴリ ID */
+    id: number
+    /** 信頼度スコア（0.0〜1.0） */
+    confidence: number
+  }>
+}
+
+/** 機能フラグ（analyzer の有効/無効など） */
+export interface FeaturesResponse {
+  /** analyzer サービスが有効かどうか */
+  analyzer: boolean
 }
 
 /** クロールジョブのステータス */

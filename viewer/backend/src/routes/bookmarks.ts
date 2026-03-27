@@ -31,7 +31,28 @@ export function bookmarksRoute(db: Database.Database): Hono {
     const sortBy: 'bookmarked_at' | 'created_at' =
       rawSortBy === 'created_at' ? 'created_at' : 'bookmarked_at'
 
-    const result = getBookmarks(db, { page, limit, q, account, sort, sortBy })
+    const rawCategory = c.req.query('category')
+    let categoryId: number | undefined
+    if (rawCategory !== undefined && rawCategory !== '') {
+      const parsedCategory = Number(rawCategory)
+      if (Number.isInteger(parsedCategory) && parsedCategory >= 1) {
+        categoryId = parsedCategory
+      }
+    }
+
+    const rawTag = c.req.query('tag')
+    const tag: string | undefined = rawTag === '' ? undefined : rawTag
+
+    const result = getBookmarks(db, {
+      page,
+      limit,
+      q,
+      account,
+      sort,
+      sortBy,
+      categoryId,
+      tag,
+    })
 
     const response: BookmarksResponse = {
       items: result.items,

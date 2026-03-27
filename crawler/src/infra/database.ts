@@ -299,3 +299,72 @@ export function getLatestCrawlJob(
     .get() as Record<string, unknown> | undefined
   return row ?? null
 }
+
+/**
+ * タグ名を upsert し、ツイートとタグの関連を保存する。
+ * 既存の関連の削除と新規挿入をトランザクション内で原子的に実行する。
+ *
+ * @param db Database インスタンス
+ * @param tweetId ツイート ID
+ * @param tagNames タグ名（名詞）の配列
+ */
+export function upsertTweetTags(
+  db: Database.Database,
+  tweetId: string,
+  tagNames: string[]
+): void {
+  // タグ名を upsert して ID を取得する
+  const upsertTag = db.prepare(
+    'INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET name = excluded.name RETURNING id'
+  )
+
+  const deleteTweetTags = db.prepare(
+    'DELETE FROM tweet_tags WHERE tweet_id = ?'
+  )
+
+  const insertTweetTag = db.prepare(
+    'INSERT OR IGNORE INTO tweet_tags (tweet_id, tag_id) VALUES (?, ?)'
+  )
+
+  // 削除と挿入をトランザクション内で原子的に実行する
+  // tagNames が空配列の場合も既存タグを削除して関連をリセットする
+  db.transaction(() => {
+    deleteTweetTags.run(tweetId)
+    for (const name of tagNames) {
+      const row = upsertTag.get(name) as { id: number } | undefined
+      if (row) {
+        insertTweetTag.run(tweetId, row.id)
+      }
+    }
+  })()
+}
+
+/**
+ * ツイートとカテゴリの関連を保存する。
+ * 既存の関連の削除と新規挿入をトランザクション内で原子的に実行する。
+ *
+ * @param db Database インスタンス
+ * @param tweetId ツイート ID
+ * @param categories カテゴリ ID と信頼度スコアの配列
+ */
+export function upsertTweetCategories(
+  db: Database.Database,
+  tweetId: string,
+  categories: { id: number; confidence: number }[]
+): void {
+  const deleteTweetCategories = db.prepare(
+    'DELETE FROM tweet_categories WHERE tweet_id = ?'
+  )
+
+  const insertTweetCategory = db.prepare(
+    'INSERT OR IGNORE INTO tweet_categories (tweet_id, category_id, confidence) VALUES (?, ?, ?)'
+  )
+
+  // 削除と挿入をトランザクション内で原子的に実行する
+  db.transaction(() => {
+    deleteTweetCategories.run(tweetId)
+    for (const cat of categories) {
+      insertTweetCategory.run(tweetId, cat.id, cat.confidence)
+    }
+  })()
+}

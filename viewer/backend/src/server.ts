@@ -4,6 +4,8 @@ import type Database from 'better-sqlite3'
 import { bookmarksRoute } from './routes/bookmarks'
 import { accountsRoute } from './routes/accounts'
 import { crawlRoute } from './routes/crawl'
+import { featuresRoute } from './routes/features'
+import { analyzerProxyRoute } from './routes/proxy'
 
 /**
  * Hono サーバーを作成する
@@ -23,6 +25,8 @@ export function createServer(db: Database.Database): Hono {
   app.route('/', bookmarksRoute(db))
   app.route('/', accountsRoute(db))
   app.route('/', crawlRoute(db))
+  app.route('/', featuresRoute())
+  app.route('/', analyzerProxyRoute())
 
   // 未マッチの /api/* リクエストは 404 を返し、SPA フォールバックに渡さない
   app.all('/api/*', (c) => c.notFound())

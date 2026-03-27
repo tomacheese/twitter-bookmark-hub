@@ -11,13 +11,108 @@ import {
   updateCrawlJob,
   upsertTweetEntry,
   upsertBookmark,
+  upsertTweetTags,
+  upsertTweetCategories,
 } from '../infra/database'
 import { Logger } from '@book000/node-utils'
 
 const logger = Logger.configure('crawler')
 
+/**
+ * クロール後に analyzer へ IDF ノイズプルーニングを依頼する。
+ * ANALYZER_URL が設定されていない場合は何もしない。
+ * プルーニングの失敗はログに記録するが、クロール全体は続行する。
+ *
+ * @param threshold IDF 閾値（デフォルト 0.1）
+ */
+async function pruneNoiseTagsViaAnalyzer(threshold = 0.1): Promise<void> {
+  const analyzerUrl = process.env.ANALYZER_URL
+  if (!analyzerUrl) return
+
+  try {
+    const response = await fetch(
+      `${analyzerUrl}/analyze/prune-noise?threshold=${threshold}`,
+      {
+        method: 'POST',
+        signal: AbortSignal.timeout(30_000),
+      }
+    )
+    if (!response.ok) {
+      logger.warn(`Prune-noise returned non-OK status: ${response.status}`)
+      return
+    }
+    const result = (await response.json()) as {
+      deleted?: number
+      threshold?: number
+    }
+    logger.info(
+      `Prune-noise completed: deleted ${result.deleted ?? 0} tweet_tags entries (threshold=${result.threshold ?? threshold})`
+    )
+  } catch (error) {
+    logger.warn(
+      'Failed to prune noise tags:',
+      error instanceof Error ? error : new Error(String(error))
+    )
+  }
+}
+
+/**
+ * analyzer に分析を依頼し、結果をデータベースに保存する。
+ * ANALYZER_URL が設定されていない場合は何もしない。
+ * 分析の失敗はログに記録するが、クロール全体は続行する。
+ *
+ * @param db Database インスタンス
+ * @param tweetId ツイート ID
+ * @param text 分析対象テキスト
+ */
+async function analyzeAndSave(
+  db: Database.Database,
+  tweetId: string,
+  text: string
+): Promise<void> {
+  const analyzerUrl = process.env.ANALYZER_URL
+  if (!analyzerUrl) return
+
+  try {
+    const response = await fetch(`${analyzerUrl}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tweetId, text }),
+      // analyzer が応答しない場合にクロール全体がハングしないよう 10 秒でタイムアウトする
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    if (!response.ok) {
+      logger.warn(
+        `Analyzer returned non-OK status for tweet ${tweetId}: ${response.status}`
+      )
+      return
+    }
+
+    const result = (await response.json()) as {
+      tags?: string[]
+      categories?: { id: number; confidence: number }[]
+    }
+
+    if (Array.isArray(result.tags)) {
+      upsertTweetTags(db, tweetId, result.tags)
+    }
+    if (Array.isArray(result.categories)) {
+      upsertTweetCategories(db, tweetId, result.categories)
+    }
+  } catch (error) {
+    logger.warn(
+      `Failed to analyze tweet ${tweetId}:`,
+      error instanceof Error ? error : new Error(String(error))
+    )
+  }
+}
+
 /** ブックマーク取得の 1 ページあたり件数 */
 const BOOKMARKS_PER_PAGE = 100
+
+/** ページ内の analyzer 呼び出しの最大同時実行数（過負荷防止） */
+const ANALYZER_CONCURRENCY = 10
 
 /** 1 回のクロールで取得するページ数の上限（API 異常時の無限ループ防止） */
 const MAX_PAGES = 500
@@ -91,6 +186,9 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
           const tweets = response.data.data
           let addedThisPage = 0
+          // ページ内の analyzer 呼び出しをまとめて並列実行する
+          // ANALYZER_URL が設定されている場合は analyze 対象を収集する（thunk にして後から制限付き並列実行）
+          const analyzeQueue: (() => Promise<void>)[] = []
 
           for (const tweetResult of tweets) {
             // プロモーション (広告) ツイートは除外
@@ -107,9 +205,27 @@ export async function runCrawl(db: Database.Database): Promise<void> {
                 crawledAt,
                 globalPosition
               )
+              // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
+              // 引用ツイート本文・カードタイトルも結合してタグ精度を高める
+              const tweetId = entry.tweetId
+              const analyzeText = [
+                entry.fullText,
+                entry.quotedTweet?.fullText,
+                entry.cardInfo?.title,
+              ]
+                .filter(Boolean)
+                .join('\n')
+              analyzeQueue.push(() => analyzeAndSave(db, tweetId, analyzeText))
               globalPosition++
               addedThisPage++
             }
+          }
+
+          // ページ内の全ツイートの分析を並列で待つ（同時実行数を ANALYZER_CONCURRENCY に制限）
+          for (let i = 0; i < analyzeQueue.length; i += ANALYZER_CONCURRENCY) {
+            await Promise.all(
+              analyzeQueue.slice(i, i + ANALYZER_CONCURRENCY).map((fn) => fn())
+            )
           }
 
           totalForAccount += addedThisPage
@@ -154,6 +270,9 @@ export async function runCrawl(db: Database.Database): Promise<void> {
     logger.info(
       `Crawl job #${jobId} completed. ${successCount}/${accounts.length} accounts succeeded.`
     )
+
+    // 全アカウントの分析完了後、IDF ベースのノイズタグを除去する（閾値 25%）
+    await pruneNoiseTagsViaAnalyzer(0.25)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     updateCrawlJob(db, jobId, 'error', {

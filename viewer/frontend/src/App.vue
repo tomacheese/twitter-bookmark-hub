@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useBookmarks } from './composables/useBookmarks'
 import { useAccounts } from './composables/useAccounts'
+import { useFeatures } from './composables/useFeatures'
+import { useCategories } from './composables/useCategories'
 import CrawlStatus from './components/CrawlStatus.vue'
 import AccountFilter from './components/AccountFilter.vue'
+import CategoryFilter from './components/CategoryFilter.vue'
 import BookmarkList from './components/BookmarkList.vue'
+import Settings from './views/Settings.vue'
 
 const {
   page,
   limit,
   selectedAccount,
+  selectedCategory,
+  selectedTag,
   searchQuery,
   sortBy,
   sortOrder,
@@ -23,9 +29,101 @@ const {
 } = useBookmarks()
 
 const { accounts } = useAccounts()
+const { analyzerEnabled } = useFeatures()
+const { categories, loadCategories } = useCategories()
+
+/** analyzer が有効になったらカテゴリを取得する（初回のみ、unmount 時に自動解除） */
+watch(
+  analyzerEnabled,
+  (enabled) => {
+    if (enabled) {
+      loadCategories().catch(() => {})
+    }
+  },
+  { immediate: true }
+)
 
 /** サイドバーの開閉状態（初期は閉じた状態） */
 const sidebarOpen = ref(false)
+
+/**
+ * URL ハッシュからタグパラメータを解析する。
+ * 例: `#/?tag=Vue` → `"Vue"`、`#/` → `null`、`#/?tag=` → `null`
+ * 空文字は null として扱い、「セット済みだが空」という不整合状態を防ぐ。
+ * @returns タグ名、またはタグパラメータがない・空の場合は null
+ */
+function parseTagFromHash(): string | null {
+  const hash = globalThis.location.hash
+  const queryStart = hash.indexOf('?')
+  if (queryStart === -1) return null
+  const tag = new URLSearchParams(hash.slice(queryStart + 1)).get('tag')
+  // 空文字は null に正規化する（#/?tag= のような不正な URL への対処）
+  return tag === '' ? null : tag
+}
+
+/**
+ * ハッシュからビュー名を導出するヘルパー。
+ * クエリパラメータ（`?` 以降）を除いたパス部分で判定する。
+ * @returns 現在のビュー名
+ */
+function resolveView(): 'main' | 'settings' {
+  const hash = globalThis.location.hash
+  const path = hash.includes('?') ? hash.slice(0, hash.indexOf('?')) : hash
+  return path === '#/settings' ? 'settings' : 'main'
+}
+
+/** 現在のビュー（ハッシュルーティング） */
+const currentView = ref<'main' | 'settings'>(resolveView())
+
+/**
+ * hashchange イベントハンドラ。
+ * ブラウザの戻る/進む操作に対応するため、ハッシュからフィルタ状態を復元する。
+ * analyzer が無効な場合は `#/settings` でもテンプレートはメイン画面を表示するため、
+ * 実際の表示状態（`analyzerEnabled` も考慮）でタグ復元を判断する。
+ */
+function onHashChange() {
+  const newView = resolveView()
+  currentView.value = newView
+  // analyzer が無効なら settings URL でも実際にはメイン画面を表示している
+  const isShowingMain = newView === 'main' || !analyzerEnabled.value
+  if (isShowingMain) {
+    const tag = parseTagFromHash()
+    if (selectedTag.value !== tag) {
+      selectedTag.value = tag
+      page.value = 1
+    }
+  }
+}
+
+onMounted(() => {
+  globalThis.addEventListener('hashchange', onHashChange)
+  // 初回マウント時にハッシュからタグフィルタを復元する（直リンク対応）
+  const tag = parseTagFromHash()
+  if (tag) {
+    selectedTag.value = tag
+  }
+})
+
+onUnmounted(() => {
+  globalThis.removeEventListener('hashchange', onHashChange)
+})
+
+/**
+ * ビューを切り替える。
+ * メインへ戻る際はアクティブなタグフィルタを URL に保持する。
+ * @param view - 遷移先ビュー名
+ */
+function navigateTo(view: 'main' | 'settings') {
+  if (view === 'settings') {
+    globalThis.location.hash = '#/settings'
+  } else {
+    // 設定から戻る際、タグフィルタが有効な場合は URL に保持する
+    const tag = selectedTag.value
+    globalThis.location.hash = tag
+      ? '#/?' + new URLSearchParams({ tag }).toString()
+      : '#/'
+  }
+}
 
 /**
  * アカウント選択を更新し、ページを 1 に戻す
@@ -34,6 +132,32 @@ const sidebarOpen = ref(false)
 function onAccountChange(account: string | null) {
   selectedAccount.value = account
   page.value = 1
+}
+
+/**
+ * カテゴリ選択を更新し、ページを 1 に戻す
+ * @param categoryId - 選択されたカテゴリ ID（null は「すべて」）
+ */
+function onCategoryChange(categoryId: number | null) {
+  selectedCategory.value = categoryId
+  page.value = 1
+}
+
+/**
+ * タグクリック時の処理。URL ハッシュを更新してブラウザ履歴エントリを作成する。
+ * hashchange が発火し、onHashChange が selectedTag・page をセットする。
+ * @param tag - クリックされたタグ名
+ */
+function onTagClick(tag: string) {
+  globalThis.location.hash = '#/?' + new URLSearchParams({ tag }).toString()
+}
+
+/**
+ * タグフィルタをクリアして URL を元に戻す。
+ * hashchange が発火し、onHashChange が selectedTag = null をセットする。
+ */
+function clearTagFilter() {
+  globalThis.location.hash = '#/'
 }
 </script>
 
@@ -52,18 +176,40 @@ function onAccountChange(account: string | null) {
           <span class="hamburger-line" />
           <span class="hamburger-line" />
         </button>
-        <h1 class="header-title">Twitter Bookmark Hub</h1>
+        <h1 class="header-title">
+          <a href="#/" class="title-link">Twitter Bookmark Hub</a>
+        </h1>
       </div>
-      <CrawlStatus />
+      <div class="header-right">
+        <CrawlStatus />
+        <!-- analyzer が有効な場合のみ設定リンクを表示 -->
+        <button
+          v-if="analyzerEnabled"
+          class="nav-btn"
+          :class="{ active: currentView === 'settings' }"
+          @click="navigateTo(currentView === 'settings' ? 'main' : 'settings')">
+          {{ currentView === 'settings' ? '← 戻る' : '⚙ 設定' }}
+        </button>
+      </div>
     </header>
 
-    <div class="layout">
+    <!-- 設定ページ（analyzer 有効時のみ表示） -->
+    <Settings v-if="currentView === 'settings' && analyzerEnabled" />
+
+    <!-- メインページ -->
+    <div v-else class="layout">
       <!-- サイドバー -->
       <aside class="sidebar" :class="{ 'sidebar-closed': !sidebarOpen }">
         <AccountFilter
           :accounts="accounts"
           :selected="selectedAccount"
           @update:selected="onAccountChange" />
+        <!-- analyzer が有効かつカテゴリがある場合のみ表示 -->
+        <CategoryFilter
+          v-if="analyzerEnabled && categories.length > 0"
+          :categories="categories"
+          :selected="selectedCategory"
+          @update:selected="onCategoryChange" />
       </aside>
 
       <!-- メインコンテンツ: サイドバーが閉じていれば横幅いっぱいに広げる -->
@@ -98,6 +244,19 @@ function onAccountChange(account: string | null) {
           </button>
         </div>
 
+        <!-- アクティブなタグフィルタチップ -->
+        <div v-if="selectedTag" class="active-filters">
+          <span class="filter-chip">
+            🏷 {{ selectedTag }}
+            <button
+              class="filter-chip-clear"
+              title="タグフィルタをクリア"
+              @click="clearTagFilter">
+              ×
+            </button>
+          </span>
+        </div>
+
         <BookmarkList
           :items="items"
           :loading="loading"
@@ -106,7 +265,8 @@ function onAccountChange(account: string | null) {
           :total="total"
           :limit="limit"
           @next="nextPage"
-          @prev="prevPage" />
+          @prev="prevPage"
+          @tag-click="onTagClick" />
       </main>
     </div>
   </div>
@@ -164,9 +324,40 @@ body {
   gap: 10px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .header-title {
   font-size: 20px;
   font-weight: 800;
+}
+
+.title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nav-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.nav-btn:hover,
+.nav-btn.active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* サイドバー開閉ボタン */
@@ -330,6 +521,47 @@ body {
 .search-input:focus {
   border-color: var(--color-accent);
   background: transparent;
+}
+
+/* アクティブなタグフィルタチップ */
+.active-filters {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(29, 155, 240, 0.15);
+  color: var(--color-accent);
+  font-size: 13px;
+}
+
+.filter-chip-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.filter-chip-clear:hover {
+  background: rgba(29, 155, 240, 0.2);
 }
 
 /* レスポンシブ */

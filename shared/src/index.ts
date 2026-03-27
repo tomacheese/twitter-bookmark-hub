@@ -8,4 +8,8 @@ export type {
   BookmarksResponse,
   AccountInfo,
   CrawlJobStatus,
+  TagItem,
+  CategoryItem,
+  AnalyzeResponse,
+  FeaturesResponse,
 } from './types'
