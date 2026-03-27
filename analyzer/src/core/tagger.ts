@@ -24,38 +24,22 @@ const ENGLISH_STOP_WORDS = new Set(engStopWords)
 
 /**
  * stopword ライブラリでカバーされない追加ノイズトークン（小文字で比較）。
- * URL 断片・ファイル拡張子由来の断片・英語副詞・単位略称などを除外する。
+ *
+ * 2 文字以下の英字断片（`wi`, `fi`, `ac`, `io` 等）は extractNouns 内の
+ * 「2 文字・非全大文字 ASCII フィルタ」で一括除外するため登録不要。
+ * `AI`, `PC`, `UI` のような全大文字 2 文字略語はそのフィルタを通過して保持される。
  */
 const EXTRA_NOISE_BLOCKLIST = new Set([
-  // URL 断片
+  // URL 断片（URL 除去後に残る可能性）
   'https',
   'http',
   'ftp',
-  'co',
   'www',
-  // ファイル拡張子・時刻略語由来の断片
-  'just',
-  'md',
-  'pm',
   // stopword ライブラリ未収録の英語汎用語・副詞
+  'just',
   'everything', // 汎用代名詞
   'entirely', // 副詞（kuromoji が名詞扱いする）
-  'ok', // 汎用感嘆詞
   'new', // 形容詞（"new feature" 等の断片）
-  // 単位・不明瞭な略称
-  'gb', // 容量単位（gigabyte）
-  'ma', // 不明瞭な 2 文字略称
-  // Wi-Fi 規格の分割断片（"Wi-Fi"→"Wi"/"Fi"、"802.11ac"→"ac"/"ax"）
-  'wi',
-  'fi',
-  'ac',
-  'ax',
-  // ドメイン拡張子・シェルスクリプト拡張子・その他 2 文字断片
-  'io',
-  'sh',
-  'jp',
-  // "we've" 等の縮約形の分割断片
-  've',
 ])
 
 /**
@@ -72,15 +56,17 @@ const EXTRA_NOISE_BLOCKLIST = new Set([
  *    「直後に する/できる/させる」パターンしか検出できない。助詞を介した
  *    「〜に参考する」「〜との関係」型は false negative になる語
  *
- * 3. **カタカナ断片**: kuromoji が複合語を分割して生成する意味のない断片
- *    （例: ワークフロー → ワーク + フロー）
+ * 3. **意味不明スラング・記号**: 特定の SNS 文化依存語で上記以外に分類できないもの
  *
  * ─────────────────────────────────────────────────────────────────────
  * 不要な登録パターン（追加禁止）:
  * - 形容動詞語幹（簡単・便利 等）→ NOUN_DETAIL_ALLOWLIST から除外済み
  * - 感動詞（いや 等）→ pos = '感動詞' でフィルタ済み
  * - 代名詞（誰か 等）→ 文脈によっては pos_detail_1='一般' に分類されるため JAPANESE_GENERIC_NOUNS で対処
- * - サ変接続語で「〜する」型の行為語（確認・利用 等）→ isUsedAsVerbalNoun() で対処
+ * - サ変接続語で「〜する/なる」型の行為語（確認・利用・参考 等）→ isUsedAsVerbalNoun() で対処
+ * - `〜的に` 副詞形（個人・基本・定期 等）→ isUsedAsAdverbialTeki() で対処
+ * - カタカナ断片（ワーク・フロー等）→ mergeConsecutiveKatakanaTokens() で再結合済み
+ * - 2 文字・非全大文字 ASCII（wi・fi・ac・io 等）→ extractNouns() の長さフィルタで対処
  * ─────────────────────────────────────────────────────────────────────
  */
 const JAPANESE_GENERIC_NOUNS = new Set([
@@ -107,17 +93,15 @@ const JAPANESE_GENERIC_NOUNS = new Set([
   '基本', // "基本的に" 型の副詞的用法
   '方法', // 汎用手段語（"〜する方法" 型）
   // --- 2c. サ変接続語（コンテキスト検出が効かないパターン）---
-  // isUsedAsVerbalNoun() は「直後に する/できる/させる」のみ検出する。
-  // 以下の語は「助詞 + 動詞」または「名詞として完結」する非トピック用法が主体。
-  '是非', // 副詞的用法（"是非試して"）→ "是非する" とは言わない
-  '意味', // "意味がない/わかる" 型 → "意味する" より格助詞後続が多い
-  '参考', // "参考に（する）" 型 → に を介するためコンテキスト検出不可
-  '関係', // "〜との関係" 型 → "依存関係" 断片も含む
-  '反応', // "反応が来た" 型 → 助詞を介するためコンテキスト検出不可
-  // --- 3. カタカナ断片（複合語分割ノイズ）---
-  'ワーク', // 「ワークフロー」の断片
-  'ライン', // 「タイムライン」の断片
-  // --- 4. 修辞的・非トピック語 ---
+  // isUsedAsVerbalNoun() は「直後に する/なる 系動詞」と「〜に + なる/する」を検出する。
+  // 以下の語は「助詞 + 動詞」または「名詞として完結」する非トピック用法が主体で
+  // かつ検出アルゴリズムが適用できない。
+  // ※ `参考` は `〜に + なる/する` パターンで全件検出できるため削除済み。
+  '是非', // 副詞的用法（"是非試して"）→ "是非する" とは言わない・格助詞も介さない
+  '意味', // "意味がない/わかる" 型 → 格助詞`が`後続が主体（アルゴリズム対象外）
+  '関係', // "〜との関係" 型 → "依存関係" 断片も含む・格助詞を介するため対象外
+  '反応', // "反応が来た" 型 → 格助詞`が`後続が主体（アルゴリズム対象外）
+  // --- 3. 修辞的・非トピック語 ---
   '人類', // "全人類やりましょう" 型の修辞的用法
   '人間', // 修辞的・哲学的汎用語
 ])
@@ -171,16 +155,27 @@ function isSpaceToken(token: KuromojiToken): boolean {
   return token.pos === '記号' && token.pos_detail_1 === '空白'
 }
 
+/** `する/できる/させる/なる/なれる` 系動詞の基本形セット */
+const VERBAL_BASIC_FORMS = new Set([
+  'する',
+  'できる',
+  'させる',
+  'なる',
+  'なれる',
+])
+
 /**
- * サ変接続名詞が動詞的用法（〜する・〜できる・〜させる）で使われているかを判定する。
+ * サ変接続名詞が動詞的用法で使われているかを判定する。
  *
- * トークン列の index の直後（空白スキップ）に「する」系動詞が来る場合に true を返す。
- * これにより "確認する", "利用できる", "追加しました" 等の行為語を除外できる。
+ * 以下の 2 パターンを検出する:
+ * 1. **直後に する系動詞**: `確認する`・`利用できる`・`追加しました`・`参加させる` 等
+ * 2. **`〜に + なる/する/できる`**: `参考になる`・`勉強になる`・`参考にする` 等
+ *    直後が `に`(格助詞) で、その直後（記号・助詞をスキップ）が する系動詞の場合
  *
  * 以下のパターンは検出対象外（false を返す）:
  * - "管理ツール" → 直後が名詞 → 複合名詞として保持
- * - "確認が取れた" → 直後が助詞 → 名詞用法として保持
- * - "参考にする" → 直後が助詞 → isUsedAsVerbalNoun は false （JAPANESE_GENERIC_NOUNS で対処）
+ * - "確認が取れた" → 直後が格助詞`が` → 名詞用法として保持
+ * - "関係がある" → 直後が格助詞`が` → 名詞用法として保持
  *
  * @param tokens - mergeConsecutiveEnglishTokens 適用後のトークン列
  * @param index - 判定対象トークンのインデックス
@@ -192,12 +187,58 @@ function isUsedAsVerbalNoun(tokens: KuromojiToken[], index: number): boolean {
   while (j < tokens.length && isSpaceToken(tokens[j])) j++
   if (j >= tokens.length) return false
   const next = tokens[j]
-  // 直後が「する」「できる」「させる」のいずれかの動詞形
+
+  // パターン 1: 直後が する/できる/させる/なる 系動詞
+  if (next.pos === '動詞' && VERBAL_BASIC_FORMS.has(next.basic_form))
+    return true
+
+  // パターン 2: 直後が「に」(格助詞) → その後に する/なる 系動詞（"参考になる" 型）
+  if (next.pos === '助詞' && next.surface_form === 'に') {
+    let k = j + 1
+    // 記号・助詞をスキップ（補助動詞が挟まる場合を考慮）
+    while (
+      k < tokens.length &&
+      (isSpaceToken(tokens[k]) || tokens[k].pos === '助詞')
+    )
+      k++
+    if (
+      k < tokens.length &&
+      tokens[k].pos === '動詞' &&
+      VERBAL_BASIC_FORMS.has(tokens[k].basic_form)
+    )
+      return true
+  }
+
+  return false
+}
+
+/**
+ * 名詞が副詞的な `〜的に` の形で使われているかを判定する。
+ *
+ * 直後に `的`(接尾) が来て、その直後に `に`(助詞) が来る場合に true を返す。
+ * - 除外例: `個人的に`・`基本的に`・`定期的に`・`効率的に`（副詞用法）
+ * - 保持例: `非破壊的編集`（`的` の後が名詞）・`批判的思考`（`に` が後続しない）
+ *
+ * @param tokens - mergeConsecutiveEnglishTokens 適用後のトークン列
+ * @param index - 判定対象トークンのインデックス
+ * @returns 副詞的 `〜的に` 用法なら true
+ */
+function isUsedAsAdverbialTeki(
+  tokens: KuromojiToken[],
+  index: number
+): boolean {
+  let j = index + 1
+  while (j < tokens.length && isSpaceToken(tokens[j])) j++
+  if (j >= tokens.length) return false
+  // 直後が「的」
+  if (tokens[j].surface_form !== '的') return false
+  // 「的」の次が「に」(助詞)
+  let k = j + 1
+  while (k < tokens.length && isSpaceToken(tokens[k])) k++
   return (
-    next.pos === '動詞' &&
-    (next.basic_form === 'する' ||
-      next.basic_form === 'できる' ||
-      next.basic_form === 'させる')
+    k < tokens.length &&
+    tokens[k].pos === '助詞' &&
+    tokens[k].surface_form === 'に'
   )
 }
 
@@ -259,6 +300,67 @@ function mergeConsecutiveEnglishTokens(
       }
     } else {
       result.push(tokens[i])
+      i++
+    }
+  }
+  return result
+}
+
+/**
+ * 連続するカタカナ名詞トークンをスペースなしで結合する。
+ * kuromoji の辞書に未登録のカタカナ複合語（ワークフロー・タイムライン・
+ * フレームワーク等）が分割されてしまう問題に対処する。
+ *
+ * 結合条件:
+ * - 両トークンの pos が `名詞`
+ * - surface_form がカタカナのみ（U+30A0–U+30FF）かつ 2 文字以上
+ * - 間に空白トークンが存在しない（元テキストにスペースがない）
+ *
+ * 例: `ワーク`[一般] + `フロー`[一般] → `ワークフロー`[一般]
+ * 例: `クラ`[固有名詞] + `ウド`[一般] + `サービス`[サ変接続] → `クラウドサービス`[一般]
+ *
+ * @param tokens - mergeConsecutiveEnglishTokens 適用後のトークン列
+ * @returns カタカナ複合語を結合済みのトークン列
+ */
+/** カタカナのみ（長音符ー含む）かつ 2 文字以上かどうかを判定する */
+const isKatakana = (s: string) => /^[\u30A0-\u30FF]{2,}$/.test(s)
+
+function mergeConsecutiveKatakanaTokens(
+  tokens: KuromojiToken[]
+): KuromojiToken[] {
+  const result: KuromojiToken[] = []
+  let i = 0
+  while (i < tokens.length) {
+    const t = tokens[i]
+    if (t.pos === '名詞' && isKatakana(t.surface_form)) {
+      const parts: string[] = [t.surface_form]
+      let j = i + 1
+      while (j < tokens.length) {
+        // 空白トークンが来たら終了（元テキストにスペースがある）
+        if (isSpaceToken(tokens[j])) break
+        // 次もカタカナ名詞なら結合
+        if (tokens[j].pos === '名詞' && isKatakana(tokens[j].surface_form)) {
+          parts.push(tokens[j].surface_form)
+          j++
+        } else {
+          break
+        }
+      }
+      if (parts.length > 1) {
+        const combined = parts.join('')
+        result.push({
+          surface_form: combined,
+          pos: '名詞',
+          pos_detail_1: '一般',
+          basic_form: combined,
+        })
+        i = j
+      } else {
+        result.push(t)
+        i++
+      }
+    } else {
+      result.push(t)
       i++
     }
   }
@@ -343,7 +445,9 @@ export function extractNouns(
     .replaceAll('&amp;', '&')
     .replaceAll('&quot;', '"')
     .replaceAll('&#39;', "'")
-  const tokens = mergeConsecutiveEnglishTokens(tokenizer.tokenize(cleanedText))
+  const tokens = mergeConsecutiveKatakanaTokens(
+    mergeConsecutiveEnglishTokens(tokenizer.tokenize(cleanedText))
+  )
 
   // 候補語の出現情報（最初の出現インデックスと出現回数）を収集する
   const candidates = new Map<
@@ -374,10 +478,24 @@ export function extractNouns(
     // URL 断片・ファイル拡張子由来など、stopword でカバーされない追加ノイズを除外
     if (EXTRA_NOISE_BLOCKLIST.has(word.toLowerCase())) continue
 
-    // サ変接続名詞が「〜する/できる/させる」型の動詞的用法で使われている場合は除外
-    // （"確認する", "利用できる", "追加しました" 等の行為語を除去する）
+    // 2 文字の英字かつ全大文字でないトークンを除外（Wi, Fi, ac, io, ok, md 等の断片）
+    // 全大文字 2 文字（AI, PC, UI 等）はトピックとして有効なため保持する
+    if (
+      word.length === 2 &&
+      /^[A-Za-z]{2}$/.test(word) &&
+      word !== word.toUpperCase()
+    )
+      continue
+
+    // サ変接続名詞が動詞的用法（〜する/できる/させる/なる 系）で使われている場合は除外
+    // パターン 1: "確認する", "利用できる", "追加しました" 等の行為語
+    // パターン 2: "参考になる", "勉強になる" 等の「〜に + なる/する」型
     if (token.pos_detail_1 === 'サ変接続' && isUsedAsVerbalNoun(tokens, i))
       continue
+
+    // 名詞が「〜的に」の形で副詞的に使われている場合は除外
+    // （"個人的に", "基本的に", "定期的に", "効率的に" 等）
+    if (isUsedAsAdverbialTeki(tokens, i)) continue
 
     // アルゴリズムで除去できない代名詞・スラング・断片等を除外
     if (JAPANESE_GENERIC_NOUNS.has(word)) continue
