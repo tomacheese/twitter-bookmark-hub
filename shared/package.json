@@ -1,0 +1,21 @@
+{
+  "name": "@twitter-bookmark-hub/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "run-z lint:prettier lint:tsc",
+    "lint:prettier": "prettier --check src",
+    "lint:tsc": "tsc --noEmit",
+    "fix": "run-z fix:prettier",
+    "fix:prettier": "prettier --write src"
+  },
+  "devDependencies": {
+    "prettier": "3.8.1",
+    "run-z": "2.1.0",
+    "typescript": "5.9.3"
+  }
+}

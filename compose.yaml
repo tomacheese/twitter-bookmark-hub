@@ -1,0 +1,28 @@
+services:
+  crawler:
+    build:
+      context: .
+      dockerfile: crawler/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  viewer:
+    build:
+      context: .
+      dockerfile: viewer/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    ports:
+      - "3000:3000"
+    depends_on:
+      crawler:
+        condition: service_healthy
