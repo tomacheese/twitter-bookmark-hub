@@ -25,8 +25,8 @@ export function useCategories() {
     error.value = null
     try {
       categories.value = await fetchCategories()
-    } catch (error_) {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
     } finally {
       loading.value = false
     }
@@ -54,8 +54,8 @@ export function useCategories() {
     try {
       await apiCreateCategory(data)
       await loadCategories()
-    } catch (error_) {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
     }
   }
 
@@ -72,8 +72,8 @@ export function useCategories() {
     try {
       await apiUpdateCategory(id, data)
       await loadCategories()
-    } catch (error_) {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
     }
   }
 
@@ -86,8 +86,8 @@ export function useCategories() {
     try {
       await apiDeleteCategory(id)
       await loadCategories()
-    } catch (error_) {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
     }
   }
 

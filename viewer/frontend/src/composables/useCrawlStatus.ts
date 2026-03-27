@@ -19,8 +19,8 @@ export function useCrawlStatus() {
       status.value = await fetchCrawlStatus()
       // 成功時は過去のエラーをクリアする
       error.value = null
-    } catch (error_) {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
     }
   }
 
@@ -30,25 +30,24 @@ export function useCrawlStatus() {
     try {
       await apiTriggerCrawl()
       await refresh()
-    } catch (error_) {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
     } finally {
       triggering.value = false
     }
   }
 
   onMounted(() => {
-    refresh().catch((error_: unknown) => {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    refresh().catch((err: unknown) => {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
     })
     // 10 秒ごとにポーリング（前回のリクエストが完了していない場合はスキップ）
     intervalId = setInterval(() => {
       if (isPolling) return
       isPolling = true
       refresh()
-        .catch((error_: unknown) => {
-          error.value =
-            error_ instanceof Error ? error_.message : 'Unknown error'
+        .catch((err: unknown) => {
+          error.value = err instanceof Error ? err.message : 'Unknown error'
         })
         .finally(() => {
           isPolling = false

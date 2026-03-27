@@ -104,9 +104,9 @@ export function useBookmarks() {
         total.value = res.total
         hasMore.value = items.value.length < res.total
       })
-      .catch((error_: unknown) => {
+      .catch((err: unknown) => {
         if (cancel.value) return
-        error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+        error.value = err instanceof Error ? err.message : 'Unknown error'
       })
       .finally(() => {
         if (!cancel.value) loading.value = false
@@ -133,9 +133,9 @@ export function useBookmarks() {
         total.value = res.total
         hasMore.value = items.value.length < res.total
       })
-      .catch((error_: unknown) => {
+      .catch((err: unknown) => {
         if (loadMoreCancelled) return
-        error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+        error.value = err instanceof Error ? err.message : 'Unknown error'
         // 失敗時はページ番号を据え置きにする（次回 loadMore で同ページを再試行できる）
       })
       .finally(() => {

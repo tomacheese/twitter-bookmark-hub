@@ -14,8 +14,8 @@ export function useAccounts() {
     loading.value = true
     try {
       accounts.value = await fetchAccounts()
-    } catch (error_) {
-      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
     } finally {
       loading.value = false
     }
