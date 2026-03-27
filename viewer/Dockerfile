@@ -33,7 +33,7 @@ RUN apk add --no-cache python3 make g++ gcompat libc6-compat && \
 WORKDIR /app
 
 # ワークスペースの依存解決に必要なファイルをコピー（レイヤーキャッシュ最適化）
-COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY crawler/package.json ./crawler/
 COPY viewer/frontend/package.json ./viewer/frontend/
