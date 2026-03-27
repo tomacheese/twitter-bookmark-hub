@@ -141,7 +141,11 @@ export function getBookmarks(
     bindValues.push(`%${q}%`)
   }
   if (account) {
-    conditions.push('b.account_username = ?')
+    // EXISTS サブクエリでフィルタすることで、メインの bookmarks JOIN の集計
+    // （GROUP_CONCAT・MIN/MAX）が全アカウントを対象にしたままになる
+    conditions.push(
+      'EXISTS (SELECT 1 FROM bookmarks b2 WHERE b2.tweet_id = t.tweet_id AND b2.account_username = ?)'
+    )
     bindValues.push(account)
   }
 

@@ -231,6 +231,8 @@ const quotedTextSegments = computed(() => {
 
 /** YouTube の embed を許可するホスト名一覧 */
 const YOUTUBE_EMBED_HOSTS = new Set(['youtube.com', 'www.youtube.com'])
+/** YouTube 動画 ID の形式（11 文字の英数字・ハイフン・アンダースコア） */
+const YOUTUBE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/
 
 /**
  * cardPlayerUrl から YouTube の embed URL を生成する。
@@ -259,13 +261,15 @@ const youtubeEmbedUrl = computed(() => {
   // /watch?v= 形式
   if (YOUTUBE_EMBED_HOSTS.has(parsed.hostname)) {
     const videoId = parsed.searchParams.get('v')
-    if (videoId) return `https://www.youtube.com/embed/${videoId}`
+    if (videoId && YOUTUBE_VIDEO_ID_RE.test(videoId))
+      return `https://www.youtube.com/embed/${videoId}`
   }
 
   // youtu.be 短縮 URL
   if (parsed.hostname === 'youtu.be') {
     const videoId = parsed.pathname.slice(1)
-    if (videoId) return `https://www.youtube.com/embed/${videoId}`
+    if (videoId && YOUTUBE_VIDEO_ID_RE.test(videoId))
+      return `https://www.youtube.com/embed/${videoId}`
   }
 
   return null

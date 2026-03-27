@@ -19,6 +19,32 @@ export type {
 const BASE = '/api'
 
 /**
+ * 非 2xx レスポンスのエラー詳細を取得してエラーをスローする。
+ * Content-Type に応じて JSON 本文またはテキスト本文からメッセージを抽出する。
+ * @param res - fetch レスポンス
+ * @param prefix - エラーメッセージのプレフィックス
+ */
+async function throwResponseError(
+  res: Response,
+  prefix: string
+): Promise<never> {
+  const contentType = res.headers.get('content-type') ?? ''
+  let detail: string
+  try {
+    if (contentType.includes('application/json')) {
+      const body = (await res.json()) as Record<string, unknown>
+      const msg = body.error ?? body.message
+      detail = typeof msg === 'string' ? msg : JSON.stringify(body)
+    } else {
+      detail = (await res.text()) || String(res.status)
+    }
+  } catch {
+    detail = String(res.status)
+  }
+  throw new Error(`${prefix}: ${detail}`)
+}
+
+/**
  * ブックマーク一覧を取得する
  * @param params - 検索パラメータ
  * @returns ブックマークレスポンス
@@ -40,7 +66,7 @@ export async function fetchBookmarks(params: {
   if (params.sortBy) query.set('sort_by', params.sortBy)
 
   const res = await fetch(`${BASE}/bookmarks?${query.toString()}`)
-  if (!res.ok) throw new Error(`Failed to fetch bookmarks: ${res.status}`)
+  if (!res.ok) return throwResponseError(res, 'Failed to fetch bookmarks')
   return res.json() as Promise<BookmarksResponse>
 }
 
@@ -50,7 +76,7 @@ export async function fetchBookmarks(params: {
  */
 export async function fetchAccounts(): Promise<AccountInfo[]> {
   const res = await fetch(`${BASE}/accounts`)
-  if (!res.ok) throw new Error(`Failed to fetch accounts: ${res.status}`)
+  if (!res.ok) return throwResponseError(res, 'Failed to fetch accounts')
   return res.json() as Promise<AccountInfo[]>
 }
 
@@ -60,7 +86,7 @@ export async function fetchAccounts(): Promise<AccountInfo[]> {
  */
 export async function fetchCrawlStatus(): Promise<CrawlJobStatus | null> {
   const res = await fetch(`${BASE}/crawl/status`)
-  if (!res.ok) throw new Error(`Failed to fetch crawl status: ${res.status}`)
+  if (!res.ok) return throwResponseError(res, 'Failed to fetch crawl status')
   return res.json() as Promise<CrawlJobStatus | null>
 }
 
@@ -70,6 +96,6 @@ export async function fetchCrawlStatus(): Promise<CrawlJobStatus | null> {
  */
 export async function triggerCrawl(): Promise<{ message: string }> {
   const res = await fetch(`${BASE}/crawl/trigger`, { method: 'POST' })
-  if (!res.ok) throw new Error(`Failed to trigger crawl: ${res.status}`)
+  if (!res.ok) return throwResponseError(res, 'Failed to trigger crawl')
   return res.json() as Promise<{ message: string }>
 }

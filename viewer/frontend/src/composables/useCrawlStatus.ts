@@ -10,6 +10,8 @@ export function useCrawlStatus() {
   const triggering = ref(false)
   const error = ref<string | null>(null)
   let intervalId: ReturnType<typeof setInterval> | null = null
+  /** ポーリング中フラグ（setInterval の重複実行を抑止する） */
+  let isPolling = false
 
   /** ステータスを取得する */
   async function refresh() {
@@ -39,11 +41,18 @@ export function useCrawlStatus() {
     refresh().catch((error_: unknown) => {
       error.value = error_ instanceof Error ? error_.message : 'Unknown error'
     })
-    // 10 秒ごとにポーリング
+    // 10 秒ごとにポーリング（前回のリクエストが完了していない場合はスキップ）
     intervalId = setInterval(() => {
-      refresh().catch((error_: unknown) => {
-        error.value = error_ instanceof Error ? error_.message : 'Unknown error'
-      })
+      if (isPolling) return
+      isPolling = true
+      refresh()
+        .catch((error_: unknown) => {
+          error.value =
+            error_ instanceof Error ? error_.message : 'Unknown error'
+        })
+        .finally(() => {
+          isPolling = false
+        })
     }, 10_000)
   })
 
