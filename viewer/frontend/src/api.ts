@@ -1,9 +1,4 @@
 import type {
-  CardInfo,
-  MediaItem,
-  UrlEntity,
-  QuotedTweet,
-  BookmarkItem,
   BookmarksResponse,
   AccountInfo,
   CrawlJobStatus,
@@ -18,7 +13,7 @@ export type {
   BookmarksResponse,
   AccountInfo,
   CrawlJobStatus,
-}
+} from '@twitter-bookmark-hub/shared'
 
 /** API のベース URL */
 const BASE = '/api'
