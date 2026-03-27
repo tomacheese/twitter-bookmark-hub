@@ -1,42 +1,72 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import type { BookmarkItem } from '../api'
 import BookmarkCard from './BookmarkCard.vue'
 
-defineProps<{
+const properties = defineProps<{
   /** ブックマークアイテム一覧 */
   items: BookmarkItem[]
   /** 読み込み中フラグ */
   loading: boolean
   /** エラーメッセージ */
   error: string | null
-  /** 現在のページ */
-  page: number
-  /** 全件数 */
-  total: number
-  /** 1 ページあたりの件数 */
-  limit: number
+  /** まだ読み込めるページが残っているか */
+  hasMore: boolean
 }>()
 
 const emit = defineEmits<{
-  /** 次のページへ */
-  next: []
-  /** 前のページへ */
-  prev: []
+  /** 追加読み込みをリクエスト */
+  'load-more': []
   /** タグがクリックされた */
   'tag-click': [tag: string]
 }>()
+
+/** センチネル要素（スクロール末端の検知用） */
+const sentinel = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+
+/**
+ * センチネル要素が画面内に入ったら load-more イベントを発火する。
+ * 読み込み中・これ以上データがない場合は発火しない。
+ */
+function onIntersect(entries: IntersectionObserverEntry[]) {
+  const entry = entries[0]
+  if (entry.isIntersecting && !properties.loading && properties.hasMore) {
+    emit('load-more')
+  }
+}
+
+onMounted(() => {
+  observer = new IntersectionObserver(onIntersect, {
+    // 画面下端から 200px 手前で発火させてスムーズに感じさせる
+    rootMargin: '0px 0px 200px 0px',
+    threshold: 0,
+  })
+  if (sentinel.value) {
+    observer.observe(sentinel.value)
+  }
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
+  observer = null
+})
 </script>
 
 <template>
   <div class="bookmark-list">
-    <!-- ローディング -->
-    <div v-if="loading" class="status-message">読み込み中...</div>
+    <!-- 初回ローディング（アイテムがまだ空の場合） -->
+    <div v-if="loading && items.length === 0" class="status-message">
+      読み込み中...
+    </div>
 
     <!-- エラー -->
-    <div v-else-if="error" class="status-message error">{{ error }}</div>
+    <div v-else-if="error && items.length === 0" class="status-message error">
+      {{ error }}
+    </div>
 
     <!-- 結果なし -->
-    <div v-else-if="items.length === 0" class="status-message">
+    <div v-else-if="!loading && items.length === 0" class="status-message">
       ブックマークが見つかりません
     </div>
 
@@ -49,20 +79,14 @@ const emit = defineEmits<{
         @tag-click="(tag) => emit('tag-click', tag)" />
     </template>
 
-    <!-- ページネーション -->
-    <div v-if="total > 0" class="pagination">
-      <button class="page-button" :disabled="page <= 1" @click="emit('prev')">
-        ← 前へ
-      </button>
-      <span class="page-info">
-        {{ page }} / {{ Math.ceil(total / limit) }}
-      </span>
-      <button
-        class="page-button"
-        :disabled="page * limit >= total"
-        @click="emit('next')">
-        次へ →
-      </button>
+    <!-- 無限スクロール用センチネル + 追加読み込みインジケータ -->
+    <div ref="sentinel" class="scroll-sentinel">
+      <div v-if="loading && items.length > 0" class="loading-more">
+        読み込み中...
+      </div>
+      <div v-else-if="!hasMore && items.length > 0" class="end-message">
+        すべて表示しました
+      </div>
     </div>
   </div>
 </template>
@@ -83,36 +107,14 @@ const emit = defineEmits<{
   color: #f4212e;
 }
 
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 16px;
-  border-top: 1px solid var(--color-border);
+.scroll-sentinel {
+  height: 1px;
 }
 
-.page-button {
-  background: transparent;
-  color: var(--color-accent);
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 9999px;
-  transition: background 0.2s;
-}
-
-.page-button:hover:not(:disabled) {
-  background: rgba(29, 155, 240, 0.1);
-}
-
-.page-button:disabled {
-  color: var(--color-text-secondary);
-  cursor: not-allowed;
-}
-
-.page-info {
+.loading-more,
+.end-message {
+  padding: 24px 16px;
+  text-align: center;
   color: var(--color-text-secondary);
   font-size: 14px;
 }
