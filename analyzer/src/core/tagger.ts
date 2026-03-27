@@ -470,9 +470,12 @@ export function extractNouns(
     .replaceAll(/https?:\/\/\S+/g, '')
     .replaceAll('&gt;', '>')
     .replaceAll('&lt;', '<')
-    .replaceAll('&amp;', '&')
     .replaceAll('&quot;', '"')
     .replaceAll('&#39;', "'")
+    // &amp; は必ず最後に処理する（二重デコードを防ぐため）
+    // 例: &amp;quot; を処理する場合、先に &quot; を処理しても &amp;quot; はマッチしないが、
+    // &amp; を先に処理してしまうと &quot; に変化し、その後 " にデコードされてしまう
+    .replaceAll('&amp;', '&')
   const tokens = mergeConsecutiveKatakanaTokens(
     mergeConsecutiveEnglishTokens(tokenizer.tokenize(cleanedText))
   )
