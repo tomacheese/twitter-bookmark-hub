@@ -47,10 +47,12 @@ export function useBookmarks() {
   const hasMore = ref(true)
 
   /**
-   * フィルタ変更時に `loadMore` の in-flight リクエストを無効化するフラグ。
-   * watchEffect の onCleanup で true にセットされ、新しい effect 開始時に false にリセットされる。
+   * loadMore リクエストのバージョンカウンター。
+   * フィルタ変更時に onCleanup でインクリメントされ、各 loadMore 呼び出しが開始時点の値をキャプチャする。
+   * レスポンス到着時にキャプチャ値と現在値が一致しない場合は stale レスポンスとして破棄する。
+   * グローバル boolean と異なりリセットが不要なため、フィルタ変更直後の loadMore 応答も確実に破棄できる。
    */
-  let loadMoreCancelled = false
+  let loadMoreVersion = 0
 
   /**
    * 現在のフィルタ条件からリクエストパラメータを生成する。
@@ -79,15 +81,12 @@ export function useBookmarks() {
     const params = buildParams(1)
 
     // フィルタ変更時に古いレスポンスが state を上書きするレース条件を防ぐため、
-    // クリーンアップ時にキャンセルフラグを立てる。loadMore の in-flight リクエストも同様にキャンセルする
+    // クリーンアップ時にキャンセルフラグを立てる。loadMore の in-flight リクエストはバージョンをインクリメントして無効化する
     const cancel = { value: false }
     onCleanup(() => {
       cancel.value = true
-      loadMoreCancelled = true
+      loadMoreVersion++
     })
-
-    // 新しいフィルタでの取得開始時に loadMore キャンセルフラグをリセットする
-    loadMoreCancelled = false
     page.value = 1
     hasMore.value = true
     loading.value = true
@@ -115,7 +114,7 @@ export function useBookmarks() {
 
   /**
    * 次のページを追加で読み込む（無限スクロール用）。
-   * フィルタ変更後に in-flight のリクエストがある場合はキャンセルされる。
+   * フィルタ変更後に in-flight のリクエストがある場合はバージョン不一致により破棄される。
    */
   function loadMore() {
     if (loading.value || !hasMore.value) return
@@ -123,10 +122,12 @@ export function useBookmarks() {
     // ページ番号はリクエスト成功後に確定させ、失敗時は巻き戻す
     loading.value = true
 
+    // 呼び出し時点のバージョンをキャプチャし、レスポンス到着時に一致チェックする
+    const capturedVersion = loadMoreVersion
     const params = buildParams(nextPage)
     fetchBookmarks(params)
       .then((res) => {
-        if (loadMoreCancelled) return
+        if (capturedVersion !== loadMoreVersion) return
         // 成功時のみページ番号を進める
         page.value = nextPage
         items.value = [...items.value, ...res.items]
@@ -134,12 +135,12 @@ export function useBookmarks() {
         hasMore.value = items.value.length < res.total
       })
       .catch((err: unknown) => {
-        if (loadMoreCancelled) return
+        if (capturedVersion !== loadMoreVersion) return
         error.value = err instanceof Error ? err.message : 'Unknown error'
         // 失敗時はページ番号を据え置きにする（次回 loadMore で同ページを再試行できる）
       })
       .finally(() => {
-        if (!loadMoreCancelled) loading.value = false
+        if (capturedVersion === loadMoreVersion) loading.value = false
       })
   }
 
