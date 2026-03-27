@@ -302,7 +302,7 @@ export function getLatestCrawlJob(
 
 /**
  * タグ名を upsert し、ツイートとタグの関連を保存する。
- * 既存の関連は削除してから再挿入する。
+ * 既存の関連の削除と新規挿入をトランザクション内で原子的に実行する。
  *
  * @param db Database インスタンス
  * @param tweetId ツイート ID
@@ -320,14 +320,17 @@ export function upsertTweetTags(
     'INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET name = excluded.name RETURNING id'
   )
 
-  // 既存の関連を削除する
-  db.prepare('DELETE FROM tweet_tags WHERE tweet_id = ?').run(tweetId)
+  const deleteTweetTags = db.prepare(
+    'DELETE FROM tweet_tags WHERE tweet_id = ?'
+  )
 
   const insertTweetTag = db.prepare(
     'INSERT OR IGNORE INTO tweet_tags (tweet_id, tag_id) VALUES (?, ?)'
   )
 
+  // 削除と挿入をトランザクション内で原子的に実行する
   db.transaction(() => {
+    deleteTweetTags.run(tweetId)
     for (const name of tagNames) {
       const row = upsertTag.get(name) as { id: number } | undefined
       if (row) {
@@ -339,7 +342,7 @@ export function upsertTweetTags(
 
 /**
  * ツイートとカテゴリの関連を保存する。
- * 既存の関連は削除してから再挿入する。
+ * 既存の関連の削除と新規挿入をトランザクション内で原子的に実行する。
  *
  * @param db Database インスタンス
  * @param tweetId ツイート ID
@@ -350,14 +353,17 @@ export function upsertTweetCategories(
   tweetId: string,
   categories: { id: number; confidence: number }[]
 ): void {
-  db.prepare('DELETE FROM tweet_categories WHERE tweet_id = ?').run(tweetId)
-  if (categories.length === 0) return
+  const deleteTweetCategories = db.prepare(
+    'DELETE FROM tweet_categories WHERE tweet_id = ?'
+  )
 
   const insertTweetCategory = db.prepare(
     'INSERT OR IGNORE INTO tweet_categories (tweet_id, category_id, confidence) VALUES (?, ?, ?)'
   )
 
+  // 削除と挿入をトランザクション内で原子的に実行する
   db.transaction(() => {
+    deleteTweetCategories.run(tweetId)
     for (const cat of categories) {
       insertTweetCategory.run(tweetId, cat.id, cat.confidence)
     }

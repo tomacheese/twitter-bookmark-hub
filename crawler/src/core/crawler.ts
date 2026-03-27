@@ -40,6 +40,8 @@ async function analyzeAndSave(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tweetId, text }),
+      // analyzer が応答しない場合にクロール全体がハングしないよう 10 秒でタイムアウトする
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (!response.ok) {

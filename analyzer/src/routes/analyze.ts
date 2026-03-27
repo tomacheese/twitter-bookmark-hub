@@ -20,10 +20,10 @@ export function analyzeRoute(
 
   /**
    * POST /analyze - ツイートテキストを形態素解析してタグとカテゴリを返す
-   * リクエストボディ: { tweetId: string, text: string }
+   * リクエストボディ: { text: string }
    */
   app.post("/analyze", async (c) => {
-    const body = await c.req.json<{ tweetId?: string; text?: string }>();
+    const body = await c.req.json<{ text?: string }>();
     const text = body.text;
 
     if (typeof text !== "string" || text.trim() === "") {
