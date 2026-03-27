@@ -14,6 +14,7 @@ export function useBookmarks() {
   const limit = ref(20)
   const selectedAccount = ref<string | null>(null)
   const selectedCategory = ref<number | null>(null)
+  const selectedTag = ref<string | null>(null)
   const searchQuery = ref('')
 
   /** ソートキー（localStorage から復元） */
@@ -60,6 +61,7 @@ export function useBookmarks() {
           sort?: 'asc' | 'desc'
           sortBy?: 'bookmarked_at' | 'created_at'
           category?: number
+          tag?: string
         } = {
           page: page.value,
           limit: limit.value,
@@ -70,6 +72,7 @@ export function useBookmarks() {
         if (selectedAccount.value) params.account = selectedAccount.value
         if (selectedCategory.value !== null)
           params.category = selectedCategory.value
+        if (selectedTag.value) params.tag = selectedTag.value
 
         const res = await fetchBookmarks(params)
         if (!cancel.value) {
@@ -119,6 +122,7 @@ export function useBookmarks() {
     limit,
     selectedAccount,
     selectedCategory,
+    selectedTag,
     searchQuery,
     sortBy,
     sortOrder,

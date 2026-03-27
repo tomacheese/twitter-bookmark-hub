@@ -12,6 +12,11 @@ const properties = defineProps<{
   item: BookmarkItem
 }>()
 
+const emit = defineEmits<{
+  /** タグをクリックしたときに発火する */
+  'tag-click': [tag: string]
+}>()
+
 // ---- アバター ---------------------------------------------------------------
 
 /**
@@ -610,10 +615,15 @@ const twitterAppUrl = computed(
           :style="{ borderColor: cat.color, color: cat.color }">
           {{ cat.name }}
         </span>
-        <!-- タグピル -->
-        <span v-for="tag in item.tags" :key="tag" class="label-tag">
+        <!-- タグピル: クリックでタグフィルタを適用する -->
+        <button
+          v-for="tag in item.tags"
+          :key="tag"
+          class="label-tag"
+          :title="`「${tag}」で検索`"
+          @click.stop="emit('tag-click', tag)">
           {{ tag }}
-        </span>
+        </button>
       </div>
 
       <!-- フッター: ブックマーク済みアカウント -->
@@ -1119,16 +1129,27 @@ const twitterAppUrl = computed(
   white-space: nowrap;
 }
 
-/* タグピル: グレー背景 */
+/* タグピル: グレー背景・クリック可能 */
 .label-tag {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 9999px;
+  border: none;
   background: var(--color-bg-secondary);
   color: var(--color-text-secondary);
   font-size: 12px;
+  font-family: inherit;
   line-height: 18px;
   white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.label-tag:hover {
+  background: rgba(29, 155, 240, 0.1);
+  color: var(--color-accent);
 }
 
 /* ============================================================

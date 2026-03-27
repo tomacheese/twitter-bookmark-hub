@@ -25,6 +25,8 @@ interface GetBookmarksParams {
   sort?: 'asc' | 'desc'
   /** カテゴリ ID でフィルタ */
   categoryId?: number
+  /** タグ名でフィルタ（完全一致） */
+  tag?: string
 }
 
 /** ブックマーク取得結果 */
@@ -231,6 +233,12 @@ export function getBookmarks(
       'EXISTS (SELECT 1 FROM tweet_categories tc WHERE tc.tweet_id = t.tweet_id AND tc.category_id = ?)'
     )
     bindValues.push(effectiveCategoryId)
+  }
+  if (params.tag && tagsTableExists) {
+    conditions.push(
+      'EXISTS (SELECT 1 FROM tweet_tags tt JOIN tags tg ON tt.tag_id = tg.id WHERE tt.tweet_id = t.tweet_id AND tg.name = ?)'
+    )
+    bindValues.push(params.tag)
   }
 
   const whereClause =

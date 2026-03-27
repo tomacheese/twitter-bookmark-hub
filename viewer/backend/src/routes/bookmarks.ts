@@ -40,6 +40,9 @@ export function bookmarksRoute(db: Database.Database): Hono {
       }
     }
 
+    const rawTag = c.req.query('tag')
+    const tag: string | undefined = rawTag === '' ? undefined : rawTag
+
     const result = getBookmarks(db, {
       page,
       limit,
@@ -48,6 +51,7 @@ export function bookmarksRoute(db: Database.Database): Hono {
       sort,
       sortBy,
       categoryId,
+      tag,
     })
 
     const response: BookmarksResponse = {

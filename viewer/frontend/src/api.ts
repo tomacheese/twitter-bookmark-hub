@@ -63,6 +63,8 @@ export async function fetchBookmarks(params: {
   sort?: 'asc' | 'desc'
   sortBy?: 'bookmarked_at' | 'created_at'
   category?: number
+  /** タグ名でフィルタ（完全一致） */
+  tag?: string
 }): Promise<BookmarksResponse> {
   const query = new URLSearchParams()
   if (params.page != null) query.set('page', String(params.page))
@@ -72,6 +74,7 @@ export async function fetchBookmarks(params: {
   if (params.sort) query.set('sort', params.sort)
   if (params.sortBy) query.set('sort_by', params.sortBy)
   if (params.category != null) query.set('category', String(params.category))
+  if (params.tag) query.set('tag', params.tag)
 
   const res = await fetch(`${BASE}/bookmarks?${query.toString()}`)
   if (!res.ok) return throwResponseError(res, 'Failed to fetch bookmarks')

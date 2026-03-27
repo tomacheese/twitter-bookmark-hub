@@ -15,6 +15,7 @@ const {
   limit,
   selectedAccount,
   selectedCategory,
+  selectedTag,
   searchQuery,
   sortBy,
   sortOrder,
@@ -92,6 +93,23 @@ function onAccountChange(account: string | null) {
  */
 function onCategoryChange(categoryId: number | null) {
   selectedCategory.value = categoryId
+  page.value = 1
+}
+
+/**
+ * タグクリック時の処理。タグフィルタをセットしてページを 1 に戻す。
+ * @param tag - クリックされたタグ名
+ */
+function onTagClick(tag: string) {
+  selectedTag.value = tag
+  page.value = 1
+}
+
+/**
+ * タグフィルタをクリアしてページを 1 に戻す
+ */
+function clearTagFilter() {
+  selectedTag.value = null
   page.value = 1
 }
 </script>
@@ -179,6 +197,19 @@ function onCategoryChange(categoryId: number | null) {
           </button>
         </div>
 
+        <!-- アクティブなタグフィルタチップ -->
+        <div v-if="selectedTag" class="active-filters">
+          <span class="filter-chip">
+            🏷 {{ selectedTag }}
+            <button
+              class="filter-chip-clear"
+              title="タグフィルタをクリア"
+              @click="clearTagFilter">
+              ×
+            </button>
+          </span>
+        </div>
+
         <BookmarkList
           :items="items"
           :loading="loading"
@@ -187,7 +218,8 @@ function onCategoryChange(categoryId: number | null) {
           :total="total"
           :limit="limit"
           @next="nextPage"
-          @prev="prevPage" />
+          @prev="prevPage"
+          @tag-click="onTagClick" />
       </main>
     </div>
   </div>
@@ -442,6 +474,47 @@ body {
 .search-input:focus {
   border-color: var(--color-accent);
   background: transparent;
+}
+
+/* アクティブなタグフィルタチップ */
+.active-filters {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(29, 155, 240, 0.15);
+  color: var(--color-accent);
+  font-size: 13px;
+}
+
+.filter-chip-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.filter-chip-clear:hover {
+  background: rgba(29, 155, 240, 0.2);
 }
 
 /* レスポンシブ */
