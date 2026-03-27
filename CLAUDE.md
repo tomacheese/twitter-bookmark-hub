@@ -25,7 +25,7 @@ crawler/          # ブックマーク収集サービス
     server.ts     # HTTP API サーバー (Hono)
 shared/           # 共有パッケージ
   src/
-    schema.ts     # Zod スキーマ
+    schema.ts     # SQLite DDL 定数 (SCHEMA_DDL)
     types.ts      # 型定義
 viewer/
   backend/        # 閲覧 API サーバー (Hono + SQLite)
@@ -57,10 +57,8 @@ compose.yaml      # Docker Compose 定義
 ### 依存パッケージのインストール
 
 ```bash
-# 各パッケージで個別に実行する
-cd crawler && pnpm install
-cd viewer/backend && pnpm install
-cd viewer/frontend && pnpm install
+# リポジトリルートで一度実行する (pnpm workspace により全パッケージに適用される)
+pnpm install
 ```
 
 ### Lint / フォーマット
@@ -81,7 +79,7 @@ docker compose up -d
 
 # 個別起動（開発時）
 cd crawler && pnpm start          # port 3001
-cd viewer/backend && pnpm start   # port 3000 内部で使用
+cd viewer/backend && pnpm start   # ポート 3000 (Docker Compose では外部公開)
 cd viewer/frontend && pnpm dev    # Vite dev server
 ```
 
