@@ -92,6 +92,10 @@ export function useBookmarks() {
     hasMore.value = true
     loading.value = true
     error.value = null
+    // フィルタ変更を検知したタイミングで古いリストと件数をクリアし、
+    // UI とフィルタ状態の不整合（旧リストが表示され続ける問題）を防ぐ
+    items.value = []
+    total.value = 0
 
     fetchBookmarks(params)
       .then((res) => {
@@ -116,14 +120,15 @@ export function useBookmarks() {
   function loadMore() {
     if (loading.value || !hasMore.value) return
     const nextPage = page.value + 1
-    page.value = nextPage
-
+    // ページ番号はリクエスト成功後に確定させ、失敗時は巻き戻す
     loading.value = true
 
     const params = buildParams(nextPage)
     fetchBookmarks(params)
       .then((res) => {
         if (loadMoreCancelled) return
+        // 成功時のみページ番号を進める
+        page.value = nextPage
         items.value = [...items.value, ...res.items]
         total.value = res.total
         hasMore.value = items.value.length < res.total
@@ -131,6 +136,7 @@ export function useBookmarks() {
       .catch((error_: unknown) => {
         if (loadMoreCancelled) return
         error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+        // 失敗時はページ番号を据え置きにする（次回 loadMore で同ページを再試行できる）
       })
       .finally(() => {
         if (!loadMoreCancelled) loading.value = false
