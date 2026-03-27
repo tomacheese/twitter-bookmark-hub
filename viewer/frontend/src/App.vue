@@ -47,23 +47,55 @@ watch(
 const sidebarOpen = ref(false)
 
 /**
- * ハッシュからビュー名を導出するヘルパー
+ * URL ハッシュからタグパラメータを解析する。
+ * 例: `#/?tag=Vue` → `"Vue"`、`#/` → `null`
+ * @returns タグ名、またはタグパラメータがない場合は null
+ */
+function parseTagFromHash(): string | null {
+  const hash = globalThis.location.hash
+  const queryStart = hash.indexOf('?')
+  if (queryStart === -1) return null
+  return new URLSearchParams(hash.slice(queryStart + 1)).get('tag')
+}
+
+/**
+ * ハッシュからビュー名を導出するヘルパー。
+ * クエリパラメータ（`?` 以降）を除いたパス部分で判定する。
  * @returns 現在のビュー名
  */
 function resolveView(): 'main' | 'settings' {
-  return globalThis.location.hash === '#/settings' ? 'settings' : 'main'
+  const hash = globalThis.location.hash
+  const path = hash.includes('?') ? hash.slice(0, hash.indexOf('?')) : hash
+  return path === '#/settings' ? 'settings' : 'main'
 }
 
 /** 現在のビュー（ハッシュルーティング） */
 const currentView = ref<'main' | 'settings'>(resolveView())
 
-/** hashchange イベントハンドラ */
+/**
+ * hashchange イベントハンドラ。
+ * ブラウザの戻る/進む操作に対応するため、ハッシュからフィルタ状態を復元する。
+ */
 function onHashChange() {
-  currentView.value = resolveView()
+  const newView = resolveView()
+  currentView.value = newView
+  // メインビュー遷移時のみタグフィルタをハッシュから復元する
+  if (newView === 'main') {
+    const tag = parseTagFromHash()
+    if (selectedTag.value !== tag) {
+      selectedTag.value = tag
+      page.value = 1
+    }
+  }
 }
 
 onMounted(() => {
   globalThis.addEventListener('hashchange', onHashChange)
+  // 初回マウント時にハッシュからタグフィルタを復元する（直リンク対応）
+  const tag = parseTagFromHash()
+  if (tag) {
+    selectedTag.value = tag
+  }
 })
 
 onUnmounted(() => {
@@ -71,11 +103,20 @@ onUnmounted(() => {
 })
 
 /**
- * ビューを切り替える
+ * ビューを切り替える。
+ * メインへ戻る際はアクティブなタグフィルタを URL に保持する。
  * @param view - 遷移先ビュー名
  */
 function navigateTo(view: 'main' | 'settings') {
-  globalThis.location.hash = view === 'settings' ? '#/settings' : '#/'
+  if (view === 'settings') {
+    globalThis.location.hash = '#/settings'
+  } else {
+    // 設定から戻る際、タグフィルタが有効な場合は URL に保持する
+    const tag = selectedTag.value
+    globalThis.location.hash = tag
+      ? '#/?' + new URLSearchParams({ tag }).toString()
+      : '#/'
+  }
 }
 
 /**
@@ -97,20 +138,20 @@ function onCategoryChange(categoryId: number | null) {
 }
 
 /**
- * タグクリック時の処理。タグフィルタをセットしてページを 1 に戻す。
+ * タグクリック時の処理。URL ハッシュを更新してブラウザ履歴エントリを作成する。
+ * hashchange が発火し、onHashChange が selectedTag・page をセットする。
  * @param tag - クリックされたタグ名
  */
 function onTagClick(tag: string) {
-  selectedTag.value = tag
-  page.value = 1
+  globalThis.location.hash = '#/?' + new URLSearchParams({ tag }).toString()
 }
 
 /**
- * タグフィルタをクリアしてページを 1 に戻す
+ * タグフィルタをクリアして URL を元に戻す。
+ * hashchange が発火し、onHashChange が selectedTag = null をセットする。
  */
 function clearTagFilter() {
-  selectedTag.value = null
-  page.value = 1
+  globalThis.location.hash = '#/'
 }
 </script>
 
