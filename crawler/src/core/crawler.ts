@@ -132,8 +132,8 @@ export function isRunning(): boolean {
 
 /**
  * 全アカウントのブックマークをクロールしてデータベースに保存する。
- * クロールが正常に完了した場合、Twitter 側で削除済みのブックマークを DB から自動削除する。
- * MAX_PAGES 到達・クロール異常終了・クロール結果が空で既存ブックマークがある場合は
+ * クロール完了後、Twitter 側で削除済みのブックマークを DB から自動削除する。
+ * MAX_PAGES 到達・クロール結果が空で既存ブックマークがある場合は
  * 誤削除防止のため差分削除をスキップする。
  *
  * @param db Database インスタンス
@@ -177,8 +177,6 @@ export async function runCrawl(db: Database.Database): Promise<void> {
         const crawledTweetIds = new Set<string>()
         // MAX_PAGES に達した場合は差分削除を行わないためのフラグ
         let reachedMaxPages = false
-        // Twitter API が nextCursor = null を返し全件取得完了を示した場合に true
-        let crawlCompleted = false
 
         while (true) {
           page++
@@ -255,13 +253,6 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           const nextCursor = response.data.cursor.bottom?.value
           if (!nextCursor || processableTweetsCount === 0) {
             logger.info(`[${account.username}] All bookmarks fetched.`)
-            // nextCursor が null の場合のみ全件取得完了とみなす。
-            // processableTweetsCount === 0 のみ（カーソルが存在する）の場合は
-            // プロモーションのみのページによる誤終了や API 一時異常の可能性があるため
-            // 完了フラグを立てない。
-            if (!nextCursor) {
-              crawlCompleted = true
-            }
             break
           }
           if (page >= MAX_PAGES) {
@@ -279,7 +270,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           logger.warn(
             `[${account.username}] Skipping stale bookmark deletion because MAX_PAGES was reached.`
           )
-        } else if (crawlCompleted) {
+        } else {
           // DB 上の tweet_id のうち今回のクロールで取得できなかったものを削除する
           const existingIds = getBookmarkTweetIds(db, account.username)
           if (crawledTweetIds.size === 0 && existingIds.length > 0) {
@@ -304,12 +295,6 @@ export async function runCrawl(db: Database.Database): Promise<void> {
               })()
             }
           }
-        } else {
-          // nextCursor が null にならずにループを抜けた場合（プロモーションのみページ等）は
-          // 全件取得を保証できないため差分削除をスキップする
-          logger.warn(
-            `[${account.username}] Skipping stale bookmark deletion because crawl did not complete normally (cursor was still present).`
-          )
         }
 
         successCount++
