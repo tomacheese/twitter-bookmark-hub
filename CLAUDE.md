@@ -100,12 +100,12 @@ pnpm install
 ### Lint / フォーマット
 
 ```bash
-# 各パッケージディレクトリで実行する (crawler / viewer/backend / viewer/frontend)
+# 各パッケージディレクトリで実行する (crawler / viewer/backend / viewer/frontend / analyzer)
 pnpm lint       # ESLint + Prettier チェック + TypeScript 型チェック
 pnpm fix        # 自動修正 (ESLint --fix + Prettier --write)
 ```
 
-CI (`nodejs-ci.yml`) は `crawler`、`viewer/backend`、`viewer/frontend` の 3 ディレクトリで `pnpm lint` を実行する。**PR 前に必ず全パッケージで lint をパスさせること。**
+CI (`nodejs-ci.yml`) は `crawler`、`viewer/backend`、`viewer/frontend`、`analyzer` の 4 ディレクトリで `pnpm lint` を実行する。**PR 前に必ず全パッケージで lint をパスさせること。**
 
 ### 起動
 
@@ -319,6 +319,6 @@ Chrome 120 on Windows 10 の JA3 TLS フィンガープリントを使用。`cyc
 
 GitHub Actions の `nodejs-ci.yml` が PR・push 時に以下を実行する:
 
-- `crawler`、`viewer/backend`、`viewer/frontend` それぞれで `pnpm lint`
+- `crawler`、`viewer/backend`、`viewer/frontend`、`analyzer` それぞれで `pnpm lint`
 
 ローカルで `pnpm lint` がパスしない場合は `pnpm fix` で自動修正後、再度確認すること。
