@@ -10,6 +10,16 @@ export default [
   // TypeScript ルールセット（.ts ファイル用）
   ...baseConfig,
   {
+    // Vite 設定ファイルは Node.js 環境で実行されるため、tsconfig.node.json を使用する
+    files: ['vite.config.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: ['tsconfig.node.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
     // .vue ファイルに vue-eslint-parser を明示的に適用する
     // baseConfig の global 設定による上書きを防ぐため、最後に定義する
     files: ['**/*.vue'],
