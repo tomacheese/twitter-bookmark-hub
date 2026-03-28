@@ -223,7 +223,7 @@ export function extractBookmarkEntry(
  *
  * @param client TwitterOpenApi クライアント
  * @param tweetId ツイート ID
- * @throws CreateBookmark フラグが存在しない場合
+ * @throws CreateBookmark フラグが存在しない、または queryId が不正な場合
  */
 export async function addBookmark(
   client: TwitterOpenApiClient,
@@ -235,9 +235,14 @@ export async function addBookmark(
   const flagEntry = postApiUtils.flag.CreateBookmark as
     | { queryId: string }
     | undefined
-  if (!flagEntry) {
+  // flagEntry が存在しない、または queryId が文字列でない・空文字の場合は実行不可
+  if (
+    !flagEntry ||
+    typeof flagEntry.queryId !== 'string' ||
+    flagEntry.queryId.length === 0
+  ) {
     throw new Error(
-      'CreateBookmark flag not found. The API may not support this operation.'
+      'CreateBookmark flag not found or queryId is invalid. The API may not support this operation.'
     )
   }
   const queryId = flagEntry.queryId
@@ -263,7 +268,7 @@ export async function addBookmark(
  *
  * @param client TwitterOpenApi クライアント
  * @param tweetId ツイート ID
- * @throws DeleteBookmark フラグが存在しない場合
+ * @throws DeleteBookmark フラグが存在しない、または queryId が不正な場合
  */
 export async function removeBookmark(
   client: TwitterOpenApiClient,
@@ -275,9 +280,14 @@ export async function removeBookmark(
   const flagEntry = postApiUtils.flag.DeleteBookmark as
     | { queryId: string }
     | undefined
-  if (!flagEntry) {
+  // flagEntry が存在しない、または queryId が文字列でない・空文字の場合は実行不可
+  if (
+    !flagEntry ||
+    typeof flagEntry.queryId !== 'string' ||
+    flagEntry.queryId.length === 0
+  ) {
     throw new Error(
-      'DeleteBookmark flag not found. The API may not support this operation.'
+      'DeleteBookmark flag not found or queryId is invalid. The API may not support this operation.'
     )
   }
   const queryId = flagEntry.queryId

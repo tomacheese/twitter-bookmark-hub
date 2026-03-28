@@ -45,7 +45,12 @@ export function createServer(db: Database.Database): Hono {
 
   /** ブックマーク追加エンドポイント */
   app.post('/bookmarks', async (c) => {
-    const body = await c.req.json<{ account?: string; tweetId?: string }>()
+    let body: { account?: string; tweetId?: string }
+    try {
+      body = await c.req.json<{ account?: string; tweetId?: string }>()
+    } catch {
+      return c.json({ error: 'Invalid JSON body.' }, 400)
+    }
     const { account, tweetId } = body
     if (!account || !tweetId) {
       return c.json({ error: 'account and tweetId are required.' }, 400)
