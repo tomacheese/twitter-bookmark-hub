@@ -18,4 +18,4 @@ jobs:
     name: Node CI
     uses: book000/templates/.github/workflows/reusable-nodejs-ci-pnpm.yml@master
     with:
-      directorys: "crawler, viewer/backend, viewer/frontend"
+      directorys: "crawler, viewer/backend, viewer/frontend, analyzer"
