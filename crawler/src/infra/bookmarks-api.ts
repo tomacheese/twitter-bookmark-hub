@@ -265,6 +265,7 @@ export async function addBookmark(
 /**
  * 指定ツイートをブックマークから削除する。
  * PostApiUtils のラッパーには未実装のため、内部の generated PostApi を直接呼び出す。
+ * ブックマークが存在しない場合は冪等な削除として正常終了する。
  *
  * @param client TwitterOpenApi クライアント
  * @param tweetId ツイート ID
@@ -291,20 +292,33 @@ export async function removeBookmark(
     )
   }
   const queryId = flagEntry.queryId
-  await withRetry(
-    () =>
-      postApiUtils.api.postDeleteBookmark(
-        {
-          pathQueryId: queryId,
-          postDeleteBookmarkRequest: {
-            queryId,
-            variables: { tweetId },
+  try {
+    await withRetry(
+      () =>
+        postApiUtils.api.postDeleteBookmark(
+          {
+            pathQueryId: queryId,
+            postDeleteBookmarkRequest: {
+              queryId,
+              variables: { tweetId },
+            },
           },
-        },
-        postApiUtils.initOverrides(flagEntry)
-      ),
-    { operationName: `removeBookmark(${tweetId})` }
-  )
+          postApiUtils.initOverrides(flagEntry)
+        ),
+      { operationName: `removeBookmark(${tweetId})` }
+    )
+  } catch (error) {
+    // twitter-openapi-typescript は存在しないブックマークを削除しようとすると
+    // レスポンスの特定フィールドが undefined になり TypeError が発生する。
+    // ブックマークが既に存在しない（冪等な削除）として無視する。
+    if (
+      error instanceof TypeError &&
+      error.message.includes('Cannot read properties of undefined')
+    ) {
+      return
+    }
+    throw error
+  }
 }
 
 /**
