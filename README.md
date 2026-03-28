@@ -95,6 +95,8 @@ docker compose --profile analyzer up -d
 | `/health` | GET | ヘルスチェック |
 | `/crawl` | POST | クロール手動実行 |
 | `/crawl/status` | GET | 最新クロールジョブの状態 |
+| `/bookmarks` | POST | ブックマーク追加（ボディ: `{"account": "<username>", "tweetId": "<id>"}` ） |
+| `/bookmarks/:tweetId` | DELETE | ブックマーク削除（クエリ: `?account=<username>`）。DB からも即時削除 |
 
 ## データ
 
