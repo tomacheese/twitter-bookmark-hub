@@ -260,10 +260,10 @@ export function getBookmarkTweetIds(
   db: Database.Database,
   accountUsername: string
 ): string[] {
-  const rows = db
+  return db
     .prepare('SELECT tweet_id FROM bookmarks WHERE account_username = ?')
-    .all(accountUsername) as { tweet_id: string }[]
-  return rows.map((r) => r.tweet_id)
+    .pluck()
+    .all(accountUsername) as string[]
 }
 
 /**
