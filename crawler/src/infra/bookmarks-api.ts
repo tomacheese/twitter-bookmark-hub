@@ -265,10 +265,13 @@ export async function addBookmark(
 /**
  * 指定ツイートをブックマークから削除する。
  * PostApiUtils のラッパーには未実装のため、内部の generated PostApi を直接呼び出す。
+ * ブックマークが存在しない場合は冪等な削除として正常終了する。
+ * それ以外のエラー（ネットワークエラー、レート制限等）は呼び出し元に再スローする。
  *
  * @param client TwitterOpenApi クライアント
  * @param tweetId ツイート ID
  * @throws DeleteBookmark フラグが存在しない、または queryId が不正な場合
+ * @throws ブックマーク不存在以外のエラー（ネットワークエラー、レート制限等）
  */
 export async function removeBookmark(
   client: TwitterOpenApiClient,
@@ -292,17 +295,34 @@ export async function removeBookmark(
   }
   const queryId = flagEntry.queryId
   await withRetry(
-    () =>
-      postApiUtils.api.postDeleteBookmark(
-        {
-          pathQueryId: queryId,
-          postDeleteBookmarkRequest: {
-            queryId,
-            variables: { tweetId },
+    async () => {
+      try {
+        return await postApiUtils.api.postDeleteBookmark(
+          {
+            pathQueryId: queryId,
+            postDeleteBookmarkRequest: {
+              queryId,
+              variables: { tweetId },
+            },
           },
-        },
-        postApiUtils.initOverrides(flagEntry)
-      ),
+          postApiUtils.initOverrides(flagEntry)
+        )
+      } catch (error) {
+        // twitter-openapi-typescript は存在しないブックマークを削除しようとすると
+        // レスポンスの .map() 呼び出しで TypeError が発生する。
+        // このケースはブックマークが既に存在しない（冪等な削除）として無視し、
+        // withRetry によるリトライをスキップする。
+        if (
+          error instanceof TypeError &&
+          error.message.includes(
+            "Cannot read properties of undefined (reading 'map')"
+          )
+        ) {
+          return
+        }
+        throw error
+      }
+    },
     { operationName: `removeBookmark(${tweetId})` }
   )
 }
