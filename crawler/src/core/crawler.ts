@@ -11,6 +11,8 @@ import {
   updateCrawlJob,
   upsertTweetEntry,
   upsertBookmark,
+  deleteBookmark,
+  getBookmarkTweetIds,
   upsertTweetTags,
   upsertTweetCategories,
 } from '../infra/database'
@@ -168,6 +170,10 @@ export async function runCrawl(db: Database.Database): Promise<void> {
         // globalPosition = 0 が最も新しいブックマークを表す
         let globalPosition = 0
         const crawledAt = new Date().toISOString()
+        // クロールで取得した tweet_id の集合（差分削除に使用）
+        const crawledTweetIds = new Set<string>()
+        // MAX_PAGES に達した場合は差分削除を行わないためのフラグ
+        let reachedMaxPages = false
 
         while (true) {
           page++
@@ -205,6 +211,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
                 crawledAt,
                 globalPosition
               )
+              crawledTweetIds.add(entry.tweetId)
               // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
               // 引用ツイート本文・カードタイトルも結合してタグ精度を高める
               const tweetId = entry.tweetId
@@ -249,9 +256,29 @@ export async function runCrawl(db: Database.Database): Promise<void> {
             logger.warn(
               `[${account.username}] Reached MAX_PAGES (${MAX_PAGES}). Stopping to prevent infinite loop.`
             )
+            reachedMaxPages = true
             break
           }
           cursor = nextCursor
+        }
+
+        // MAX_PAGES に達した場合は全件取得できていないため差分削除を行わない
+        if (reachedMaxPages) {
+          logger.warn(
+            `[${account.username}] Skipping stale bookmark deletion because MAX_PAGES was reached.`
+          )
+        } else {
+          // DB 上の tweet_id のうち今回のクロールで取得できなかったものを削除する
+          const existingIds = getBookmarkTweetIds(db, account.username)
+          const staleIds = existingIds.filter((id) => !crawledTweetIds.has(id))
+          if (staleIds.length > 0) {
+            logger.info(
+              `[${account.username}] Deleting ${staleIds.length} stale bookmark(s) not found in crawl results.`
+            )
+            for (const tweetId of staleIds) {
+              deleteBookmark(db, tweetId, account.username)
+            }
+          }
         }
 
         successCount++

@@ -249,6 +249,24 @@ export function deleteBookmark(
 }
 
 /**
+ * 指定アカウントの全ブックマーク tweet_id を返す。
+ * クロール後の差分削除処理で使用する。
+ *
+ * @param db Database インスタンス
+ * @param accountUsername アカウントのユーザー名
+ * @returns tweet_id の配列
+ */
+export function getBookmarkTweetIds(
+  db: Database.Database,
+  accountUsername: string
+): string[] {
+  const rows = db
+    .prepare('SELECT tweet_id FROM bookmarks WHERE account_username = ?')
+    .all(accountUsername) as { tweet_id: string }[]
+  return rows.map((r) => r.tweet_id)
+}
+
+/**
  * クロールジョブを新規作成する。
  *
  * @param db Database インスタンス
