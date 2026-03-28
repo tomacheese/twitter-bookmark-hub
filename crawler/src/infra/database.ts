@@ -232,6 +232,23 @@ export function upsertBookmark(
 }
 
 /**
+ * ブックマークレコードを DB から削除する。
+ *
+ * @param db Database インスタンス
+ * @param tweetId ツイート ID
+ * @param accountUsername アカウントのユーザー名
+ */
+export function deleteBookmark(
+  db: Database.Database,
+  tweetId: string,
+  accountUsername: string
+): void {
+  db.prepare(
+    'DELETE FROM bookmarks WHERE tweet_id = ? AND account_username = ?'
+  ).run(tweetId, accountUsername)
+}
+
+/**
  * クロールジョブを新規作成する。
  *
  * @param db Database インスタンス

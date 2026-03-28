@@ -10,6 +10,7 @@ import type {
   QuotedTweet,
   UrlEntity,
 } from '../shared/types'
+import { withRetry } from '../shared/retry'
 import { cycleTLSFetch } from './cycletls'
 
 /**
@@ -214,6 +215,96 @@ export function extractBookmarkEntry(
     cardPlayerUrl,
     cardInfo,
   }
+}
+
+/**
+ * 指定ツイートをブックマークに追加する。
+ * PostApiUtils のラッパーには未実装のため、内部の generated PostApi を直接呼び出す。
+ *
+ * @param client TwitterOpenApi クライアント
+ * @param tweetId ツイート ID
+ * @throws CreateBookmark フラグが存在しない、または queryId が不正な場合
+ */
+export async function addBookmark(
+  client: TwitterOpenApiClient,
+  tweetId: string
+): Promise<void> {
+  const postApiUtils = client.getPostApi()
+  // DefaultFlag は { [key: string]: { [key: string]: any } } 型だが、
+  // 実行時に Twitter 初期ページから取得した queryId が格納されており存在しない場合がある
+  const flagEntry = postApiUtils.flag.CreateBookmark as
+    | { queryId: string }
+    | undefined
+  // flagEntry が存在しない、または queryId が文字列でない・空文字の場合は実行不可
+  if (
+    !flagEntry ||
+    typeof flagEntry.queryId !== 'string' ||
+    flagEntry.queryId.length === 0
+  ) {
+    throw new Error(
+      'CreateBookmark flag not found or queryId is invalid. The API may not support this operation.'
+    )
+  }
+  const queryId = flagEntry.queryId
+  await withRetry(
+    () =>
+      postApiUtils.api.postCreateBookmark(
+        {
+          pathQueryId: queryId,
+          postCreateBookmarkRequest: {
+            queryId,
+            variables: { tweetId },
+          },
+        },
+        postApiUtils.initOverrides(flagEntry)
+      ),
+    { operationName: `addBookmark(${tweetId})` }
+  )
+}
+
+/**
+ * 指定ツイートをブックマークから削除する。
+ * PostApiUtils のラッパーには未実装のため、内部の generated PostApi を直接呼び出す。
+ *
+ * @param client TwitterOpenApi クライアント
+ * @param tweetId ツイート ID
+ * @throws DeleteBookmark フラグが存在しない、または queryId が不正な場合
+ */
+export async function removeBookmark(
+  client: TwitterOpenApiClient,
+  tweetId: string
+): Promise<void> {
+  const postApiUtils = client.getPostApi()
+  // DefaultFlag は { [key: string]: { [key: string]: any } } 型だが、
+  // 実行時に Twitter 初期ページから取得した queryId が格納されており存在しない場合がある
+  const flagEntry = postApiUtils.flag.DeleteBookmark as
+    | { queryId: string }
+    | undefined
+  // flagEntry が存在しない、または queryId が文字列でない・空文字の場合は実行不可
+  if (
+    !flagEntry ||
+    typeof flagEntry.queryId !== 'string' ||
+    flagEntry.queryId.length === 0
+  ) {
+    throw new Error(
+      'DeleteBookmark flag not found or queryId is invalid. The API may not support this operation.'
+    )
+  }
+  const queryId = flagEntry.queryId
+  await withRetry(
+    () =>
+      postApiUtils.api.postDeleteBookmark(
+        {
+          pathQueryId: queryId,
+          postDeleteBookmarkRequest: {
+            queryId,
+            variables: { tweetId },
+          },
+        },
+        postApiUtils.initOverrides(flagEntry)
+      ),
+    { operationName: `removeBookmark(${tweetId})` }
+  )
 }
 
 /**
