@@ -332,14 +332,14 @@ const deletingAccounts = ref(new Set<string>())
  * @param account - 解除対象のアカウント名
  */
 async function onDeleteBookmark(account: string) {
-  if (!confirm(`@${account} のブックマークを解除しますか？`)) return
+  if (!confirm(`Remove bookmark for @${account}?`)) return
   deletingAccounts.value = new Set([...deletingAccounts.value, account])
   try {
     await deleteBookmark(properties.item.tweetId, account)
     emit('bookmark-deleted', { tweetId: properties.item.tweetId, account })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
-    alert(`ブックマーク解除に失敗しました: ${message}`)
+    alert(`Failed to remove bookmark: ${message}`)
   } finally {
     const next = new Set(deletingAccounts.value)
     next.delete(account)

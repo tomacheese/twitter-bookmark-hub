@@ -3,9 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type Database from 'better-sqlite3'
 import { getBookmarks } from '../infra/database'
 import type { BookmarksResponse } from '../shared/types'
-
-/** クローラーサービスの URL */
-const CRAWLER_URL = process.env.CRAWLER_URL ?? 'http://crawler:3001'
+import { CRAWLER_URL } from '../shared/config'
 
 /**
  * ブックマーク API ルートを作成する
