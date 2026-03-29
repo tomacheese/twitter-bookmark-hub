@@ -49,6 +49,7 @@ function relativeTime(dateString: string): string {
     <button
       class="crawl-button"
       :disabled="triggering || status?.status === 'running'"
+      aria-label="クロール実行"
       @click="triggerCrawl">
       <!-- PC: テキスト表示 / スマホ: アイコンのみ表示 -->
       <svg viewBox="0 0 24 24" class="crawl-icon" aria-hidden="true">

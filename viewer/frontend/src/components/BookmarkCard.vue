@@ -672,6 +672,7 @@ async function onDeleteBookmark(account: string) {
               class="bookmark-delete-btn"
               :disabled="deletingAccounts.has(account)"
               :title="`@${account} のブックマークを解除`"
+              :aria-label="`@${account} のブックマークを解除`"
               @click.stop="onDeleteBookmark(account)">
               <svg
                 viewBox="0 0 24 24"

@@ -194,6 +194,7 @@ function onBookmarkDeleted(payload: { tweetId: string; account: string }) {
           v-if="analyzerEnabled"
           class="nav-btn"
           :class="{ active: currentView === 'settings' }"
+          :aria-label="currentView === 'settings' ? '戻る' : '設定'"
           @click="navigateTo(currentView === 'settings' ? 'main' : 'settings')">
           <!-- PC: テキスト表示 / スマホ: アイコンのみ表示 -->
           <span class="nav-btn-label">{{

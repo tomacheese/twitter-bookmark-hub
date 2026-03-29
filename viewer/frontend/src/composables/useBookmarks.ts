@@ -160,6 +160,16 @@ export function useBookmarks() {
     if (idx === -1) return
     const item = items.value[idx]
     const newBookmarkedBy = item.bookmarkedBy.filter((a) => a !== account)
+
+    // アカウントフィルタ中に、そのアカウントのブックマークを解除した場合は
+    // newBookmarkedBy に他アカウントが残っていても現在の一覧からは除去する。
+    // フィルタ済みリストにはそのアカウントがブックマークしたツイートのみが含まれるため。
+    if (selectedAccount.value === account) {
+      items.value = items.value.filter((_, i) => i !== idx)
+      total.value = Math.max(0, total.value - 1)
+      return
+    }
+
     if (newBookmarkedBy.length === 0) {
       items.value = items.value.filter((_, i) => i !== idx)
       total.value = Math.max(0, total.value - 1)
