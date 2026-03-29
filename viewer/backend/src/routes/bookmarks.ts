@@ -1,7 +1,11 @@
 import { Hono } from 'hono'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type Database from 'better-sqlite3'
 import { getBookmarks } from '../infra/database'
 import type { BookmarksResponse } from '../shared/types'
+
+/** クローラーサービスの URL */
+const CRAWLER_URL = process.env.CRAWLER_URL ?? 'http://crawler:3001'
 
 /**
  * ブックマーク API ルートを作成する
@@ -62,6 +66,43 @@ export function bookmarksRoute(db: Database.Database): Hono {
     }
 
     return c.json(response)
+  })
+
+  /** DELETE /api/bookmarks/:tweetId - ブックマークを解除する（クローラーに転送） */
+  app.delete('/api/bookmarks/:tweetId', async (c) => {
+    const tweetId = c.req.param('tweetId')
+    const account = c.req.query('account')
+    if (!account) {
+      return c.json({ error: 'account query parameter is required.' }, 400)
+    }
+
+    // 30 秒でタイムアウトし、ハングした接続でリクエストがブロックされるのを防ぐ
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      controller.abort()
+    }, 30_000)
+    try {
+      const url = new URL(
+        `${CRAWLER_URL}/bookmarks/${encodeURIComponent(tweetId)}`
+      )
+      url.searchParams.set('account', account)
+      const res = await fetch(url.toString(), {
+        method: 'DELETE',
+        signal: controller.signal,
+      })
+      const contentType = res.headers.get('content-type') ?? ''
+      const data: unknown = contentType.includes('application/json')
+        ? await res.json()
+        : { message: await res.text() }
+      return c.json(data, res.status as ContentfulStatusCode)
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return c.json({ error: 'Crawler service timed out.' }, 504)
+      }
+      return c.json({ error: 'Crawler service is unavailable.' }, 502)
+    } finally {
+      clearTimeout(timer)
+    }
   })
 
   return app

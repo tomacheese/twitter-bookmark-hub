@@ -23,6 +23,7 @@ const {
   hasMore,
   loadMore,
   toggleSortOrder,
+  removeItemAccount,
 } = useBookmarks()
 
 const { accounts } = useAccounts()
@@ -157,6 +158,14 @@ function onTagClick(tag: string) {
 function clearTagFilter() {
   globalThis.location.hash = '#/'
 }
+
+/**
+ * ブックマーク解除完了時に items からアカウントを削除する。
+ * @param payload - 解除されたツイート ID とアカウント名
+ */
+function onBookmarkDeleted(payload: { tweetId: string; account: string }) {
+  removeItemAccount(payload.tweetId, payload.account)
+}
 </script>
 
 <template>
@@ -186,7 +195,13 @@ function clearTagFilter() {
           class="nav-btn"
           :class="{ active: currentView === 'settings' }"
           @click="navigateTo(currentView === 'settings' ? 'main' : 'settings')">
-          {{ currentView === 'settings' ? '← 戻る' : '⚙ 設定' }}
+          <!-- PC: テキスト表示 / スマホ: アイコンのみ表示 -->
+          <span class="nav-btn-label">{{
+            currentView === 'settings' ? '← 戻る' : '⚙ 設定'
+          }}</span>
+          <span class="nav-btn-icon" aria-hidden="true">{{
+            currentView === 'settings' ? '←' : '⚙'
+          }}</span>
         </button>
       </div>
     </header>
@@ -196,6 +211,12 @@ function clearTagFilter() {
 
     <!-- メインページ -->
     <div v-else class="layout">
+      <!-- スマホ: サイドバー展開時のオーバーレイ背景 -->
+      <div
+        v-if="sidebarOpen"
+        class="sidebar-overlay"
+        aria-hidden="true"
+        @click="sidebarOpen = false" />
       <!-- サイドバー -->
       <aside class="sidebar" :class="{ 'sidebar-closed': !sidebarOpen }">
         <AccountFilter
@@ -256,7 +277,8 @@ function clearTagFilter() {
           :error="error"
           :has-more="hasMore"
           @load-more="loadMore"
-          @tag-click="onTagClick" />
+          @tag-click="onTagClick"
+          @bookmark-deleted="onBookmarkDeleted" />
       </main>
     </div>
   </div>
@@ -348,6 +370,21 @@ body {
 .nav-btn.active {
   border-color: var(--color-accent);
   color: var(--color-accent);
+}
+
+/* PC ではアイコンを非表示にして、スマホではテキストを非表示にする */
+.nav-btn-icon {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .nav-btn-label {
+    display: none;
+  }
+
+  .nav-btn-icon {
+    display: inline;
+  }
 }
 
 /* サイドバー開閉ボタン */
@@ -560,18 +597,41 @@ body {
     flex-direction: column;
   }
 
+  /* スマホ: サイドバーを全画面オーバーレイとして表示する */
   .sidebar {
-    width: 100%;
-    position: static;
-    height: auto;
+    position: fixed;
+    inset: 0;
+    top: 53px;
+    width: 100% !important;
+    height: calc(100vh - 53px) !important;
+    z-index: 20;
     border-right: none;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: none;
+    overflow-y: auto;
+    background: var(--color-bg);
+    transition:
+      opacity 0.25s ease,
+      visibility 0.25s ease;
+    visibility: visible;
   }
 
   .sidebar.sidebar-closed {
-    width: 100%;
-    height: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    /* width/height はオーバーライドされているため 0 への縮小は不要 */
+    width: 100% !important;
+    height: calc(100vh - 53px) !important;
     border-bottom-color: transparent;
+  }
+
+  /* スマホ: オーバーレイ背景（サイドバーの後ろを暗くする） */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    top: 53px;
+    z-index: 19;
+    background: rgba(0, 0, 0, 0.5);
   }
 
   .main {

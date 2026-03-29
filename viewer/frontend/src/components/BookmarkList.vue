@@ -19,6 +19,8 @@ const emit = defineEmits<{
   'load-more': []
   /** タグがクリックされた */
   'tag-click': [tag: string]
+  /** ブックマーク解除が完了した */
+  'bookmark-deleted': [{ tweetId: string; account: string }]
 }>()
 
 /** センチネル要素（スクロール末端の検知用） */
@@ -77,7 +79,8 @@ onUnmounted(() => {
         v-for="item in items"
         :key="item.tweetId"
         :item="item"
-        @tag-click="(tag) => emit('tag-click', tag)" />
+        @tag-click="(tag) => emit('tag-click', tag)"
+        @bookmark-deleted="(payload) => emit('bookmark-deleted', payload)" />
     </template>
 
     <!-- 無限スクロール用センチネル + 追加読み込みインジケータ -->

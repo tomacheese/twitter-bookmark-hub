@@ -179,6 +179,23 @@ export async function deleteCategory(id: number): Promise<void> {
 }
 
 /**
+ * ブックマークを解除する。クローラー経由で Twitter 側からも削除する
+ * @param tweetId - ツイート ID
+ * @param account - 解除対象のアカウント名
+ */
+export async function deleteBookmark(
+  tweetId: string,
+  account: string
+): Promise<void> {
+  const query = new URLSearchParams({ account })
+  const res = await fetch(
+    `${BASE}/bookmarks/${encodeURIComponent(tweetId)}?${query.toString()}`,
+    { method: 'DELETE' }
+  )
+  if (!res.ok) return throwResponseError(res, 'Failed to delete bookmark')
+}
+
+/**
  * 頻出タグ一覧を取得する
  * @param limit - 上限件数（デフォルト 50）
  * @returns タグアイテムの配列

@@ -50,7 +50,13 @@ function relativeTime(dateString: string): string {
       class="crawl-button"
       :disabled="triggering || status?.status === 'running'"
       @click="triggerCrawl">
-      クロール実行
+      <!-- PC: テキスト表示 / スマホ: アイコンのみ表示 -->
+      <svg viewBox="0 0 24 24" class="crawl-icon" aria-hidden="true">
+        <path
+          d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+          fill="currentColor" />
+      </svg>
+      <span class="crawl-btn-label">クロール実行</span>
     </button>
   </div>
 </template>
@@ -60,6 +66,30 @@ function relativeTime(dateString: string): string {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.crawl-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  /* PC ではアイコンを非表示 */
+  display: none;
+}
+
+/* スマホではアイコンを表示し、テキストを非表示にする */
+@media (max-width: 768px) {
+  .crawl-icon {
+    display: block;
+  }
+
+  .crawl-btn-label {
+    display: none;
+  }
+
+  /* アイコンのみになるため正方形に近いパディングに変更 */
+  .crawl-button {
+    padding: 7px 10px;
+  }
 }
 
 .status-info {
@@ -108,6 +138,9 @@ function relativeTime(dateString: string): string {
 }
 
 .crawl-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--color-accent);
   color: #fff;
   border: none;
@@ -116,6 +149,7 @@ function relativeTime(dateString: string): string {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
   transition: background 0.2s;
 }
 

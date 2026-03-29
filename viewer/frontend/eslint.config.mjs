@@ -46,6 +46,8 @@ export default [
       // unicorn は null より undefined を好むが、Vue の v-model や Optional Chaining と
       // の相性を考慮して .vue ファイルに限り無効化する
       'unicorn/no-null': 'off',
+      // .ts/.tsx 同様に省略形を許可する（unicorn flat/recommended が .vue にも適用されるため明示的に無効化）
+      'unicorn/prevent-abbreviations': 'off',
       // vue-eslint-parser が生成する仮想ファイルには型情報が不完全なため、
       // TypeScript の unsafe 系ルールを .vue ファイルに限り無効化する
       // @see https://github.com/vuejs/vue-eslint-parser/issues/104

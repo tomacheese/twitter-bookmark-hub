@@ -149,6 +149,27 @@ export function useBookmarks() {
     sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
   }
 
+  /**
+   * ローカルの items から指定アカウントのブックマークを削除する。
+   * bookmarkedBy が空になった場合はアイテム自体も除去する。
+   * @param tweetId - ツイート ID
+   * @param account - 解除したアカウント名
+   */
+  function removeItemAccount(tweetId: string, account: string) {
+    const idx = items.value.findIndex((item) => item.tweetId === tweetId)
+    if (idx === -1) return
+    const item = items.value[idx]
+    const newBookmarkedBy = item.bookmarkedBy.filter((a) => a !== account)
+    if (newBookmarkedBy.length === 0) {
+      items.value = items.value.filter((_, i) => i !== idx)
+      total.value = Math.max(0, total.value - 1)
+    } else {
+      items.value = items.value.map((it, i) =>
+        i === idx ? { ...it, bookmarkedBy: newBookmarkedBy } : it
+      )
+    }
+  }
+
   return {
     page,
     limit,
@@ -165,5 +186,6 @@ export function useBookmarks() {
     hasMore,
     loadMore,
     toggleSortOrder,
+    removeItemAccount,
   }
 }
