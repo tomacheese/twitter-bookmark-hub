@@ -23,6 +23,7 @@ const {
   hasMore,
   loadMore,
   toggleSortOrder,
+  removeItemAccount,
 } = useBookmarks()
 
 const { accounts } = useAccounts()
@@ -157,6 +158,14 @@ function onTagClick(tag: string) {
 function clearTagFilter() {
   globalThis.location.hash = '#/'
 }
+
+/**
+ * ブックマーク解除完了時に items からアカウントを削除する。
+ * @param payload - 解除されたツイート ID とアカウント名
+ */
+function onBookmarkDeleted(payload: { tweetId: string; account: string }) {
+  removeItemAccount(payload.tweetId, payload.account)
+}
 </script>
 
 <template>
@@ -168,6 +177,8 @@ function clearTagFilter() {
         <button
           class="sidebar-toggle"
           :title="sidebarOpen ? 'サイドバーを閉じる' : 'サイドバーを開く'"
+          :aria-label="sidebarOpen ? 'サイドバーを閉じる' : 'サイドバーを開く'"
+          :aria-expanded="sidebarOpen"
           :class="{ 'is-open': sidebarOpen }"
           @click="sidebarOpen = !sidebarOpen">
           <span class="hamburger-line" />
@@ -185,8 +196,15 @@ function clearTagFilter() {
           v-if="analyzerEnabled"
           class="nav-btn"
           :class="{ active: currentView === 'settings' }"
+          :aria-label="currentView === 'settings' ? '戻る' : '設定'"
           @click="navigateTo(currentView === 'settings' ? 'main' : 'settings')">
-          {{ currentView === 'settings' ? '← 戻る' : '⚙ 設定' }}
+          <!-- PC: テキスト表示 / スマホ: アイコンのみ表示 -->
+          <span class="nav-btn-label">{{
+            currentView === 'settings' ? '← 戻る' : '⚙ 設定'
+          }}</span>
+          <span class="nav-btn-icon" aria-hidden="true">{{
+            currentView === 'settings' ? '←' : '⚙'
+          }}</span>
         </button>
       </div>
     </header>
@@ -196,6 +214,12 @@ function clearTagFilter() {
 
     <!-- メインページ -->
     <div v-else class="layout">
+      <!-- スマホ: サイドバー展開時のオーバーレイ背景 -->
+      <div
+        v-if="sidebarOpen"
+        class="sidebar-overlay"
+        aria-hidden="true"
+        @click="sidebarOpen = false" />
       <!-- サイドバー -->
       <aside class="sidebar" :class="{ 'sidebar-closed': !sidebarOpen }">
         <AccountFilter
@@ -256,7 +280,8 @@ function clearTagFilter() {
           :error="error"
           :has-more="hasMore"
           @load-more="loadMore"
-          @tag-click="onTagClick" />
+          @tag-click="onTagClick"
+          @bookmark-deleted="onBookmarkDeleted" />
       </main>
     </div>
   </div>
@@ -270,9 +295,19 @@ function clearTagFilter() {
   --color-bg-hover: #080808;
   --color-border: #2f3336;
   --color-text-primary: #e7e9ea;
-  --color-text-secondary: #71767b;
+  --color-text-secondary: #8b9098;
   --color-accent: #1d9bf0;
   --color-accent-hover: #1a8cd8;
+  --color-success: #00ba7c;
+  --color-error: #f4212e;
+  --color-error-bg: rgba(244, 33, 46, 0.1);
+  --header-height: 53px;
+}
+
+/* キーボードフォーカスの視覚的フィードバック（マウス操作では表示しない） */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 * {
@@ -350,6 +385,21 @@ body {
   color: var(--color-accent);
 }
 
+/* PC ではアイコンを非表示にして、スマホではテキストを非表示にする */
+.nav-btn-icon {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .nav-btn-label {
+    display: none;
+  }
+
+  .nav-btn-icon {
+    display: inline;
+  }
+}
+
 /* サイドバー開閉ボタン */
 /* ハンバーガーボタン */
 .sidebar-toggle {
@@ -410,8 +460,8 @@ body {
   flex-shrink: 0;
   border-right: 1px solid var(--color-border);
   position: sticky;
-  top: 53px;
-  height: calc(100vh - 53px);
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
   overflow-y: auto;
   overflow-x: hidden;
   transition:
@@ -554,24 +604,58 @@ body {
   background: rgba(29, 155, 240, 0.2);
 }
 
+/* アニメーション軽減設定 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* レスポンシブ */
 @media (max-width: 768px) {
   .layout {
     flex-direction: column;
   }
 
+  /* スマホ: サイドバーを全画面オーバーレイとして表示する */
   .sidebar {
-    width: 100%;
-    position: static;
-    height: auto;
+    position: fixed;
+    inset: 0;
+    top: var(--header-height);
+    width: 100% !important;
+    height: calc(100vh - var(--header-height)) !important;
+    z-index: 20;
     border-right: none;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: none;
+    overflow-y: auto;
+    background: var(--color-bg);
+    transition:
+      opacity 0.25s ease,
+      visibility 0.25s ease;
+    visibility: visible;
   }
 
   .sidebar.sidebar-closed {
-    width: 100%;
-    height: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    /* width/height はオーバーライドされているため 0 への縮小は不要 */
+    width: 100% !important;
+    height: calc(100vh - var(--header-height)) !important;
     border-bottom-color: transparent;
+  }
+
+  /* スマホ: オーバーレイ背景（サイドバーの後ろを暗くする） */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    top: var(--header-height);
+    z-index: 19;
+    background: rgba(0, 0, 0, 0.5);
   }
 
   .main {

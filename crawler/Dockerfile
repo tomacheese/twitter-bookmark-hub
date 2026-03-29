@@ -20,13 +20,17 @@ COPY viewer/frontend/package.json ./viewer/frontend/
 COPY viewer/backend/package.json ./viewer/backend/
 
 # ロックファイルからパッケージをストアにフェッチ（ネットワーク層をキャッシュ）
-RUN --mount=type=cache,id=pnpm-crawler,target=/pnpm/store pnpm fetch
+# viewer と同一の pnpm-store キャッシュを共有し、重複ダウンロードを防ぐ
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm fetch
 
 # shared パッケージのソースをコピー（workspace リンクに必要）
 COPY shared/ ./shared/
 
 # crawler の全依存パッケージをインストール（ネイティブモジュールをここでコンパイル）
-RUN --mount=type=cache,id=pnpm-crawler,target=/pnpm/store pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-crawler
+# node-gyp キャッシュを共有して better-sqlite3 の再コンパイルを防ぐ
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    --mount=type=cache,id=node-gyp,target=/root/.cache/node-gyp \
+    pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-crawler
 
 # crawler のソースをコピー
 COPY crawler/ ./crawler/

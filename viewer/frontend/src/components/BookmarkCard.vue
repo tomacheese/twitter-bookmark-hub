@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { BookmarkItem, UrlEntity } from '../api'
+import { deleteBookmark } from '../api'
 
 /** タッチデバイス判定 */
 const isTouchDevice =
@@ -15,6 +16,8 @@ const properties = defineProps<{
 const emit = defineEmits<{
   /** タグをクリックしたときに発火する */
   'tag-click': [tag: string]
+  /** ブックマーク解除が完了したときに発火する */
+  'bookmark-deleted': [{ tweetId: string; account: string }]
 }>()
 
 // ---- アバター ---------------------------------------------------------------
@@ -317,11 +320,39 @@ function upgradedImageUrl(
 const twitterAppUrl = computed(
   () => `twitter://status?id=${properties.item.tweetId}`
 )
+
+// ---- ブックマーク解除 --------------------------------------------------------
+
+/** 解除処理中のアカウント名セット */
+const deletingAccounts = ref(new Set<string>())
+
+/**
+ * 指定アカウントのブックマークを解除する。
+ * 確認ダイアログを表示し、承諾された場合のみ API を呼び出す。
+ * @param account - 解除対象のアカウント名
+ */
+async function onDeleteBookmark(account: string) {
+  if (!confirm(`Remove bookmark for @${account}?`)) return
+  deletingAccounts.value = new Set([...deletingAccounts.value, account])
+  try {
+    await deleteBookmark(properties.item.tweetId, account)
+    emit('bookmark-deleted', { tweetId: properties.item.tweetId, account })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    alert(`Failed to remove bookmark: ${message}`)
+  } finally {
+    const next = new Set(deletingAccounts.value)
+    next.delete(account)
+    deletingAccounts.value = next
+  }
+}
 </script>
 
 <template>
   <article
     class="tweet"
+    role="article"
+    :aria-label="`${item.userName} (@${item.screenName}) のツイート`"
     tabindex="0"
     @click="onCardClick"
     @keydown="onCardKeydown">
@@ -353,7 +384,9 @@ const twitterAppUrl = computed(
           <span class="meta-right">
             <span class="screen-name">@{{ item.screenName }}</span>
             <span class="meta-sep" aria-hidden="true">·</span>
-            <time class="tweet-time">{{ relativeTime }}</time>
+            <time class="tweet-time" :datetime="item.createdAt">{{
+              relativeTime
+            }}</time>
           </span>
         </div>
         <!-- ヘッダー右: 外部リンクボタン -->
@@ -626,7 +659,7 @@ const twitterAppUrl = computed(
         </button>
       </div>
 
-      <!-- フッター: ブックマーク済みアカウント -->
+      <!-- フッター: ブックマーク済みアカウント + 解除ボタン -->
       <div class="tweet-footer">
         <div class="bookmarked-by">
           <svg viewBox="0 0 24 24" class="bookmark-icon" aria-hidden="true">
@@ -637,9 +670,32 @@ const twitterAppUrl = computed(
           <span
             v-for="account in item.bookmarkedBy"
             :key="account"
-            class="bookmark-account"
-            >@{{ account }}</span
-          >
+            class="bookmark-account-group">
+            <span class="bookmark-account">@{{ account }}</span>
+            <button
+              class="bookmark-delete-btn"
+              :disabled="deletingAccounts.has(account)"
+              :title="`@${account} のブックマークを解除`"
+              :aria-label="`@${account} のブックマークを解除`"
+              @click.stop="onDeleteBookmark(account)">
+              <svg
+                viewBox="0 0 24 24"
+                class="bookmark-delete-icon"
+                aria-hidden="true">
+                <path
+                  d="M6 2a2 2 0 0 0-2 2v17.586l8-4 8 4V4a2 2 0 0 0-2-2H6zm0 2h12v14.414l-6-3-6 3V4z"
+                  fill="currentColor" />
+                <line
+                  x1="4"
+                  y1="4"
+                  x2="20"
+                  y2="20"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round" />
+              </svg>
+            </button>
+          </span>
         </div>
       </div>
     </div>
@@ -860,10 +916,6 @@ const twitterAppUrl = computed(
 
 .text-link {
   color: var(--color-accent);
-  text-decoration: none;
-}
-
-.text-link:hover {
   text-decoration: underline;
 }
 
@@ -1173,9 +1225,49 @@ const twitterAppUrl = computed(
   flex-shrink: 0;
 }
 
+.bookmark-account-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .bookmark-account {
   font-size: 13px;
   color: var(--color-text-secondary);
+}
+
+/* ブックマーク解除ボタン */
+.bookmark-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+}
+
+.bookmark-delete-btn:hover:not(:disabled) {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.bookmark-delete-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bookmark-delete-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* ============================================================
