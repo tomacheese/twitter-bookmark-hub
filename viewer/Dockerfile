@@ -23,13 +23,17 @@ COPY viewer/frontend/package.json ./viewer/frontend/
 COPY viewer/backend/package.json ./viewer/backend/
 
 # ロックファイルからパッケージをストアにフェッチ（ネットワーク層をキャッシュ）
-RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm fetch
+# crawler/backend と同一の pnpm-store キャッシュを共有し、重複ダウンロードを防ぐ
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm fetch
 
 # shared パッケージのソースをコピー（workspace リンクに必要）
 COPY shared/ ./shared/
 
 # frontend の全依存パッケージをインストール
-RUN --mount=type=cache,id=pnpm-frontend,target=/pnpm/store pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-frontend
+# node-gyp キャッシュを共有してネイティブモジュールの再コンパイルを防ぐ
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    --mount=type=cache,id=node-gyp,target=/root/.cache/node-gyp \
+    pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-frontend
 
 # frontend のソースをコピーしてビルド
 COPY viewer/frontend/ ./viewer/frontend/
@@ -57,13 +61,17 @@ COPY viewer/frontend/package.json ./viewer/frontend/
 COPY viewer/backend/package.json ./viewer/backend/
 
 # ロックファイルからパッケージをストアにフェッチ（ネットワーク層をキャッシュ）
-RUN --mount=type=cache,id=pnpm-backend,target=/pnpm/store pnpm fetch
+# frontend と同一の pnpm-store キャッシュを共有し、重複ダウンロードを防ぐ
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm fetch
 
 # shared パッケージのソースをコピー（workspace リンクに必要）
 COPY shared/ ./shared/
 
 # backend の全依存パッケージをインストール（ネイティブモジュールをここでコンパイル）
-RUN --mount=type=cache,id=pnpm-backend,target=/pnpm/store pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-backend
+# node-gyp キャッシュを共有して better-sqlite3 の再コンパイルを防ぐ
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    --mount=type=cache,id=node-gyp,target=/root/.cache/node-gyp \
+    pnpm install --offline --frozen-lockfile --filter twitter-bookmark-hub-backend
 
 # backend のソースとフロントエンドのビルド成果物をコピー
 COPY viewer/backend/ ./viewer/backend/
