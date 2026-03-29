@@ -1,4 +1,4 @@
-import { ref, watch, watchEffect } from 'vue'
+import { ref, watch, watchEffect, onScopeDispose } from 'vue'
 import { fetchBookmarks } from '../api'
 import type { BookmarkItem } from '../api'
 
@@ -7,15 +7,26 @@ import type { BookmarkItem } from '../api'
  * 前回の呼び出しから delay ms 経過するまで実行を遅延する。
  * @param fn - デバウンス対象の関数
  * @param delay - 遅延時間（ミリ秒）
+ * @returns デバウンスされた関数と、保留中タイマーをキャンセルする cancel 関数
  */
-function debounce<T extends () => void>(fn: T, delay: number): T {
+function debounce<T extends () => void>(
+  fn: T,
+  delay: number
+): { fn: T; cancel: () => void } {
   let timer: ReturnType<typeof setTimeout> | null = null
-  return function (this: unknown) {
+  const debouncedFn = function (this: unknown) {
     if (timer !== null) clearTimeout(timer)
     timer = setTimeout(() => {
       fn.call(this)
     }, delay)
   } as T
+  const cancel = () => {
+    if (timer !== null) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+  return { fn: debouncedFn, cancel }
 }
 
 /** localStorage のキー定数 */
@@ -56,10 +67,12 @@ export function useBookmarks() {
   })
 
   /** 検索クエリ変更時に 200ms デバウンスして debouncedSearchQuery を更新する */
-  const updateDebouncedQuery = debounce(() => {
+  const { fn: updateDebouncedQuery, cancel: cancelDebounce } = debounce(() => {
     debouncedSearchQuery.value = searchQuery.value
   }, 200)
   watch(searchQuery, updateDebouncedQuery)
+  // スコープ破棄時に保留中タイマーをキャンセルして不要な state 更新を防ぐ
+  onScopeDispose(cancelDebounce)
 
   /** 蓄積されたブックマーク一覧（無限スクロールで追記） */
   const items = ref<BookmarkItem[]>([])

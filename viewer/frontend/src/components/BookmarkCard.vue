@@ -1256,7 +1256,7 @@ async function onDeleteBookmark(account: string) {
 }
 
 .bookmark-delete-btn:hover:not(:disabled) {
-  background: rgba(244, 33, 46, 0.1);
+  background: var(--color-error-bg);
   color: var(--color-error);
 }
 

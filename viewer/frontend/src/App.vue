@@ -300,6 +300,8 @@ function onBookmarkDeleted(payload: { tweetId: string; account: string }) {
   --color-accent-hover: #1a8cd8;
   --color-success: #00ba7c;
   --color-error: #f4212e;
+  --color-error-bg: rgba(244, 33, 46, 0.1);
+  --header-height: 53px;
 }
 
 /* キーボードフォーカスの視覚的フィードバック（マウス操作では表示しない） */
@@ -458,8 +460,8 @@ body {
   flex-shrink: 0;
   border-right: 1px solid var(--color-border);
   position: sticky;
-  top: 53px;
-  height: calc(100vh - 53px);
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
   overflow-y: auto;
   overflow-x: hidden;
   transition:
@@ -623,9 +625,9 @@ body {
   .sidebar {
     position: fixed;
     inset: 0;
-    top: 53px;
+    top: var(--header-height);
     width: 100% !important;
-    height: calc(100vh - 53px) !important;
+    height: calc(100vh - var(--header-height)) !important;
     z-index: 20;
     border-right: none;
     border-bottom: none;
@@ -643,7 +645,7 @@ body {
     pointer-events: none;
     /* width/height はオーバーライドされているため 0 への縮小は不要 */
     width: 100% !important;
-    height: calc(100vh - 53px) !important;
+    height: calc(100vh - var(--header-height)) !important;
     border-bottom-color: transparent;
   }
 
@@ -651,7 +653,7 @@ body {
   .sidebar-overlay {
     position: fixed;
     inset: 0;
-    top: 53px;
+    top: var(--header-height);
     z-index: 19;
     background: rgba(0, 0, 0, 0.5);
   }
