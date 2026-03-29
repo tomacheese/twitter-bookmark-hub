@@ -351,6 +351,8 @@ async function onDeleteBookmark(account: string) {
 <template>
   <article
     class="tweet"
+    role="article"
+    :aria-label="`${item.userName} (@${item.screenName}) のツイート`"
     tabindex="0"
     @click="onCardClick"
     @keydown="onCardKeydown">
@@ -382,7 +384,9 @@ async function onDeleteBookmark(account: string) {
           <span class="meta-right">
             <span class="screen-name">@{{ item.screenName }}</span>
             <span class="meta-sep" aria-hidden="true">·</span>
-            <time class="tweet-time">{{ relativeTime }}</time>
+            <time class="tweet-time" :datetime="item.createdAt">{{
+              relativeTime
+            }}</time>
           </span>
         </div>
         <!-- ヘッダー右: 外部リンクボタン -->
@@ -912,10 +916,6 @@ async function onDeleteBookmark(account: string) {
 
 .text-link {
   color: var(--color-accent);
-  text-decoration: none;
-}
-
-.text-link:hover {
   text-decoration: underline;
 }
 
@@ -1257,7 +1257,7 @@ async function onDeleteBookmark(account: string) {
 
 .bookmark-delete-btn:hover:not(:disabled) {
   background: rgba(244, 33, 46, 0.1);
-  color: #f4212e;
+  color: var(--color-error);
 }
 
 .bookmark-delete-btn:disabled {

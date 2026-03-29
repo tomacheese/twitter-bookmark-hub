@@ -24,7 +24,7 @@ function select(username: string | null) {
 
 <template>
   <div class="account-filter">
-    <h3 class="filter-title">アカウント</h3>
+    <h2 class="filter-title">アカウント</h2>
     <ul class="account-list">
       <li
         class="account-item"

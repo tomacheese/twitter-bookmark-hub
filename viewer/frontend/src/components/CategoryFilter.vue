@@ -24,7 +24,7 @@ function select(id: number | null) {
 
 <template>
   <div class="category-filter">
-    <h3 class="filter-title">カテゴリ</h3>
+    <h2 class="filter-title">カテゴリ</h2>
     <ul class="category-list">
       <li
         class="category-item"

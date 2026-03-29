@@ -177,6 +177,8 @@ function onBookmarkDeleted(payload: { tweetId: string; account: string }) {
         <button
           class="sidebar-toggle"
           :title="sidebarOpen ? 'サイドバーを閉じる' : 'サイドバーを開く'"
+          :aria-label="sidebarOpen ? 'サイドバーを閉じる' : 'サイドバーを開く'"
+          :aria-expanded="sidebarOpen"
           :class="{ 'is-open': sidebarOpen }"
           @click="sidebarOpen = !sidebarOpen">
           <span class="hamburger-line" />
@@ -293,9 +295,17 @@ function onBookmarkDeleted(payload: { tweetId: string; account: string }) {
   --color-bg-hover: #080808;
   --color-border: #2f3336;
   --color-text-primary: #e7e9ea;
-  --color-text-secondary: #71767b;
+  --color-text-secondary: #8b9098;
   --color-accent: #1d9bf0;
   --color-accent-hover: #1a8cd8;
+  --color-success: #00ba7c;
+  --color-error: #f4212e;
+}
+
+/* キーボードフォーカスの視覚的フィードバック（マウス操作では表示しない） */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 * {
@@ -590,6 +600,17 @@ body {
 
 .filter-chip-clear:hover {
   background: rgba(29, 155, 240, 0.2);
+}
+
+/* アニメーション軽減設定 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* レスポンシブ */

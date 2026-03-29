@@ -112,11 +112,11 @@ function relativeTime(dateString: string): string {
 }
 
 .status-dot.success {
-  background: #00ba7c;
+  background: var(--color-success);
 }
 
 .status-dot.error {
-  background: #f4212e;
+  background: var(--color-error);
 }
 
 @keyframes pulse {
@@ -135,7 +135,7 @@ function relativeTime(dateString: string): string {
 }
 
 .error-text {
-  color: #f4212e;
+  color: var(--color-error);
 }
 
 .crawl-button {

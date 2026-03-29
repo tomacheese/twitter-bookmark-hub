@@ -2,6 +2,22 @@ import { ref, watch, watchEffect } from 'vue'
 import { fetchBookmarks } from '../api'
 import type { BookmarkItem } from '../api'
 
+/**
+ * 指定した関数を delay ミリ秒デバウンスするユーティリティ。
+ * 前回の呼び出しから delay ms 経過するまで実行を遅延する。
+ * @param fn - デバウンス対象の関数
+ * @param delay - 遅延時間（ミリ秒）
+ */
+function debounce<T extends () => void>(fn: T, delay: number): T {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return function (this: unknown) {
+    if (timer !== null) clearTimeout(timer)
+    timer = setTimeout(() => {
+      fn.call(this)
+    }, delay)
+  } as T
+}
+
 /** localStorage のキー定数 */
 const LS_SORT_BY = 'bookmark-sort-by'
 const LS_SORT_ORDER = 'bookmark-sort-order'
@@ -17,6 +33,8 @@ export function useBookmarks() {
   const selectedCategory = ref<number | null>(null)
   const selectedTag = ref<string | null>(null)
   const searchQuery = ref('')
+  /** 検索クエリのデバウンス済み値（200ms 遅延）。watchEffect はこちらを追跡する */
+  const debouncedSearchQuery = ref('')
 
   /** ソートキー（localStorage から復元） */
   const rawSortBy = localStorage.getItem(LS_SORT_BY)
@@ -36,6 +54,12 @@ export function useBookmarks() {
   watch(sortOrder, (val) => {
     localStorage.setItem(LS_SORT_ORDER, val)
   })
+
+  /** 検索クエリ変更時に 200ms デバウンスして debouncedSearchQuery を更新する */
+  const updateDebouncedQuery = debounce(() => {
+    debouncedSearchQuery.value = searchQuery.value
+  }, 200)
+  watch(searchQuery, updateDebouncedQuery)
 
   /** 蓄積されたブックマーク一覧（無限スクロールで追記） */
   const items = ref<BookmarkItem[]>([])
@@ -66,7 +90,7 @@ export function useBookmarks() {
       limit: limit.value,
       sort: sortOrder.value,
       sortBy: sortBy.value,
-      ...(searchQuery.value ? { q: searchQuery.value } : {}),
+      ...(debouncedSearchQuery.value ? { q: debouncedSearchQuery.value } : {}),
       ...(selectedAccount.value ? { account: selectedAccount.value } : {}),
       ...(selectedCategory.value === null
         ? {}
