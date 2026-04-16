@@ -2,7 +2,7 @@
   "name": "twitter-bookmark-hub-crawler",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "start": "tsx src/main.ts",
     "lint": "run-z lint:prettier,lint:eslint,lint:tsc",
