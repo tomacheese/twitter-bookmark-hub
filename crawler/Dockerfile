@@ -36,7 +36,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 COPY crawler/ ./crawler/
 
 # devDependencies を除いた本番環境用スタンドアローンパッケージを作成する
-RUN pnpm --filter twitter-bookmark-hub-crawler deploy /deploy
+# pnpm v11 以降では inject-workspace-packages がロックファイルに記録されなくなったため --legacy フラグが必要
+RUN pnpm --filter twitter-bookmark-hub-crawler deploy --legacy /deploy
 
 # ---- Stage 2: ランタイム ----
 FROM node:24-alpine AS runner

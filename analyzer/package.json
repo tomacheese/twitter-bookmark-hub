@@ -18,13 +18,13 @@
     "@hono/node-server": "^1.13.8",
     "@patdx/kuromoji": "^1.0.4",
     "@twitter-bookmark-hub/shared": "workspace:*",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^12.9.0",
     "hono": "^4.7.7",
     "stopword": "^3.1.5",
     "tsx": "4.21.0"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.13.24",
+    "@book000/eslint-config": "1.14.16",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "22.x",
     "eslint": "10.1.0",
