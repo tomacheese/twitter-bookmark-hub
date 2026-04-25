@@ -4,3 +4,6 @@ packages:
   - viewer/backend
   - viewer/frontend
   - analyzer
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true

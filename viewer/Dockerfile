@@ -78,7 +78,8 @@ COPY viewer/backend/ ./viewer/backend/
 COPY --from=frontend-builder /app/viewer/frontend/dist ./viewer/backend/public
 
 # devDependencies を除いた本番環境用スタンドアローンパッケージを作成する
-RUN pnpm --filter twitter-bookmark-hub-backend deploy /deploy
+# pnpm v11 以降では inject-workspace-packages がロックファイルに記録されなくなったため --legacy フラグが必要
+RUN pnpm --filter twitter-bookmark-hub-backend deploy --legacy /deploy
 
 # ---- Stage 3: ランタイム ----
 FROM node:24-alpine AS runner
