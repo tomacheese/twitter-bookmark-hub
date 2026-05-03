@@ -25,7 +25,8 @@ RUN --mount=type=cache,id=pnpm-analyzer,target=/pnpm/store pnpm install --offlin
 
 COPY analyzer/ ./analyzer/
 
-RUN pnpm --filter twitter-bookmark-hub-analyzer deploy /deploy
+# pnpm v11 以降では inject-workspace-packages がロックファイルに記録されなくなったため --legacy フラグが必要
+RUN pnpm --filter twitter-bookmark-hub-analyzer deploy --legacy /deploy
 
 # ---- Stage 2: ランタイム ----
 FROM node:24-alpine AS runner

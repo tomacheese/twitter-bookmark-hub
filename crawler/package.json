@@ -18,7 +18,7 @@
     "@hono/node-server": "^1.13.8",
     "@the-convocation/twitter-scraper": "0.22.1",
     "@twitter-bookmark-hub/shared": "workspace:*",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^12.9.0",
     "cycletls": "2.0.5",
     "hono": "^4.7.7",
     "node-cron": "^3.0.3",
@@ -26,7 +26,7 @@
     "twitter-openapi-typescript": "0.0.55"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.13.24",
+    "@book000/eslint-config": "1.14.16",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "22.x",
     "@types/node-cron": "^3.0.11",
