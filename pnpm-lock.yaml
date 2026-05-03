@@ -11,25 +11,25 @@ importers:
   analyzer:
     dependencies:
       '@book000/node-utils':
-        specifier: ^1.24.105
+        specifier: 1.24.105
         version: 1.24.105
       '@hono/node-server':
-        specifier: ^1.13.8
+        specifier: 1.19.11
         version: 1.19.11(hono@4.12.9)
       '@patdx/kuromoji':
-        specifier: ^1.0.4
+        specifier: 1.0.4
         version: 1.0.4
       '@twitter-bookmark-hub/shared':
         specifier: workspace:*
         version: link:../shared
       better-sqlite3:
-        specifier: ^12.9.0
+        specifier: 12.9.0
         version: 12.9.0
       hono:
-        specifier: ^4.7.7
+        specifier: 4.12.9
         version: 4.12.9
       stopword:
-        specifier: ^3.1.5
+        specifier: 3.1.5
         version: 3.1.5
       tsx:
         specifier: 4.21.0
@@ -39,10 +39,10 @@ importers:
         specifier: 1.14.16
         version: 1.14.16(eslint@10.1.0)(typescript@5.9.3)
       '@types/better-sqlite3':
-        specifier: ^7.6.13
+        specifier: 7.6.13
         version: 7.6.13
       '@types/node':
-        specifier: 22.x
+        specifier: 22.19.15
         version: 22.19.15
       eslint:
         specifier: 10.1.0
@@ -60,10 +60,10 @@ importers:
   crawler:
     dependencies:
       '@book000/node-utils':
-        specifier: ^1.24.105
+        specifier: 1.24.105
         version: 1.24.105
       '@hono/node-server':
-        specifier: ^1.13.8
+        specifier: 1.19.11
         version: 1.19.11(hono@4.12.9)
       '@the-convocation/twitter-scraper':
         specifier: 0.22.1
@@ -72,16 +72,16 @@ importers:
         specifier: workspace:*
         version: link:../shared
       better-sqlite3:
-        specifier: ^12.9.0
+        specifier: 12.9.0
         version: 12.9.0
       cycletls:
         specifier: 2.0.5
         version: 2.0.5
       hono:
-        specifier: ^4.7.7
+        specifier: 4.12.9
         version: 4.12.9
       node-cron:
-        specifier: ^3.0.3
+        specifier: 3.0.3
         version: 3.0.3
       tsx:
         specifier: 4.21.0
@@ -94,13 +94,13 @@ importers:
         specifier: 1.14.16
         version: 1.14.16(eslint@10.1.0)(typescript@5.9.3)
       '@types/better-sqlite3':
-        specifier: ^7.6.13
+        specifier: 7.6.13
         version: 7.6.13
       '@types/node':
-        specifier: 22.x
+        specifier: 22.19.15
         version: 22.19.15
       '@types/node-cron':
-        specifier: ^3.0.11
+        specifier: 3.0.11
         version: 3.0.11
       '@types/tough-cookie':
         specifier: 4.0.5
@@ -133,19 +133,19 @@ importers:
   viewer/backend:
     dependencies:
       '@book000/node-utils':
-        specifier: ^1.24.105
+        specifier: 1.24.105
         version: 1.24.105
       '@hono/node-server':
-        specifier: ^1.13.8
+        specifier: 1.19.11
         version: 1.19.11(hono@4.12.9)
       '@twitter-bookmark-hub/shared':
         specifier: workspace:*
         version: link:../../shared
       better-sqlite3:
-        specifier: ^12.9.0
+        specifier: 12.9.0
         version: 12.9.0
       hono:
-        specifier: ^4.7.7
+        specifier: 4.12.9
         version: 4.12.9
       tsx:
         specifier: 4.21.0
@@ -155,10 +155,10 @@ importers:
         specifier: 1.14.16
         version: 1.14.16(eslint@10.1.0)(typescript@5.9.3)
       '@types/better-sqlite3':
-        specifier: ^7.6.13
+        specifier: 7.6.13
         version: 7.6.13
       '@types/node':
-        specifier: 22.x
+        specifier: 22.19.15
         version: 22.19.15
       eslint:
         specifier: 10.1.0
@@ -179,29 +179,29 @@ importers:
         specifier: workspace:*
         version: link:../../shared
       vue:
-        specifier: ^3.5.13
+        specifier: 3.5.31
         version: 3.5.31(typescript@5.9.3)
     devDependencies:
       '@book000/eslint-config':
         specifier: 1.14.16
         version: 1.14.16(eslint@10.1.0)(typescript@5.9.3)
       '@types/node':
-        specifier: ^25.5.0
+        specifier: 25.5.0
         version: 25.5.0
       '@typescript-eslint/parser':
-        specifier: ^8.57.2
+        specifier: 8.57.2
         version: 8.57.2(eslint@10.1.0)(typescript@5.9.3)
       '@vitejs/plugin-vue':
-        specifier: ^5.2.3
+        specifier: 5.2.4
         version: 5.2.4(vite@6.4.1(@types/node@25.5.0)(terser@5.46.1)(tsx@4.21.0))(vue@3.5.31(typescript@5.9.3))
       eslint:
         specifier: 10.1.0
         version: 10.1.0
       eslint-plugin-vue:
-        specifier: ^10.8.0
+        specifier: 10.8.0
         version: 10.8.0(@stylistic/eslint-plugin@2.11.0(eslint@10.1.0)(typescript@5.9.3))(@typescript-eslint/parser@8.57.2(eslint@10.1.0)(typescript@5.9.3))(eslint@10.1.0)(vue-eslint-parser@10.4.0(eslint@10.1.0))
       globals:
-        specifier: ^17.4.0
+        specifier: 17.4.0
         version: 17.4.0
       prettier:
         specifier: 3.8.1
@@ -213,19 +213,19 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
       vite:
-        specifier: ^6.3.4
+        specifier: 6.4.1
         version: 6.4.1(@types/node@25.5.0)(terser@5.46.1)(tsx@4.21.0)
       vite-plugin-pwa:
-        specifier: ^1.2.0
+        specifier: 1.2.0
         version: 1.2.0(vite@6.4.1(@types/node@25.5.0)(terser@5.46.1)(tsx@4.21.0))(workbox-build@7.4.0)(workbox-window@7.4.0)
       vue-eslint-parser:
-        specifier: ^10.4.0
+        specifier: 10.4.0
         version: 10.4.0(eslint@10.1.0)
       vue-tsc:
-        specifier: ^2.2.8
+        specifier: 2.2.12
         version: 2.2.12(typescript@5.9.3)
       workbox-build:
-        specifier: ^7.4.0
+        specifier: 7.4.0
         version: 7.4.0
 
 packages:
@@ -3290,6 +3290,7 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vite-plugin-pwa@1.2.0:
@@ -4681,8 +4682,8 @@ snapshots:
 
   '@typescript-eslint/project-service@8.57.2(typescript@5.9.3)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.57.2(typescript@5.9.3)
-      '@typescript-eslint/types': 8.57.2
+      '@typescript-eslint/tsconfig-utils': 8.59.0(typescript@5.9.3)
+      '@typescript-eslint/types': 8.59.0
       debug: 4.4.3
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -5515,7 +5516,7 @@ snapshots:
       core-js-compat: 3.49.0
       eslint: 10.1.0
       find-up-simple: 1.0.1
-      globals: 17.5.0
+      globals: 17.4.0
       indent-string: 5.0.0
       is-builtin-module: 5.0.0
       jsesc: 3.1.0
@@ -6147,7 +6148,7 @@ snapshots:
       eslint-plugin-promise: 7.2.1(eslint@10.1.0)
       eslint-plugin-react: 7.37.5(eslint@10.1.0)
       find-up: 8.0.0
-      globals: 17.5.0
+      globals: 17.4.0
       peowly: 1.3.3
       typescript-eslint: 8.59.0(eslint@10.1.0)(typescript@5.9.3)
     transitivePeerDependencies:
