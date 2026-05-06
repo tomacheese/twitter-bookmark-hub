@@ -25,7 +25,7 @@
     "@vitejs/plugin-vue": "5.2.4",
     "eslint": "10.1.0",
     "eslint-plugin-vue": "10.9.0",
-    "globals": "17.4.0",
+    "globals": "17.6.0",
     "prettier": "3.8.3",
     "run-z": "2.1.0",
     "typescript": "5.9.3",
