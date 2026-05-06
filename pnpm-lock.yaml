@@ -42,8 +42,8 @@ importers:
         specifier: 7.6.13
         version: 7.6.13
       '@types/node':
-        specifier: 22.19.15
-        version: 22.19.15
+        specifier: 22.19.17
+        version: 22.19.17
       eslint:
         specifier: 10.1.0
         version: 10.1.0
@@ -97,8 +97,8 @@ importers:
         specifier: 7.6.13
         version: 7.6.13
       '@types/node':
-        specifier: 22.19.15
-        version: 22.19.15
+        specifier: 22.19.17
+        version: 22.19.17
       '@types/node-cron':
         specifier: 3.0.11
         version: 3.0.11
@@ -158,8 +158,8 @@ importers:
         specifier: 7.6.13
         version: 7.6.13
       '@types/node':
-        specifier: 22.19.15
-        version: 22.19.15
+        specifier: 22.19.17
+        version: 22.19.17
       eslint:
         specifier: 10.1.0
         version: 10.1.0
@@ -1375,8 +1375,8 @@ packages:
   '@types/node@20.19.37':
     resolution: {integrity: sha512-8kzdPJ3FsNsVIurqBs7oodNnCEVbni9yUEkaHbgptDACOPW04jimGagZ51E6+lXUwJjgnBw+hyko/lkFWCldqw==}
 
-  '@types/node@22.19.15':
-    resolution: {integrity: sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg==}
+  '@types/node@22.19.17':
+    resolution: {integrity: sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==}
 
   '@types/node@25.5.0':
     resolution: {integrity: sha512-jp2P3tQMSxWugkCUKLRPVUpGaL5MVFwF8RDuSRztfwgN1wmqJeMSbKlnEtQqU8UrhTmzEmZdu2I6v2dpp7XIxw==}
@@ -4654,7 +4654,7 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@types/node@22.19.15':
+  '@types/node@22.19.17':
     dependencies:
       undici-types: 6.21.0
 
