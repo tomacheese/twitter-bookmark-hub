@@ -19,3 +19,4 @@ jobs:
     uses: book000/templates/.github/workflows/reusable-nodejs-ci-pnpm.yml@master
     with:
       directorys: "crawler, viewer/backend, viewer/frontend, analyzer"
+      lock-path: "pnpm-lock.yaml"

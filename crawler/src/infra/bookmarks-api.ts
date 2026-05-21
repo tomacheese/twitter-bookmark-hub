@@ -122,7 +122,7 @@ export function extractBookmarkEntry(
 
   // fullText が truthy なら legacy は TweetLegacy に narrowing される
   const mediaItems = extractMediaItems(legacy)
-  const urlEntities = extractUrlEntities(legacy.entities)
+  const urlEntities = extractUrlEntities(legacy.entities ?? {})
 
   // 引用ツイートの抽出
   let quotedTweet: QuotedTweet | null = null
@@ -134,23 +134,17 @@ export function extractBookmarkEntry(
     // User.legacy は必須フィールドのため optional chain 不要
     const qtUserLegacy = qtUser.legacy
 
-    if (qtLegacy) {
+    if (qtLegacy && qtUserLegacy.screenName && qtUserLegacy.name) {
       quotedTweet = {
-        // TweetLegacy.idStr は必須フィールド
         tweetId: qtLegacy.idStr,
-        // User.restId は必須フィールド
         userId: qtUser.restId,
-        // TweetLegacy.fullText は必須フィールド
         fullText: qtLegacy.fullText,
-        // TweetLegacy.createdAt は必須フィールド
         createdAt: new Date(qtLegacy.createdAt).toISOString(),
-        // UserLegacy.screenName / name は必須フィールド
         screenName: qtUserLegacy.screenName,
         userName: qtUserLegacy.name,
-        profileImageUrl: qtUserLegacy.profileImageUrlHttps,
+        profileImageUrl: qtUserLegacy.profileImageUrlHttps ?? null,
         mediaItems: extractMediaItems(qtLegacy),
-        // TweetLegacy.entities は必須フィールド
-        urlEntities: extractUrlEntities(qtLegacy.entities),
+        urlEntities: extractUrlEntities(qtLegacy.entities ?? {}),
       }
     }
   }
@@ -206,8 +200,7 @@ export function extractBookmarkEntry(
     fullText,
     screenName,
     userName,
-    // UserLegacy.profileImageUrlHttps は必須フィールドのため optional chain 不要
-    profileImageUrl: userLegacy.profileImageUrlHttps,
+    profileImageUrl: userLegacy.profileImageUrlHttps ?? null,
     createdAt,
     mediaItems,
     urlEntities,

@@ -23,7 +23,7 @@
     "hono": "4.12.18",
     "node-cron": "3.0.3",
     "tsx": "4.21.0",
-    "twitter-openapi-typescript": "0.0.55"
+    "twitter-openapi-typescript": "0.0.56"
   },
   "devDependencies": {
     "@book000/eslint-config": "1.14.30",
