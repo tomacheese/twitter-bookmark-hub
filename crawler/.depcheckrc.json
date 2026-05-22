@@ -3,6 +3,7 @@
     "@types/node",
     "@types/node-cron",
     "@types/tough-cookie",
+    "@types/ws",
     "run-z",
     "eslint-config-standard",
     "eslint-plugin-import",
