@@ -1,6 +1,7 @@
 {
   "ignores": [
     "@types/node",
+    "@types/ws",
     "run-z",
     "eslint-config-standard",
     "eslint-plugin-import",
