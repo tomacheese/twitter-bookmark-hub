@@ -106,7 +106,7 @@ importers:
         specifier: 4.0.5
         version: 4.0.5
       '@types/ws':
-        specifier: ^8.18.1
+        specifier: 8.18.1
         version: 8.18.1
       eslint:
         specifier: 10.4.0
@@ -164,7 +164,7 @@ importers:
         specifier: 24.12.4
         version: 24.12.4
       '@types/ws':
-        specifier: ^8.18.1
+        specifier: 8.18.1
         version: 8.18.1
       eslint:
         specifier: 10.4.0
