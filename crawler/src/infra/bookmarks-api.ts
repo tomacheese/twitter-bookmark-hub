@@ -380,16 +380,18 @@ export async function removeBookmark(
  *
  * @param authToken auth_token Cookie の値
  * @param ct0 ct0 Cookie の値
+ * @param clientLanguage Twitter API クライアントの言語コード (BCP47)。API レスポンスの言語に影響する。省略時は 'ja'
  * @returns TwitterOpenApi クライアント
  */
 export async function getBookmarksClient(
   authToken: string,
-  ct0: string
+  ct0: string,
+  clientLanguage = 'ja'
 ): Promise<TwitterOpenApiClient> {
   const api = new TwitterOpenApi()
   TwitterOpenApi.fetchApi = cycleTLSFetch
-  // twitter-openapi-typescript は x-twitter-client-language を 'en' でハードコードしているため
-  // 日本語翻訳 (Grok) を取得するために上書きする
-  api.setAdditionalApiHeaders({ 'x-twitter-client-language': 'ja' })
+  // twitter-openapi-typescript は x-twitter-client-language を 'en' でハードコードしているため上書きする。
+  // このヘッダーは Grok 翻訳先言語を含む API レスポンスの言語全体に影響する
+  api.setAdditionalApiHeaders({ 'x-twitter-client-language': clientLanguage })
   return api.getClientFromCookies({ auth_token: authToken, ct0 })
 }

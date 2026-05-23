@@ -164,7 +164,11 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       logger.info(`===== Account: ${account.username} =====`)
       try {
         const { authToken, ct0 } = await getAuthCookies(account)
-        const client = await getBookmarksClient(authToken, ct0)
+        const client = await getBookmarksClient(
+          authToken,
+          ct0,
+          config.twitter.clientLanguage
+        )
 
         let cursor: string | undefined
         let page = 0
