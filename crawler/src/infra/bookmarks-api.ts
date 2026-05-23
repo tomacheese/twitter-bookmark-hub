@@ -137,9 +137,9 @@ export function extractBookmarkEntry(
   // User.restId は必須フィールドのため fallback 不要
   const userId = user.restId
   const fullText = legacy?.fullText
-  // UserLegacy.screenName / name は必須フィールドのため optional chain 不要
-  const screenName = userLegacy.screenName
-  const userName = userLegacy.name
+  // Twitter API 変更により screenName/name は user.core に移動した（user.legacy をフォールバックとして保持）
+  const screenName = user.core?.screenName ?? userLegacy.screenName
+  const userName = user.core?.name ?? userLegacy.name
   // Twitter API は "Wed Sep 24 11:28:06 +0000 2025" 形式で返すため ISO 8601 に変換する
   const createdAt = legacy?.createdAt
     ? new Date(legacy.createdAt).toISOString()
@@ -171,16 +171,20 @@ export function extractBookmarkEntry(
     // User.legacy は必須フィールドのため optional chain 不要
     const qtUserLegacy = qtUser.legacy
 
-    if (qtLegacy && qtUserLegacy.screenName && qtUserLegacy.name) {
+    // Twitter API 変更により screenName/name は qtUser.core に移動した（qtUserLegacy をフォールバックとして保持）
+    const qtScreenName = qtUser.core?.screenName ?? qtUserLegacy.screenName
+    const qtUserName = qtUser.core?.name ?? qtUserLegacy.name
+    if (qtLegacy && qtScreenName && qtUserName) {
       const qtGrok = extractGrokTranslation(qt.tweet)
       quotedTweet = {
         tweetId: qtLegacy.idStr,
         userId: qtUser.restId,
         fullText: qtLegacy.fullText,
         createdAt: new Date(qtLegacy.createdAt).toISOString(),
-        screenName: qtUserLegacy.screenName,
-        userName: qtUserLegacy.name,
-        profileImageUrl: qtUserLegacy.profileImageUrlHttps ?? null,
+        screenName: qtScreenName,
+        userName: qtUserName,
+        profileImageUrl:
+          qtUser.avatar?.imageUrl ?? qtUserLegacy.profileImageUrlHttps ?? null,
         mediaItems: extractMediaItems(qtLegacy),
         urlEntities: extractUrlEntities(qtLegacy.entities ?? {}),
         translatedText: qtGrok.translatedText,
@@ -245,7 +249,8 @@ export function extractBookmarkEntry(
     fullText,
     screenName,
     userName,
-    profileImageUrl: userLegacy.profileImageUrlHttps ?? null,
+    profileImageUrl:
+      user.avatar?.imageUrl ?? userLegacy.profileImageUrlHttps ?? null,
     createdAt,
     mediaItems,
     urlEntities,
