@@ -224,16 +224,65 @@ function parseTextSegments(
   return segments
 }
 
-const textSegments = computed(() =>
-  parseTextSegments(properties.item.fullText, properties.item.urlEntities)
+/** 主ツイートの表示モード（翻訳があればデフォルト 'translated'） */
+const mainViewMode = ref<'translated' | 'original'>(
+  properties.item.translatedText ? 'translated' : 'original'
 )
-const quotedTextSegments = computed(() => {
-  if (!properties.item.quotedTweet) return []
+/** 引用ツイートの表示モード（翻訳があればデフォルト 'translated'） */
+const quotedViewMode = ref<'translated' | 'original'>(
+  properties.item.quotedTweet?.translatedText ? 'translated' : 'original'
+)
+
+const textSegments = computed(() => {
+  if (mainViewMode.value === 'translated' && properties.item.translatedText) {
+    return parseTextSegments(
+      properties.item.translatedText,
+      properties.item.translatedUrlEntities
+    )
+  }
   return parseTextSegments(
-    properties.item.quotedTweet.fullText,
-    properties.item.quotedTweet.urlEntities
+    properties.item.fullText,
+    properties.item.urlEntities
   )
 })
+const quotedTextSegments = computed(() => {
+  const qt = properties.item.quotedTweet
+  if (!qt) return []
+  if (quotedViewMode.value === 'translated' && qt.translatedText) {
+    return parseTextSegments(qt.translatedText, qt.translatedUrlEntities)
+  }
+  return parseTextSegments(qt.fullText, qt.urlEntities)
+})
+
+/** 言語コードを日本語ラベルに変換する。未知のコードはそのまま返す。 */
+const LANGUAGE_LABELS: Record<string, string> = {
+  en: '英語',
+  ko: '韓国語',
+  zh: '中国語',
+  'zh-CN': '簡体中国語',
+  'zh-TW': '繁体中国語',
+  fr: 'フランス語',
+  de: 'ドイツ語',
+  es: 'スペイン語',
+  pt: 'ポルトガル語',
+  ru: 'ロシア語',
+  it: 'イタリア語',
+  ar: 'アラビア語',
+  th: 'タイ語',
+  vi: 'ベトナム語',
+  id: 'インドネシア語',
+  ja: '日本語',
+}
+
+/**
+ * 言語コードを日本語ラベルに変換する
+ * @param code - BCP47 言語コード
+ * @returns 日本語ラベル（未知のコードはそのまま返す）
+ */
+function formatLanguage(code: string | null): string {
+  if (!code) return '他言語'
+  return LANGUAGE_LABELS[code] ?? code
+}
 
 // ---- YouTube 埋め込み -------------------------------------------------------
 
@@ -442,6 +491,20 @@ async function onDeleteBookmark(account: string) {
           <span v-else>{{ seg.content }}</span>
         </template>
       </div>
+      <div v-if="item.translatedText" class="translation-toggle">
+        <span v-if="mainViewMode === 'translated'" class="translation-note">
+          {{ formatLanguage(item.sourceLanguage) }}から翻訳
+        </span>
+        <button
+          type="button"
+          class="translation-toggle-btn"
+          @click.stop="
+            mainViewMode =
+              mainViewMode === 'translated' ? 'original' : 'translated'
+          ">
+          {{ mainViewMode === 'translated' ? '元の言語を表示' : '翻訳を表示' }}
+        </button>
+      </div>
 
       <!-- YouTube 埋め込み -->
       <div v-if="youtubeEmbedUrl" class="embed-container">
@@ -592,6 +655,24 @@ async function onDeleteBookmark(account: string) {
             >
             <span v-else>{{ seg.content }}</span>
           </template>
+        </div>
+        <div
+          v-if="item.quotedTweet?.translatedText"
+          class="translation-toggle quoted-translation-toggle">
+          <span v-if="quotedViewMode === 'translated'" class="translation-note">
+            {{ formatLanguage(item.quotedTweet.sourceLanguage) }}から翻訳
+          </span>
+          <button
+            type="button"
+            class="translation-toggle-btn"
+            @click.stop="
+              quotedViewMode =
+                quotedViewMode === 'translated' ? 'original' : 'translated'
+            ">
+            {{
+              quotedViewMode === 'translated' ? '元の言語を表示' : '翻訳を表示'
+            }}
+          </button>
         </div>
         <!-- 引用ツイートのメディア -->
         <template v-for="(media, i) in item.quotedTweet.mediaItems" :key="i">
@@ -1385,5 +1466,43 @@ async function onDeleteBookmark(account: string) {
 
 .lightbox-close:hover {
   background: rgba(15, 20, 25, 0.9);
+}
+
+/* ============================================================
+   翻訳切替 UI
+   ============================================================ */
+.translation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #657786);
+}
+
+.translation-note {
+  font-size: 12px;
+}
+
+.translation-toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent, #1da1f2);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.translation-toggle-btn:hover {
+  text-decoration: underline;
+}
+
+.quoted-translation-toggle {
+  font-size: 12px;
+}
+
+.quoted-translation-toggle .translation-toggle-btn {
+  font-size: 12px;
 }
 </style>

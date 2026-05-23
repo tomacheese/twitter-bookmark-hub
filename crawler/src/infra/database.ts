@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { SCHEMA_DDL } from '@twitter-bookmark-hub/shared'
+import { SCHEMA_DDL, applyColumnMigrations } from '@twitter-bookmark-hub/shared'
 import type { BookmarkEntry } from '../shared/types'
 
 /**
@@ -17,6 +17,7 @@ export function initDatabase(dbPath: string): Database.Database {
   db.pragma('foreign_keys=ON')
 
   db.exec(SCHEMA_DDL)
+  applyColumnMigrations(db)
 
   return db
 }
@@ -63,6 +64,14 @@ interface TweetRecord {
   urlEntities: BookmarkEntry['urlEntities']
   cardPlayerUrl: string | null
   cardInfo: BookmarkEntry['cardInfo']
+  /** Grok 翻訳テキスト（翻訳がない場合は null） */
+  translatedText: string | null
+  /** 翻訳元言語コード (BCP47。翻訳がない場合は null) */
+  sourceLanguage: string | null
+  /** 翻訳先言語コード (BCP47。翻訳がない場合は null) */
+  destinationLanguage: string | null
+  /** 翻訳テキスト内の URL エンティティ（翻訳がない場合は空配列） */
+  translatedUrlEntities: BookmarkEntry['urlEntities']
 }
 
 /**
@@ -92,19 +101,23 @@ function upsertTweetRecord(
     `
     INSERT INTO tweets (
       tweet_id, user_id, full_text, created_at, quoted_tweet_id,
-      card_type, card_url, card_vanity_url, card_title, card_description, card_thumbnail_url
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      card_type, card_url, card_vanity_url, card_title, card_description, card_thumbnail_url,
+      translated_text, source_language, destination_language
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(tweet_id) DO UPDATE SET
-      user_id            = excluded.user_id,
-      full_text          = excluded.full_text,
-      created_at         = excluded.created_at,
-      quoted_tweet_id    = excluded.quoted_tweet_id,
-      card_type          = excluded.card_type,
-      card_url           = excluded.card_url,
-      card_vanity_url    = excluded.card_vanity_url,
-      card_title         = excluded.card_title,
-      card_description   = excluded.card_description,
-      card_thumbnail_url = excluded.card_thumbnail_url
+      user_id              = excluded.user_id,
+      full_text            = excluded.full_text,
+      created_at           = excluded.created_at,
+      quoted_tweet_id      = excluded.quoted_tweet_id,
+      card_type            = excluded.card_type,
+      card_url             = excluded.card_url,
+      card_vanity_url      = excluded.card_vanity_url,
+      card_title           = excluded.card_title,
+      card_description     = excluded.card_description,
+      card_thumbnail_url   = excluded.card_thumbnail_url,
+      translated_text      = excluded.translated_text,
+      source_language      = excluded.source_language,
+      destination_language = excluded.destination_language
   `
   ).run(
     record.tweetId,
@@ -117,7 +130,10 @@ function upsertTweetRecord(
     record.cardInfo?.vanityUrl ?? null,
     record.cardInfo?.title ?? null,
     record.cardInfo?.description ?? null,
-    record.cardInfo?.thumbnailUrl ?? null
+    record.cardInfo?.thumbnailUrl ?? null,
+    record.translatedText,
+    record.sourceLanguage,
+    record.destinationLanguage
   )
 
   // media_items を差し替える
@@ -135,13 +151,40 @@ function upsertTweetRecord(
     )
   }
 
-  // url_entities を差し替える
-  db.prepare('DELETE FROM url_entities WHERE tweet_id = ?').run(record.tweetId)
+  // オリジナル url_entities を差し替える（翻訳用エンティティは削除しない）
+  db.prepare('DELETE FROM url_entities WHERE tweet_id = ? AND kind = ?').run(
+    record.tweetId,
+    'original'
+  )
   const insertUrl = db.prepare(
-    'INSERT INTO url_entities (tweet_id, url, expanded_url, display_url) VALUES (?, ?, ?, ?)'
+    'INSERT INTO url_entities (tweet_id, url, expanded_url, display_url, kind) VALUES (?, ?, ?, ?, ?)'
   )
   for (const ue of record.urlEntities) {
-    insertUrl.run(record.tweetId, ue.url, ue.expandedUrl, ue.displayUrl)
+    insertUrl.run(
+      record.tweetId,
+      ue.url,
+      ue.expandedUrl,
+      ue.displayUrl,
+      'original'
+    )
+  }
+
+  // 翻訳用 url_entities を差し替える
+  db.prepare('DELETE FROM url_entities WHERE tweet_id = ? AND kind = ?').run(
+    record.tweetId,
+    'translated'
+  )
+  const insertTranslatedUrl = db.prepare(
+    'INSERT INTO url_entities (tweet_id, url, expanded_url, display_url, kind) VALUES (?, ?, ?, ?, ?)'
+  )
+  for (const entity of record.translatedUrlEntities) {
+    insertTranslatedUrl.run(
+      record.tweetId,
+      entity.url,
+      entity.expandedUrl,
+      entity.displayUrl,
+      'translated'
+    )
   }
 }
 
@@ -192,6 +235,10 @@ export const upsertTweetEntry = (
           urlEntities: qt.urlEntities,
           cardPlayerUrl: null,
           cardInfo: null,
+          translatedText: qt.translatedText,
+          sourceLanguage: qt.sourceLanguage,
+          destinationLanguage: qt.destinationLanguage,
+          translatedUrlEntities: qt.translatedUrlEntities,
         },
         null
       )

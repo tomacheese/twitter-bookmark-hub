@@ -24,6 +24,9 @@ export const SCHEMA_DDL = `
     card_title         TEXT,
     card_description   TEXT,
     card_thumbnail_url TEXT,
+    translated_text       TEXT,
+    source_language       TEXT,
+    destination_language  TEXT,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (quoted_tweet_id) REFERENCES tweets(tweet_id)
   );
@@ -44,6 +47,7 @@ export const SCHEMA_DDL = `
     url          TEXT NOT NULL,
     expanded_url TEXT NOT NULL,
     display_url  TEXT NOT NULL,
+    kind         TEXT NOT NULL DEFAULT 'original',
     FOREIGN KEY (tweet_id) REFERENCES tweets(tweet_id)
   );
 
@@ -102,4 +106,43 @@ export const SCHEMA_DDL = `
 
   CREATE INDEX IF NOT EXISTS idx_tweet_tags_tag_id           ON tweet_tags(tag_id);
   CREATE INDEX IF NOT EXISTS idx_tweet_categories_cat_id     ON tweet_categories(category_id);
-`
+`;
+
+/** 既存 DB 向けのカラム追加マイグレーション定義 */
+export const COLUMN_MIGRATIONS = [
+  {
+    table: "tweets",
+    column: "translated_text",
+    ddl: "ALTER TABLE tweets ADD COLUMN translated_text TEXT",
+  },
+  {
+    table: "tweets",
+    column: "source_language",
+    ddl: "ALTER TABLE tweets ADD COLUMN source_language TEXT",
+  },
+  {
+    table: "tweets",
+    column: "destination_language",
+    ddl: "ALTER TABLE tweets ADD COLUMN destination_language TEXT",
+  },
+  {
+    table: "url_entities",
+    column: "kind",
+    ddl: "ALTER TABLE url_entities ADD COLUMN kind TEXT NOT NULL DEFAULT 'original'",
+  },
+] as const;
+
+/** PRAGMA table_info でカラムの存在を確認し、未存在の場合のみ ALTER TABLE を実行する */
+export function applyColumnMigrations(db: {
+  prepare: (sql: string) => { all: () => unknown[] };
+  exec: (sql: string) => void;
+}): void {
+  for (const migration of COLUMN_MIGRATIONS) {
+    const columns = db
+      .prepare(`PRAGMA table_info(${migration.table})`)
+      .all() as { name: string }[];
+    if (!columns.some((c) => c.name === migration.column)) {
+      db.exec(migration.ddl);
+    }
+  }
+}

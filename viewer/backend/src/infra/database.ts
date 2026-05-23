@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { SCHEMA_DDL } from '@twitter-bookmark-hub/shared'
+import { SCHEMA_DDL, applyColumnMigrations } from '@twitter-bookmark-hub/shared'
 import type {
   CardInfo,
   CrawlJobStatus,
@@ -53,6 +53,9 @@ export function openDatabase(dbPath: string): Database.Database {
 
   // crawler が先に起動していない場合に備えてテーブルを作成
   db.exec(SCHEMA_DDL)
+
+  // 既存 DB に対してカラム追加マイグレーションを適用する
+  applyColumnMigrations(db)
 
   return db
 }
@@ -269,6 +272,9 @@ export function getBookmarks(
       t.card_title,
       t.card_description,
       t.card_thumbnail_url,
+      t.translated_text,
+      t.source_language,
+      t.destination_language,
       u.screen_name,
       u.user_name,
       u.profile_image_url,
@@ -291,15 +297,27 @@ export function getBookmarks(
           'displayUrl', ue.display_url
         ))
         FROM url_entities ue
-        WHERE ue.tweet_id = t.tweet_id
+        WHERE ue.tweet_id = t.tweet_id AND (ue.kind = 'original' OR ue.kind IS NULL)
       ) AS url_entities,
-      qt.tweet_id        AS qt_tweet_id,
-      qt.full_text       AS qt_full_text,
-      qt.user_id         AS qt_user_id,
-      qt.created_at      AS qt_created_at,
-      qu.screen_name     AS qt_screen_name,
-      qu.user_name       AS qt_user_name,
-      qu.profile_image_url AS qt_profile_image_url,
+      (
+        SELECT json_group_array(json_object(
+          'url', ue.url,
+          'expandedUrl', ue.expanded_url,
+          'displayUrl', ue.display_url
+        ))
+        FROM url_entities ue
+        WHERE ue.tweet_id = t.tweet_id AND ue.kind = 'translated'
+      ) AS translated_url_entities,
+      qt.tweet_id              AS qt_tweet_id,
+      qt.full_text             AS qt_full_text,
+      qt.user_id               AS qt_user_id,
+      qt.created_at            AS qt_created_at,
+      qt.translated_text       AS qt_translated_text,
+      qt.source_language       AS qt_source_language,
+      qt.destination_language  AS qt_destination_language,
+      qu.screen_name           AS qt_screen_name,
+      qu.user_name             AS qt_user_name,
+      qu.profile_image_url     AS qt_profile_image_url,
       (
         SELECT json_group_array(json_object(
           'type', mi.type,
@@ -317,8 +335,17 @@ export function getBookmarks(
           'displayUrl', ue.display_url
         ))
         FROM url_entities ue
-        WHERE ue.tweet_id = t.quoted_tweet_id
-      ) AS qt_url_entities${
+        WHERE ue.tweet_id = t.quoted_tweet_id AND (ue.kind = 'original' OR ue.kind IS NULL)
+      ) AS qt_url_entities,
+      (
+        SELECT json_group_array(json_object(
+          'url', ue.url,
+          'expandedUrl', ue.expanded_url,
+          'displayUrl', ue.display_url
+        ))
+        FROM url_entities ue
+        WHERE ue.tweet_id = t.quoted_tweet_id AND ue.kind = 'translated'
+      ) AS qt_translated_url_entities${
         tagsTableExists
           ? `,
       (
@@ -368,15 +395,23 @@ export function getBookmarks(
     bookmarked_by: string
     media_items: string | null
     url_entities: string | null
+    translated_text: string | null
+    source_language: string | null
+    destination_language: string | null
+    translated_url_entities: string | null
     qt_tweet_id: string | null
     qt_full_text: string | null
     qt_user_id: string | null
     qt_created_at: string | null
+    qt_translated_text: string | null
+    qt_source_language: string | null
+    qt_destination_language: string | null
     qt_screen_name: string | null
     qt_user_name: string | null
     qt_profile_image_url: string | null
     qt_media_items: string | null
     qt_url_entities: string | null
+    qt_translated_url_entities: string | null
     tweet_tags_json?: string | null
     tweet_categories_json?: string | null
   }[]
@@ -395,6 +430,10 @@ export function getBookmarks(
         profileImageUrl: row.qt_profile_image_url,
         mediaItems: parseMediaItems(row.qt_media_items),
         urlEntities: parseUrlEntities(row.qt_url_entities),
+        translatedText: row.qt_translated_text,
+        sourceLanguage: row.qt_source_language,
+        destinationLanguage: row.qt_destination_language,
+        translatedUrlEntities: parseUrlEntities(row.qt_translated_url_entities),
       }
     }
 
@@ -430,6 +469,10 @@ export function getBookmarks(
       mediaItems: parseMediaItems(row.media_items),
       bookmarkedBy: row.bookmarked_by ? row.bookmarked_by.split(',') : [],
       urlEntities: parseUrlEntities(row.url_entities),
+      translatedText: row.translated_text,
+      sourceLanguage: row.source_language,
+      destinationLanguage: row.destination_language,
+      translatedUrlEntities: parseUrlEntities(row.translated_url_entities),
       quotedTweet,
       cardPlayerUrl,
       cardInfo,

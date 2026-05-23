@@ -82,6 +82,43 @@ function extractMediaItems(legacy: {
 }
 
 /**
+ * Tweet オブジェクトから Grok 翻訳情報を抽出する。
+ * grokTranslatedPostWithAvailability が存在しない・利用不可・翻訳が空の場合は
+ * 全フィールド null・空配列を返す。
+ *
+ * @param tweet Twitter API の Tweet オブジェクト
+ * @returns 翻訳テキスト・言語コード・URL エンティティを含むオブジェクト
+ */
+function extractGrokTranslation(tweet: TweetApiUtilsData['tweet']): {
+  translatedText: string | null
+  sourceLanguage: string | null
+  destinationLanguage: string | null
+  translatedUrlEntities: BookmarkEntry['urlEntities']
+} {
+  const empty = {
+    translatedText: null,
+    sourceLanguage: null,
+    destinationLanguage: null,
+    translatedUrlEntities: [] as BookmarkEntry['urlEntities'],
+  }
+
+  const grok = tweet.grokTranslatedPostWithAvailability
+  // grok 翻訳が存在しない・利用不可の場合はスキップ
+  if (!grok?.isAvailable || !grok.data) return empty
+
+  const data = grok.data
+  // 翻訳テキストが空の場合はスキップ
+  if (!data.translation) return empty
+
+  return {
+    translatedText: data.translation,
+    sourceLanguage: data.sourceLanguage ?? null,
+    destinationLanguage: data.destinationLanguage ?? null,
+    translatedUrlEntities: extractUrlEntities(data.entities ?? {}),
+  }
+}
+
+/**
  * TweetApiUtilsData からブックマーク 1 件分のデータを抽出する。
  *
  * @param tweetResult TweetApiUtilsData
@@ -135,6 +172,7 @@ export function extractBookmarkEntry(
     const qtUserLegacy = qtUser.legacy
 
     if (qtLegacy && qtUserLegacy.screenName && qtUserLegacy.name) {
+      const qtGrok = extractGrokTranslation(qt.tweet)
       quotedTweet = {
         tweetId: qtLegacy.idStr,
         userId: qtUser.restId,
@@ -145,9 +183,16 @@ export function extractBookmarkEntry(
         profileImageUrl: qtUserLegacy.profileImageUrlHttps ?? null,
         mediaItems: extractMediaItems(qtLegacy),
         urlEntities: extractUrlEntities(qtLegacy.entities ?? {}),
+        translatedText: qtGrok.translatedText,
+        sourceLanguage: qtGrok.sourceLanguage,
+        destinationLanguage: qtGrok.destinationLanguage,
+        translatedUrlEntities: qtGrok.translatedUrlEntities,
       }
     }
   }
+
+  // Grok 翻訳情報の抽出
+  const grok = extractGrokTranslation(tweet)
 
   // カード情報の抽出（player / summary / summary_large_image）
   let cardPlayerUrl: string | null = null
@@ -207,6 +252,10 @@ export function extractBookmarkEntry(
     quotedTweet,
     cardPlayerUrl,
     cardInfo,
+    translatedText: grok.translatedText,
+    sourceLanguage: grok.sourceLanguage,
+    destinationLanguage: grok.destinationLanguage,
+    translatedUrlEntities: grok.translatedUrlEntities,
   }
 }
 
