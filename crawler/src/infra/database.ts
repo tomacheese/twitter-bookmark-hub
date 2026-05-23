@@ -76,9 +76,11 @@ interface TweetRecord {
 
 /**
  * ツイートレコードを upsert する（users への依存を前提とする）。
- * media_items・url_entities は削除してから再挿入する。
+ * media_items と kind='original' の url_entities は削除してから再挿入する。
+ * kind='translated' の url_entities は translatedText が非 null の場合のみ削除・再挿入し、
+ * null の場合は既存データを保持する（再クロール時に Grok が翻訳を返さなかった場合の消失を防ぐため）。
  * この関数は呼び出し元のトランザクション内で実行されることを前提とする。
- * 単独で呼び出した場合、media_items の削除と再挿入が原子的に行われない。
+ * 単独で呼び出した場合、削除と再挿入が原子的に行われない。
  *
  * @param db Database インスタンス
  * @param record ツイートレコード

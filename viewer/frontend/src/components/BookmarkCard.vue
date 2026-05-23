@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { BookmarkItem, UrlEntity } from '../api'
 import { deleteBookmark } from '../api'
 
@@ -231,6 +231,19 @@ const mainViewMode = ref<'translated' | 'original'>(
 /** 引用ツイートの表示モード（翻訳があればデフォルト 'translated'） */
 const quotedViewMode = ref<'translated' | 'original'>(
   properties.item.quotedTweet?.translatedText ? 'translated' : 'original'
+)
+
+// item が切り替わったときに表示モードをリセットする（コンポーネントインスタンス再利用時の残留を防ぐ）
+watch(
+  () => properties.item.tweetId,
+  () => {
+    mainViewMode.value = properties.item.translatedText
+      ? 'translated'
+      : 'original'
+    quotedViewMode.value = properties.item.quotedTweet?.translatedText
+      ? 'translated'
+      : 'original'
+  }
 )
 
 const textSegments = computed(() => {
