@@ -132,7 +132,12 @@ export const COLUMN_MIGRATIONS = [
   },
 ] as const;
 
-/** PRAGMA table_info でカラムの存在を確認し、未存在の場合のみ ALTER TABLE を実行する */
+/**
+ * 既存 DB に対してカラム追加マイグレーションを適用する。
+ * PRAGMA table_info でカラムの存在を確認し、未存在の場合のみ ALTER TABLE を実行する。
+ *
+ * @param db PRAGMA クエリと DDL 実行が可能な DB インスタンス（better-sqlite3 互換）
+ */
 export function applyColumnMigrations(db: {
   prepare: (sql: string) => { all: () => unknown[] };
   exec: (sql: string) => void;

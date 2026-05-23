@@ -115,9 +115,9 @@ function upsertTweetRecord(
       card_title           = excluded.card_title,
       card_description     = excluded.card_description,
       card_thumbnail_url   = excluded.card_thumbnail_url,
-      translated_text      = excluded.translated_text,
-      source_language      = excluded.source_language,
-      destination_language = excluded.destination_language
+      translated_text      = COALESCE(excluded.translated_text, tweets.translated_text),
+      source_language      = COALESCE(excluded.source_language, tweets.source_language),
+      destination_language = COALESCE(excluded.destination_language, tweets.destination_language)
   `
   ).run(
     record.tweetId,
@@ -169,22 +169,24 @@ function upsertTweetRecord(
     )
   }
 
-  // 翻訳用 url_entities を差し替える
-  db.prepare('DELETE FROM url_entities WHERE tweet_id = ? AND kind = ?').run(
-    record.tweetId,
-    'translated'
-  )
-  const insertTranslatedUrl = db.prepare(
-    'INSERT INTO url_entities (tweet_id, url, expanded_url, display_url, kind) VALUES (?, ?, ?, ?, ?)'
-  )
-  for (const entity of record.translatedUrlEntities) {
-    insertTranslatedUrl.run(
+  // 翻訳テキストがある場合のみ翻訳用 url_entities を差し替える（null 時は既存データを保持）
+  if (record.translatedText !== null) {
+    db.prepare('DELETE FROM url_entities WHERE tweet_id = ? AND kind = ?').run(
       record.tweetId,
-      entity.url,
-      entity.expandedUrl,
-      entity.displayUrl,
       'translated'
     )
+    const insertTranslatedUrl = db.prepare(
+      'INSERT INTO url_entities (tweet_id, url, expanded_url, display_url, kind) VALUES (?, ?, ?, ?, ?)'
+    )
+    for (const entity of record.translatedUrlEntities) {
+      insertTranslatedUrl.run(
+        record.tweetId,
+        entity.url,
+        entity.expandedUrl,
+        entity.displayUrl,
+        'translated'
+      )
+    }
   }
 }
 
