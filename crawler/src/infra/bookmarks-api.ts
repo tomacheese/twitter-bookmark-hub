@@ -388,5 +388,8 @@ export async function getBookmarksClient(
 ): Promise<TwitterOpenApiClient> {
   const api = new TwitterOpenApi()
   TwitterOpenApi.fetchApi = cycleTLSFetch
+  // twitter-openapi-typescript は x-twitter-client-language を 'en' でハードコードしているため
+  // 日本語翻訳 (Grok) を取得するために上書きする
+  api.setAdditionalApiHeaders({ 'x-twitter-client-language': 'ja' })
   return api.getClientFromCookies({ auth_token: authToken, ct0 })
 }
