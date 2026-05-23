@@ -82,6 +82,43 @@ function extractMediaItems(legacy: {
 }
 
 /**
+ * Tweet オブジェクトから Grok 翻訳情報を抽出する。
+ * grokTranslatedPostWithAvailability が存在しない・利用不可・翻訳が空の場合は
+ * 全フィールド null・空配列を返す。
+ *
+ * @param tweet Twitter API の Tweet オブジェクト
+ * @returns 翻訳テキスト・言語コード・URL エンティティを含むオブジェクト
+ */
+function extractGrokTranslation(tweet: TweetApiUtilsData['tweet']): {
+  translatedText: string | null
+  sourceLanguage: string | null
+  destinationLanguage: string | null
+  translatedUrlEntities: BookmarkEntry['urlEntities']
+} {
+  const empty = {
+    translatedText: null,
+    sourceLanguage: null,
+    destinationLanguage: null,
+    translatedUrlEntities: [] as BookmarkEntry['urlEntities'],
+  }
+
+  const grok = tweet.grokTranslatedPostWithAvailability
+  // grok 翻訳が存在しない・利用不可の場合はスキップ
+  if (!grok?.isAvailable || !grok.data) return empty
+
+  const data = grok.data
+  // 翻訳テキストが空の場合はスキップ
+  if (!data.translation) return empty
+
+  return {
+    translatedText: data.translation,
+    sourceLanguage: data.sourceLanguage ?? null,
+    destinationLanguage: data.destinationLanguage ?? null,
+    translatedUrlEntities: extractUrlEntities(data.entities ?? {}),
+  }
+}
+
+/**
  * TweetApiUtilsData からブックマーク 1 件分のデータを抽出する。
  *
  * @param tweetResult TweetApiUtilsData
@@ -100,9 +137,9 @@ export function extractBookmarkEntry(
   // User.restId は必須フィールドのため fallback 不要
   const userId = user.restId
   const fullText = legacy?.fullText
-  // UserLegacy.screenName / name は必須フィールドのため optional chain 不要
-  const screenName = userLegacy.screenName
-  const userName = userLegacy.name
+  // Twitter API 変更により screenName/name は user.core に移動した（user.legacy をフォールバックとして保持）
+  const screenName = user.core?.screenName ?? userLegacy.screenName
+  const userName = user.core?.name ?? userLegacy.name
   // Twitter API は "Wed Sep 24 11:28:06 +0000 2025" 形式で返すため ISO 8601 に変換する
   const createdAt = legacy?.createdAt
     ? new Date(legacy.createdAt).toISOString()
@@ -134,20 +171,32 @@ export function extractBookmarkEntry(
     // User.legacy は必須フィールドのため optional chain 不要
     const qtUserLegacy = qtUser.legacy
 
-    if (qtLegacy && qtUserLegacy.screenName && qtUserLegacy.name) {
+    // Twitter API 変更により screenName/name は qtUser.core に移動した（qtUserLegacy をフォールバックとして保持）
+    const qtScreenName = qtUser.core?.screenName ?? qtUserLegacy.screenName
+    const qtUserName = qtUser.core?.name ?? qtUserLegacy.name
+    if (qtLegacy && qtScreenName && qtUserName) {
+      const qtGrok = extractGrokTranslation(qt.tweet)
       quotedTweet = {
         tweetId: qtLegacy.idStr,
         userId: qtUser.restId,
         fullText: qtLegacy.fullText,
         createdAt: new Date(qtLegacy.createdAt).toISOString(),
-        screenName: qtUserLegacy.screenName,
-        userName: qtUserLegacy.name,
-        profileImageUrl: qtUserLegacy.profileImageUrlHttps ?? null,
+        screenName: qtScreenName,
+        userName: qtUserName,
+        profileImageUrl:
+          qtUser.avatar?.imageUrl ?? qtUserLegacy.profileImageUrlHttps ?? null,
         mediaItems: extractMediaItems(qtLegacy),
         urlEntities: extractUrlEntities(qtLegacy.entities ?? {}),
+        translatedText: qtGrok.translatedText,
+        sourceLanguage: qtGrok.sourceLanguage,
+        destinationLanguage: qtGrok.destinationLanguage,
+        translatedUrlEntities: qtGrok.translatedUrlEntities,
       }
     }
   }
+
+  // Grok 翻訳情報の抽出
+  const grok = extractGrokTranslation(tweet)
 
   // カード情報の抽出（player / summary / summary_large_image）
   let cardPlayerUrl: string | null = null
@@ -200,13 +249,18 @@ export function extractBookmarkEntry(
     fullText,
     screenName,
     userName,
-    profileImageUrl: userLegacy.profileImageUrlHttps ?? null,
+    profileImageUrl:
+      user.avatar?.imageUrl ?? userLegacy.profileImageUrlHttps ?? null,
     createdAt,
     mediaItems,
     urlEntities,
     quotedTweet,
     cardPlayerUrl,
     cardInfo,
+    translatedText: grok.translatedText,
+    sourceLanguage: grok.sourceLanguage,
+    destinationLanguage: grok.destinationLanguage,
+    translatedUrlEntities: grok.translatedUrlEntities,
   }
 }
 
@@ -326,13 +380,18 @@ export async function removeBookmark(
  *
  * @param authToken auth_token Cookie の値
  * @param ct0 ct0 Cookie の値
+ * @param clientLanguage Twitter API クライアントの言語コード (BCP47)。API レスポンスの言語に影響する。省略時は 'ja'
  * @returns TwitterOpenApi クライアント
  */
 export async function getBookmarksClient(
   authToken: string,
-  ct0: string
+  ct0: string,
+  clientLanguage = 'ja'
 ): Promise<TwitterOpenApiClient> {
   const api = new TwitterOpenApi()
   TwitterOpenApi.fetchApi = cycleTLSFetch
+  // twitter-openapi-typescript は x-twitter-client-language を 'en' でハードコードしているため上書きする。
+  // このヘッダーは Grok 翻訳先言語を含む API レスポンスの言語全体に影響する
+  api.setAdditionalApiHeaders({ 'x-twitter-client-language': clientLanguage })
   return api.getClientFromCookies({ auth_token: authToken, ct0 })
 }

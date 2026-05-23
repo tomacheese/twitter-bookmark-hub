@@ -1,4 +1,4 @@
-export { SCHEMA_DDL } from './schema'
+export { SCHEMA_DDL, COLUMN_MIGRATIONS, applyColumnMigrations } from "./schema";
 export type {
   CardInfo,
   MediaItem,
@@ -12,4 +12,4 @@ export type {
   CategoryItem,
   AnalyzeResponse,
   FeaturesResponse,
-} from './types'
+} from "./types";

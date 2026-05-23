@@ -30,6 +30,13 @@ export interface AppConfig {
   twitter: {
     /** アカウント一覧 */
     accounts: AccountConfig[]
+    /**
+     * Twitter API クライアントの言語コード (BCP47)。
+     * x-twitter-client-language ヘッダーとして送信され、
+     * API レスポンスの言語（Grok 翻訳先言語を含む）に影響する。
+     * 省略時は 'ja'。
+     */
+    clientLanguage?: string
   }
 }
 
@@ -69,4 +76,12 @@ export interface BookmarkEntry {
   cardPlayerUrl: string | null
   /** リンクカード情報（OGP 相当） */
   cardInfo: CardInfo | null
+  /** Grok 翻訳テキスト（翻訳がない場合は null） */
+  translatedText: string | null
+  /** 翻訳元言語コード (BCP47、例: 'en'。翻訳がない場合は null) */
+  sourceLanguage: string | null
+  /** 翻訳先言語コード (BCP47、例: 'ja'。翻訳がない場合は null) */
+  destinationLanguage: string | null
+  /** 翻訳テキスト内の URL エンティティ（t.co を展開 URL に置換するために使用。翻訳がない場合は空配列） */
+  translatedUrlEntities: BookmarkEntry['urlEntities']
 }

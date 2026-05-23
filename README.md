@@ -28,12 +28,15 @@
         "password": "your_password",
         "otp_secret": null
       }
-    ]
+    ],
+    "clientLanguage": "ja"
   }
 }
 ```
 
 > `otp_secret` は 2 段階認証 (TOTP) を使用している場合に設定します。
+
+> `clientLanguage` は Twitter API クライアントの言語コード (BCP47) です。`x-twitter-client-language` ヘッダーとして送信され、Grok 翻訳先言語など API レスポンスの言語に影響します。省略時は `ja` (日本語) になります。
 
 ### 2. 環境変数の設定 (任意)
 
