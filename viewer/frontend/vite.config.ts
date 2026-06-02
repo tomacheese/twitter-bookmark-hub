@@ -35,11 +35,22 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // ナビゲーションフォールバックを有効にし、オフライン時でも SPA が動作するよう index.html を返す
-        // /api/* はサービスワーカーのフォールバック対象から除外する
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            // ナビゲーションリクエスト（ページ読み込み）は NetworkFirst にし、
+            // Cloudflare Access による JWT 検証・再認証が正しく動作するようにする
+            // ネットワーク失敗時またはタイムアウト時はキャッシュにフォールバックする
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'navigation-cache',
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24, // 1 日
+              },
+            },
+          },
           {
             // Twitter 画像をキャッシュ（pbs.twimg.com）
             // 静的アセットルールより前に定義し、Twitter 画像が正しいキャッシュに格納されるようにする
