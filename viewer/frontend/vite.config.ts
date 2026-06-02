@@ -39,12 +39,16 @@ export default defineConfig({
           {
             // ナビゲーションリクエスト（ページ読み込み）は NetworkFirst にし、
             // Cloudflare Access による JWT 検証・再認証が正しく動作するようにする
-            // オフライン時はキャッシュにフォールバックする
+            // ネットワーク失敗時またはタイムアウト時はキャッシュにフォールバックする
             urlPattern: ({ request }) => request.mode === 'navigate',
             handler: 'NetworkFirst',
             options: {
               cacheName: 'navigation-cache',
               networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24, // 1 日
+              },
             },
           },
           {
