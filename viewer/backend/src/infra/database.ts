@@ -9,14 +9,35 @@ import type {
 } from '@twitter-bookmark-hub/shared'
 import type { BookmarkItem, AccountInfo } from '../shared/types'
 
+/**
+ * 検索対象グループ。
+ * - `text`   : ツイート本文・翻訳テキスト
+ * - `card`   : カードタイトル・概要・URL
+ * - `url`    : URL エンティティ（展開済み URL・表示 URL）
+ * - `author` : 投稿者 @ハンドル・表示名
+ * - `quoted` : 引用ツイート本文・翻訳テキスト
+ */
+export type SearchInGroup = 'text' | 'card' | 'url' | 'author' | 'quoted'
+
+/** 全検索対象グループ（デフォルト値として使用） */
+const ALL_SEARCH_GROUPS: SearchInGroup[] = [
+  'text',
+  'card',
+  'url',
+  'author',
+  'quoted',
+]
+
 /** ブックマーク取得時のパラメータ */
 interface GetBookmarksParams {
   /** ページ番号 */
   page: number
   /** 1 ページあたりの件数 */
   limit: number
-  /** 検索クエリ（ツイート本文・カード情報・URL エンティティで部分一致） */
+  /** 検索クエリ */
   q?: string
+  /** 検索対象グループ（省略時は全グループを対象にする） */
+  searchIn?: SearchInGroup[]
   /** アカウントでフィルタ */
   account?: string
   /** ソートキー (bookmarked_at: ブックマーク初回発見日 / created_at: ツイート投稿日) */
@@ -220,20 +241,51 @@ export function getBookmarks(
   const bindValues: unknown[] = []
 
   if (q) {
-    // ツイート本文・カードタイトル・カード概要・カード URL・URL エンティティを対象に全文検索する
-    conditions.push(
-      '(t.full_text LIKE ? OR t.card_title LIKE ? OR t.card_description LIKE ? OR t.card_url LIKE ? OR t.card_vanity_url LIKE ? OR EXISTS (SELECT 1 FROM url_entities ue WHERE ue.tweet_id = t.tweet_id AND (ue.expanded_url LIKE ? OR ue.display_url LIKE ?)))'
+    const activeGroups = new Set<SearchInGroup>(
+      params.searchIn && params.searchIn.length > 0
+        ? params.searchIn
+        : ALL_SEARCH_GROUPS
     )
     const likeParam = `%${q}%`
-    bindValues.push(
-      likeParam,
-      likeParam,
-      likeParam,
-      likeParam,
-      likeParam,
-      likeParam,
-      likeParam
-    )
+    const clauses: string[] = []
+
+    if (activeGroups.has('text')) {
+      clauses.push('t.full_text LIKE ?', 't.translated_text LIKE ?')
+      bindValues.push(likeParam, likeParam)
+    }
+    if (activeGroups.has('card')) {
+      clauses.push(
+        't.card_title LIKE ?',
+        't.card_description LIKE ?',
+        't.card_url LIKE ?',
+        't.card_vanity_url LIKE ?'
+      )
+      bindValues.push(likeParam, likeParam, likeParam, likeParam)
+    }
+    if (activeGroups.has('url')) {
+      clauses.push(
+        'EXISTS (SELECT 1 FROM url_entities ue WHERE ue.tweet_id = t.tweet_id AND (ue.expanded_url LIKE ? OR ue.display_url LIKE ?))'
+      )
+      bindValues.push(likeParam, likeParam)
+    }
+    if (activeGroups.has('author')) {
+      // users テーブルはカウントクエリに JOIN されないためサブクエリで参照する
+      clauses.push(
+        'EXISTS (SELECT 1 FROM users u2 WHERE u2.user_id = t.user_id AND (u2.screen_name LIKE ? OR u2.user_name LIKE ?))'
+      )
+      bindValues.push(likeParam, likeParam)
+    }
+    if (activeGroups.has('quoted')) {
+      // 引用ツイートはカウントクエリに JOIN されないためサブクエリで参照する
+      clauses.push(
+        'EXISTS (SELECT 1 FROM tweets qt2 WHERE qt2.tweet_id = t.quoted_tweet_id AND (qt2.full_text LIKE ? OR qt2.translated_text LIKE ?))'
+      )
+      bindValues.push(likeParam, likeParam)
+    }
+
+    if (clauses.length > 0) {
+      conditions.push(`(${clauses.join(' OR ')})`)
+    }
   }
   if (account) {
     // EXISTS サブクエリでフィルタすることで、メインの bookmarks JOIN の集計

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type Database from 'better-sqlite3'
 import { getBookmarks } from '../infra/database'
+import type { SearchInGroup } from '../infra/database'
 import type { BookmarksResponse } from '../shared/types'
 import { CRAWLER_URL } from '../shared/config'
 
@@ -45,10 +46,28 @@ export function bookmarksRoute(db: Database.Database): Hono {
     const rawTag = c.req.query('tag')
     const tag: string | undefined = rawTag === '' ? undefined : rawTag
 
+    const VALID_GROUPS = new Set<SearchInGroup>([
+      'text',
+      'card',
+      'url',
+      'author',
+      'quoted',
+    ])
+    const rawSearchIn = c.req.query('search_in')
+    const searchIn: SearchInGroup[] | undefined =
+      rawSearchIn && rawSearchIn !== ''
+        ? rawSearchIn
+            .split(',')
+            .filter((g): g is SearchInGroup =>
+              VALID_GROUPS.has(g as SearchInGroup)
+            )
+        : undefined
+
     const result = getBookmarks(db, {
       page,
       limit,
       q,
+      searchIn,
       account,
       sort,
       sortBy,

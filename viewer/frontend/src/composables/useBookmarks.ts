@@ -1,6 +1,6 @@
 import { ref, watch, watchEffect, onScopeDispose } from 'vue'
-import { fetchBookmarks } from '../api'
-import type { BookmarkItem } from '../api'
+import { fetchBookmarks, ALL_SEARCH_GROUPS } from '../api'
+import type { BookmarkItem, SearchInGroup } from '../api'
 
 /**
  * 指定した関数を delay ミリ秒デバウンスするユーティリティ。
@@ -32,6 +32,23 @@ function debounce<T extends () => void>(
 /** localStorage のキー定数 */
 const LS_SORT_BY = 'bookmark-sort-by'
 const LS_SORT_ORDER = 'bookmark-sort-order'
+const LS_SEARCH_IN = 'bookmark-search-in'
+
+/**
+ * localStorage から検索対象グループを復元する。
+ * 不正な値は無視し、空の場合は全グループを返す。
+ * @returns 有効な SearchInGroup の配列
+ */
+function loadSearchIn(): SearchInGroup[] {
+  const raw = localStorage.getItem(LS_SEARCH_IN)
+  if (!raw) return [...ALL_SEARCH_GROUPS]
+  const parsed = raw
+    .split(',')
+    .filter((g): g is SearchInGroup =>
+      ALL_SEARCH_GROUPS.includes(g as SearchInGroup)
+    )
+  return parsed.length > 0 ? parsed : [...ALL_SEARCH_GROUPS]
+}
 
 /**
  * ブックマーク一覧の取得・無限スクロール・フィルタリングを管理する composable。
@@ -46,6 +63,8 @@ export function useBookmarks() {
   const searchQuery = ref('')
   /** 検索クエリのデバウンス済み値（200ms 遅延）。watchEffect はこちらを追跡する */
   const debouncedSearchQuery = ref('')
+  /** 検索対象グループ（localStorage から復元） */
+  const searchIn = ref<SearchInGroup[]>(loadSearchIn())
 
   /** ソートキー（localStorage から復元） */
   const rawSortBy = localStorage.getItem(LS_SORT_BY)
@@ -64,6 +83,10 @@ export function useBookmarks() {
   /** sortOrder 変更時に localStorage へ保存 */
   watch(sortOrder, (val) => {
     localStorage.setItem(LS_SORT_ORDER, val)
+  })
+  /** searchIn 変更時に localStorage へ保存 */
+  watch(searchIn, (val) => {
+    localStorage.setItem(LS_SEARCH_IN, val.join(','))
   })
 
   /** 検索クエリ変更時に 200ms デバウンスして debouncedSearchQuery を更新する */
@@ -104,6 +127,7 @@ export function useBookmarks() {
       sort: sortOrder.value,
       sortBy: sortBy.value,
       ...(debouncedSearchQuery.value ? { q: debouncedSearchQuery.value } : {}),
+      ...(debouncedSearchQuery.value ? { searchIn: searchIn.value } : {}),
       ...(selectedAccount.value ? { account: selectedAccount.value } : {}),
       ...(selectedCategory.value === null
         ? {}
@@ -224,6 +248,7 @@ export function useBookmarks() {
     selectedCategory,
     selectedTag,
     searchQuery,
+    searchIn,
     sortBy,
     sortOrder,
     items,

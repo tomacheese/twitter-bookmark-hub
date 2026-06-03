@@ -8,6 +8,7 @@ import CrawlStatus from './components/CrawlStatus.vue'
 import AccountFilter from './components/AccountFilter.vue'
 import CategoryFilter from './components/CategoryFilter.vue'
 import BookmarkList from './components/BookmarkList.vue'
+import SearchOptions from './components/SearchOptions.vue'
 import Settings from './views/Settings.vue'
 
 const {
@@ -15,6 +16,7 @@ const {
   selectedCategory,
   selectedTag,
   searchQuery,
+  searchIn,
   sortBy,
   sortOrder,
   items,
@@ -243,6 +245,8 @@ function onBookmarkDeleted(payload: { tweetId: string; account: string }) {
             type="text"
             class="search-input"
             placeholder="ブックマークを検索" />
+          <!-- 検索対象グループ選択 -->
+          <SearchOptions v-model="searchIn" />
           <!-- ソートキー選択 -->
           <select v-model="sortBy" class="sort-select" title="ソート条件">
             <option value="bookmarked_at">発見日</option>
