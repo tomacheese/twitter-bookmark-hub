@@ -119,112 +119,6 @@ function extractGrokTranslation(tweet: TweetApiUtilsData['tweet']): {
 }
 
 /**
- * 値が Record<string, unknown> であるかを判定する型ガード。
- *
- * @param value 検査対象の値
- * @returns Record<string, unknown> であれば true
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-/**
- * unified_card の JSON 文字列を解析して CardInfo を返す。
- * X ネイティブ記事 (x.com/i/article/...) 等で使用される unified_card 形式に対応する。
- *
- * JSON 構造はレイアウトによって key 名が変動し公式ドキュメントが存在しないため、
- * Object.values() で各コンテナを走査する防御的実装とする。
- * 遷移先 URL を抽出できない場合や JSON のパースに失敗した場合は null を返す。
- *
- * @param unifiedCardJson bindingValues の "unified_card" key の stringValue
- * @returns CardInfo または null (パース失敗・URL 未取得の場合)
- */
-export function extractUnifiedCard(
-  unifiedCardJson: string | undefined
-): CardInfo | null {
-  if (!unifiedCardJson) return null
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(unifiedCardJson)
-  } catch {
-    return null
-  }
-
-  if (!isRecord(parsed)) return null
-
-  // 遷移先 URL: destination_objects の各値を走査し url_data.url を探す
-  let cardUrl: string | undefined
-  if (isRecord(parsed.destination_objects)) {
-    for (const dest of Object.values(parsed.destination_objects)) {
-      if (
-        isRecord(dest) &&
-        isRecord(dest.data) &&
-        isRecord(dest.data.url_data) &&
-        typeof dest.data.url_data.url === 'string'
-      ) {
-        cardUrl = dest.data.url_data.url
-        break
-      }
-    }
-  }
-  // 遷移先 URL が取得できない場合はカード化しない（現状の URL のみ表示に維持）
-  if (!cardUrl) return null
-
-  // タイトル / 説明: component_objects の各値を走査する
-  let title = ''
-  let description = ''
-  if (isRecord(parsed.component_objects)) {
-    for (const component of Object.values(parsed.component_objects)) {
-      if (!isRecord(component) || !isRecord(component.data)) continue
-      const data = component.data
-      if (
-        title === '' &&
-        isRecord(data.title) &&
-        typeof data.title.content === 'string'
-      ) {
-        title = data.title.content
-      }
-      if (
-        description === '' &&
-        isRecord(data.subtitle) &&
-        typeof data.subtitle.content === 'string'
-      ) {
-        description = data.subtitle.content
-      }
-    }
-  }
-
-  // サムネイル画像: media_entities の各値を走査し最初の media_url_https を採用
-  let thumbnailUrl: string | null = null
-  if (isRecord(parsed.media_entities)) {
-    for (const media of Object.values(parsed.media_entities)) {
-      if (isRecord(media) && typeof media.media_url_https === 'string') {
-        thumbnailUrl = media.media_url_https
-        break
-      }
-    }
-  }
-
-  // vanityUrl: cardUrl の hostname を取り出す（不正な URL の場合は cardUrl 自体を使用）
-  let vanityUrl: string
-  try {
-    vanityUrl = new URL(cardUrl).hostname
-  } catch {
-    vanityUrl = cardUrl
-  }
-
-  return {
-    cardType: thumbnailUrl ? 'summary_large_image' : 'summary',
-    cardUrl,
-    vanityUrl,
-    title,
-    description,
-    thumbnailUrl,
-  }
-}
-
-/**
  * TweetApiUtilsData からブックマーク 1 件分のデータを抽出する。
  *
  * @param tweetResult TweetApiUtilsData
@@ -304,7 +198,7 @@ export function extractBookmarkEntry(
   // Grok 翻訳情報の抽出
   const grok = extractGrokTranslation(tweet)
 
-  // カード情報の抽出（player / summary / summary_large_image / unified_card）
+  // カード情報の抽出（player / summary / summary_large_image / unified_card / article）
   let cardPlayerUrl: string | null = null
   let cardInfo: CardInfo | null = null
   const card = tweet.card
@@ -346,9 +240,27 @@ export function extractBookmarkEntry(
           thumbnailUrl: thumbImage?.url ?? null,
         }
       }
-    } else if (cardName.includes('unified_card')) {
-      // X ネイティブ記事カード（x.com/i/article/... 等）
-      cardInfo = extractUnifiedCard(bvMap.get('unified_card')?.stringValue)
+    }
+  }
+
+  // tweet.article が存在する場合は X 記事カードとして情報を抽出する。
+  // card.legacy.bindingValues に記事情報が含まれないため、article フィールドから取得する。
+  if (cardInfo === null && tweet.article?.articleResults.result) {
+    const articleResult = tweet.article.articleResults.result
+    // URL エンティティから x.com/i/article/... の展開 URL を取得し、
+    // なければ restId から構築する
+    const articleUrl =
+      urlEntities.find((u) => u.expandedUrl.includes('/i/article/'))
+        ?.expandedUrl ?? `https://x.com/i/article/${articleResult.restId}`
+    const thumbnailUrl =
+      articleResult.coverMedia?.mediaInfo.originalImgUrl ?? null
+    cardInfo = {
+      cardType: thumbnailUrl ? 'summary_large_image' : 'summary',
+      cardUrl: articleUrl,
+      vanityUrl: 'x.com',
+      title: articleResult.title,
+      description: articleResult.previewText,
+      thumbnailUrl,
     }
   }
 
