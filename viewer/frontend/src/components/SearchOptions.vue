@@ -71,7 +71,24 @@ const isAllActive = () =>
       :title="open ? '検索対象を閉じる' : '検索対象を絞り込む'"
       :aria-expanded="open"
       @click="open = !open">
-      <span class="options-icon" aria-hidden="true">⊟</span>
+      <!-- スライダーアイコン（検索対象の絞り込みを表す） -->
+      <svg
+        aria-hidden="true"
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round">
+        <line x1="2" y1="4" x2="14" y2="4" />
+        <line x1="2" y1="8" x2="14" y2="8" />
+        <line x1="2" y1="12" x2="14" y2="12" />
+        <circle cx="5" cy="4" r="1.6" fill="currentColor" stroke="none" />
+        <circle cx="10" cy="8" r="1.6" fill="currentColor" stroke="none" />
+        <circle cx="7" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      </svg>
+      <span class="options-label">検索範囲</span>
     </button>
 
     <div v-if="open" class="dropdown" role="group" aria-label="検索対象">
@@ -95,19 +112,24 @@ const isAllActive = () =>
 .options-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 7px 10px;
   border: 1px solid var(--color-border);
-  border-radius: 50%;
+  border-radius: 9999px;
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: 16px;
+  font-size: 13px;
   cursor: pointer;
+  white-space: nowrap;
   transition:
     border-color 0.2s,
     color 0.2s,
     background 0.2s;
+}
+
+.options-label {
+  font-size: 13px;
 }
 
 .options-btn:hover,
