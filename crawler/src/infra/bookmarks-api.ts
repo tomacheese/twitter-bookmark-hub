@@ -198,7 +198,7 @@ export function extractBookmarkEntry(
   // Grok 翻訳情報の抽出
   const grok = extractGrokTranslation(tweet)
 
-  // カード情報の抽出（player / summary / summary_large_image）
+  // カード情報の抽出（player / summary / summary_large_image / unified_card / article）
   let cardPlayerUrl: string | null = null
   let cardInfo: CardInfo | null = null
   const card = tweet.card
@@ -240,6 +240,27 @@ export function extractBookmarkEntry(
           thumbnailUrl: thumbImage?.url ?? null,
         }
       }
+    }
+  }
+
+  // tweet.article が存在する場合は X 記事カードとして情報を抽出する。
+  // card.legacy.bindingValues に記事情報が含まれないため、article フィールドから取得する。
+  if (cardInfo === null && tweet.article?.articleResults.result) {
+    const articleResult = tweet.article.articleResults.result
+    // URL エンティティから x.com/i/article/... の展開 URL を取得し、
+    // なければ restId から構築する
+    const articleUrl =
+      urlEntities.find((u) => u.expandedUrl.includes('/i/article/'))
+        ?.expandedUrl ?? `https://x.com/i/article/${articleResult.restId}`
+    const thumbnailUrl =
+      articleResult.coverMedia?.mediaInfo.originalImgUrl ?? null
+    cardInfo = {
+      cardType: thumbnailUrl ? 'summary_large_image' : 'summary',
+      cardUrl: articleUrl,
+      vanityUrl: 'x.com',
+      title: articleResult.title,
+      description: articleResult.previewText,
+      thumbnailUrl,
     }
   }
 
