@@ -145,18 +145,23 @@ Vite HMR でソース変更が即反映される。本番 backend をそのま�
 
 ##### 1. crawler のビルドと起動（crawler 変更時のみ再ビルド）
 
+**リポジトリルートで実行すること**（Dockerfile がルートの `pnpm-workspace.yaml` や `shared/` を参照するため）。
+
 ```bash
 # ビルド（crawler/Dockerfile を変更した場合のみ）
 docker build -t tbh-test-crawler:dev -f crawler/Dockerfile .
 
-# 起動
+# 起動（同名コンテナが残っていれば先に docker rm tbh-test-crawler する）
 docker run -d \
   --name tbh-test-crawler \
   -v "$(pwd)/data:/data" \
   -p 3021:3001 \
   -e CRAWL_ON_STARTUP=false \
+  -e CRAWL_SCHEDULE="0 0 31 2 *" \
   tbh-test-crawler:dev
 ```
+
+`CRAWL_SCHEDULE="0 0 31 2 *"` は 2 月 31 日（存在しない日付）を指定することで cron クロールを無効化する。`CRAWL_ON_STARTUP=false` だけでは起動時クロールを止めるだけで、スケジュールは動き続ける。
 
 ##### 2. viewer のビルドと起動（backend 変更時のみ再ビルド）
 
@@ -164,7 +169,7 @@ docker run -d \
 # ビルド（viewer/Dockerfile を変更した場合のみ）
 docker build -t tbh-test-viewer:dev -f viewer/Dockerfile .
 
-# 起動
+# 起動（同名コンテナが残っていれば先に docker rm tbh-test-viewer する）
 docker run -d \
   --name tbh-test-viewer \
   -v "$(pwd)/data:/data" \
@@ -199,14 +204,14 @@ curl -s http://localhost:3020/api/bookmarks?limit=1 | jq .total  # viewer 確認
 docker stop tbh-test-viewer tbh-test-crawler
 docker rm   tbh-test-viewer tbh-test-crawler
 docker rmi  tbh-test-viewer:dev tbh-test-crawler:dev
-rm -rf data-test/
 ```
 
 ##### 重要な注意点（ハマりポイント）
 
+- **`docker build` はリポジトリルートで実行する**: Dockerfile はルートの `pnpm-workspace.yaml` や `shared/` を参照するため、`cd crawler` などしてから実行してはいけない
+- **同名コンテナが残っている場合は先に削除**: `Error: Conflict. The container name is already in use` が出たら `docker rm tbh-test-crawler tbh-test-viewer` を先に実行する
 - **`docker compose -p <project> build` + `up --no-build` は使わない**: `image:` フィールドがないと compose がイメージ名を解決できず動作しない
 - **`docker compose up -d` は使わない**: 毎回フルリビルドが走り 20 分以上かかる
-- **`docker build` で直接タグを指定する**: `docker build -t <明示的タグ> -f <Dockerfile> .`
 - ゴーストコンテナ（`docker ps -a` に出ないが名前が使用中と言われる）が発生したら `docker ps -a --no-trunc` で確認して別名を使う
 
 ## アーキテクチャ / データフロー
