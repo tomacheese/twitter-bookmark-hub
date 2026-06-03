@@ -120,6 +120,76 @@ cd viewer/frontend && pnpm dev    # Vite 開発サーバー (API は localhost:3
 cd viewer/frontend && pnpm build  # プロダクションビルド (dist/ に出力)
 ```
 
+### テスト環境の構築（本番を汚さない）
+
+本番は `3000`（viewer）/ `3001`（crawler）を使用。テスト環境は **`3020`（viewer）/ `3021`（crawler）** を使う。
+データは本番 DB（`./data`）を共有するが、`CRAWL_ON_STARTUP=false` でクロールを無効化する。
+
+#### 重要な注意点（ハマりポイント）
+
+- **`docker compose -p <project> build` + `up --no-build` は使わない**: image フィールドがない場合に compose がイメージ名を解決できず動作しない
+- **`docker compose up -d` は使わない**: 毎回フルリビルドが走り 20 分以上かかる
+- **`docker build` で直接タグを指定する**: `docker build -t <明示的タグ> -f <Dockerfile> .`
+- ゴーストコンテナ（`docker ps -a` に出ないが名前が使用中になる）が発生した場合は `docker ps -a --no-trunc` で確認して別名を使う
+
+#### crawler のビルドと起動（crawler 変更時のみ再ビルド）
+
+```bash
+# ビルド（crawler/Dockerfile を変更した場合のみ）
+docker build -t tbh-test-crawler:dev -f crawler/Dockerfile .
+
+# 起動（--no-build なら既存イメージをそのまま使う）
+docker run -d \
+  --name tbh-test-crawler \
+  -v "$(pwd)/data:/data" \
+  -p 3021:3001 \
+  -e CRAWL_ON_STARTUP=false \
+  tbh-test-crawler:dev
+```
+
+#### viewer のビルドと起動（backend 変更時のみ再ビルド）
+
+```bash
+# ビルド（viewer/Dockerfile を変更した場合のみ）
+docker build -t tbh-test-viewer:dev -f viewer/Dockerfile .
+
+# 起動
+docker run -d \
+  --name tbh-test-viewer \
+  -v "$(pwd)/data:/data" \
+  -p 3020:3000 \
+  -e CRAWLER_URL=http://host.docker.internal:3021 \
+  --add-host=host.docker.internal:host-gateway \
+  tbh-test-viewer:dev
+```
+
+#### フロントエンドのみ変更した場合（最速・Docker 再ビルド不要）
+
+```bash
+# ① ローカルでビルド（約 1 分）
+pnpm --filter twitter-bookmark-hub-frontend build
+
+# ② 実行中の viewer コンテナに直接コピー
+docker cp viewer/frontend/dist/. tbh-test-viewer:/app/public/
+
+# ③ ブラウザで Ctrl+Shift+R（ハードリロード）
+```
+
+#### 動作確認
+
+```bash
+curl -s http://localhost:3021/health          # crawler ヘルスチェック
+curl -s http://localhost:3020/api/bookmarks?limit=1 | jq .total  # viewer 確認
+```
+
+#### クリーンアップ
+
+```bash
+docker stop tbh-test-viewer tbh-test-crawler
+docker rm   tbh-test-viewer tbh-test-crawler
+docker rmi  tbh-test-viewer:dev tbh-test-crawler:dev
+```
+
 ## アーキテクチャ / データフロー
 
 ```
