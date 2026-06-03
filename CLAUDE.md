@@ -141,19 +141,7 @@ Vite HMR でソース変更が即反映される。本番 backend をそのま�
 
 #### パターン B: Docker による本番に近い動作確認
 
-常用環境は `3000`（viewer）/ `3001`（crawler）を使用。テスト環境は **`3020`（viewer）/ `3021`（crawler）** を使う。
-
-**`./data`（常用データ）はテスト環境と共有しない**。必ず `./data-test/` に DB スナップショットを作ってマウントする。テスト中に誤ってクロールが走っても常用データに影響しない。
-
-##### 0. テスト用データディレクトリの準備（初回・データ更新時）
-
-```bash
-# DB のスナップショットを作成（config.json や Cookie は含めない）
-mkdir -p data-test
-cp data/db.sqlite data-test/db.sqlite
-```
-
-`data-test/` は `.gitignore` 対象なのでコミットされない。最新データに追従したい場合は再度 `cp` を実行する。
+常用環境は `3000`（viewer）/ `3001`（crawler）を使用。テスト環境は **`3020`（viewer）/ `3021`（crawler）** を使う。データは `./data` を共有し、`CRAWL_ON_STARTUP=false` でクロールを無効化する。
 
 ##### 1. crawler のビルドと起動（crawler 変更時のみ再ビルド）
 
@@ -164,7 +152,7 @@ docker build -t tbh-test-crawler:dev -f crawler/Dockerfile .
 # 起動
 docker run -d \
   --name tbh-test-crawler \
-  -v "$(pwd)/data-test:/data" \
+  -v "$(pwd)/data:/data" \
   -p 3021:3001 \
   -e CRAWL_ON_STARTUP=false \
   tbh-test-crawler:dev
@@ -179,7 +167,7 @@ docker build -t tbh-test-viewer:dev -f viewer/Dockerfile .
 # 起動
 docker run -d \
   --name tbh-test-viewer \
-  -v "$(pwd)/data-test:/data" \
+  -v "$(pwd)/data:/data" \
   -p 3020:3000 \
   -e CRAWLER_URL=http://host.docker.internal:3021 \
   --add-host=host.docker.internal:host-gateway \
