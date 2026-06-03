@@ -51,6 +51,21 @@ async function throwResponseError(
 }
 
 /**
+ * 検索対象グループ。
+ * backend の SearchInGroup と同一の値セット。
+ */
+export type SearchInGroup = 'text' | 'card' | 'url' | 'author' | 'quoted'
+
+/** 全検索対象グループ */
+export const ALL_SEARCH_GROUPS: SearchInGroup[] = [
+  'text',
+  'card',
+  'url',
+  'author',
+  'quoted',
+]
+
+/**
  * ブックマーク一覧を取得する
  * @param params - 検索パラメータ
  * @returns ブックマークレスポンス
@@ -59,6 +74,8 @@ export async function fetchBookmarks(params: {
   page?: number
   limit?: number
   q?: string
+  /** 検索対象グループ（省略時は全グループ） */
+  searchIn?: SearchInGroup[]
   account?: string
   sort?: 'asc' | 'desc'
   sortBy?: 'bookmarked_at' | 'created_at'
@@ -70,6 +87,9 @@ export async function fetchBookmarks(params: {
   if (params.page != null) query.set('page', String(params.page))
   if (params.limit != null) query.set('limit', String(params.limit))
   if (params.q) query.set('q', params.q)
+  if (params.searchIn && params.searchIn.length > 0) {
+    query.set('search_in', params.searchIn.join(','))
+  }
   if (params.account) query.set('account', params.account)
   if (params.sort) query.set('sort', params.sort)
   if (params.sortBy) query.set('sort_by', params.sortBy)
