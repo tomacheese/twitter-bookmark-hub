@@ -74,6 +74,8 @@ dist
 
 # local data (contains sensitive credentials and cookies)
 data/
+# test environment data snapshot (db copy for local testing)
+data-test/
 
 # local development artifacts (not part of the repository)
 ref-repos/

@@ -120,34 +120,57 @@ cd viewer/frontend && pnpm dev    # Vite 開発サーバー (API は localhost:3
 cd viewer/frontend && pnpm build  # プロダクションビルド (dist/ に出力)
 ```
 
-### テスト環境の構築（本番を汚さない）
+### テスト環境の構築
 
-本番は `3000`（viewer）/ `3001`（crawler）を使用。テスト環境は **`3020`（viewer）/ `3021`（crawler）** を使う。
-データは本番 DB（`./data`）を共有するが、`CRAWL_ON_STARTUP=false` でクロールを無効化する。
+**目的別に使い分ける**:
 
-#### 重要な注意点（ハマりポイント）
+| 目的 | 手段 | 所要時間 |
+|------|------|---------|
+| フロントエンドの UI テスト | `pnpm dev`（Vite dev サーバー） | 約 10 秒 |
+| バックエンド変更・本番に近い動作確認 | Docker（下記手順） | 初回約 20 分、2 回目以降数秒 |
 
-- **`docker compose -p <project> build` + `up --no-build` は使わない**: image フィールドがない場合に compose がイメージ名を解決できず動作しない
-- **`docker compose up -d` は使わない**: 毎回フルリビルドが走り 20 分以上かかる
-- **`docker build` で直接タグを指定する**: `docker build -t <明示的タグ> -f <Dockerfile> .`
-- ゴーストコンテナ（`docker ps -a` に出ないが名前が使用中になる）が発生した場合は `docker ps -a --no-trunc` で確認して別名を使う
+#### パターン A: フロントエンドの UI テスト（pnpm dev）
 
-#### crawler のビルドと起動（crawler 変更時のみ再ビルド）
+```bash
+# viewer/frontend/vite.config.ts の proxy が localhost:3000 を向いているので
+# 本番 backend（ポート 3000）に向けて動く
+cd viewer/frontend && pnpm dev   # http://localhost:5173 でアクセス
+```
+
+Vite HMR でソース変更が即反映される。本番 backend をそのまま使うため DB の変更は不要。
+
+#### パターン B: Docker による本番に近い動作確認
+
+常用環境は `3000`（viewer）/ `3001`（crawler）を使用。テスト環境は **`3020`（viewer）/ `3021`（crawler）** を使う。
+
+**`./data`（常用データ）はテスト環境と共有しない**。必ず `./data-test/` に DB スナップショットを作ってマウントする。テスト中に誤ってクロールが走っても常用データに影響しない。
+
+##### 0. テスト用データディレクトリの準備（初回・データ更新時）
+
+```bash
+# DB のスナップショットを作成（config.json や Cookie は含めない）
+mkdir -p data-test
+cp data/db.sqlite data-test/db.sqlite
+```
+
+`data-test/` は `.gitignore` 対象なのでコミットされない。最新データに追従したい場合は再度 `cp` を実行する。
+
+##### 1. crawler のビルドと起動（crawler 変更時のみ再ビルド）
 
 ```bash
 # ビルド（crawler/Dockerfile を変更した場合のみ）
 docker build -t tbh-test-crawler:dev -f crawler/Dockerfile .
 
-# 起動（--no-build なら既存イメージをそのまま使う）
+# 起動
 docker run -d \
   --name tbh-test-crawler \
-  -v "$(pwd)/data:/data" \
+  -v "$(pwd)/data-test:/data" \
   -p 3021:3001 \
   -e CRAWL_ON_STARTUP=false \
   tbh-test-crawler:dev
 ```
 
-#### viewer のビルドと起動（backend 変更時のみ再ビルド）
+##### 2. viewer のビルドと起動（backend 変更時のみ再ビルド）
 
 ```bash
 # ビルド（viewer/Dockerfile を変更した場合のみ）
@@ -156,14 +179,14 @@ docker build -t tbh-test-viewer:dev -f viewer/Dockerfile .
 # 起動
 docker run -d \
   --name tbh-test-viewer \
-  -v "$(pwd)/data:/data" \
+  -v "$(pwd)/data-test:/data" \
   -p 3020:3000 \
   -e CRAWLER_URL=http://host.docker.internal:3021 \
   --add-host=host.docker.internal:host-gateway \
   tbh-test-viewer:dev
 ```
 
-#### フロントエンドのみ変更した場合（最速・Docker 再ビルド不要）
+##### フロントエンドのみ変更した場合（Docker 再ビルド不要）
 
 ```bash
 # ① ローカルでビルド（約 1 分）
@@ -175,20 +198,28 @@ docker cp viewer/frontend/dist/. tbh-test-viewer:/app/public/
 # ③ ブラウザで Ctrl+Shift+R（ハードリロード）
 ```
 
-#### 動作確認
+##### 動作確認
 
 ```bash
-curl -s http://localhost:3021/health          # crawler ヘルスチェック
+curl -s http://localhost:3021/health                              # crawler ヘルスチェック
 curl -s http://localhost:3020/api/bookmarks?limit=1 | jq .total  # viewer 確認
 ```
 
-#### クリーンアップ
+##### クリーンアップ
 
 ```bash
 docker stop tbh-test-viewer tbh-test-crawler
 docker rm   tbh-test-viewer tbh-test-crawler
 docker rmi  tbh-test-viewer:dev tbh-test-crawler:dev
+rm -rf data-test/
 ```
+
+##### 重要な注意点（ハマりポイント）
+
+- **`docker compose -p <project> build` + `up --no-build` は使わない**: `image:` フィールドがないと compose がイメージ名を解決できず動作しない
+- **`docker compose up -d` は使わない**: 毎回フルリビルドが走り 20 分以上かかる
+- **`docker build` で直接タグを指定する**: `docker build -t <明示的タグ> -f <Dockerfile> .`
+- ゴーストコンテナ（`docker ps -a` に出ないが名前が使用中と言われる）が発生したら `docker ps -a --no-trunc` で確認して別名を使う
 
 ## アーキテクチャ / データフロー
 
