@@ -220,8 +220,12 @@ export function getBookmarks(
   const bindValues: unknown[] = []
 
   if (q) {
-    conditions.push('t.full_text LIKE ?')
-    bindValues.push(`%${q}%`)
+    // ツイート本文・カードタイトル・カード概要を対象に全文検索する
+    conditions.push(
+      '(t.full_text LIKE ? OR t.card_title LIKE ? OR t.card_description LIKE ?)'
+    )
+    const likeParam = `%${q}%`
+    bindValues.push(likeParam, likeParam, likeParam)
   }
   if (account) {
     // EXISTS サブクエリでフィルタすることで、メインの bookmarks JOIN の集計
