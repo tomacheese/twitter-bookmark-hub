@@ -126,93 +126,90 @@ cd viewer/frontend && pnpm build  # プロダクションビルド (dist/ に出
 
 | 目的 | 手段 | 所要時間 |
 |------|------|---------|
-| フロントエンドの UI テスト | `pnpm dev`（Vite dev サーバー） | 約 10 秒 |
-| バックエンド変更・本番に近い動作確認 | Docker（下記手順） | 初回約 20 分、2 回目以降数秒 |
+| フロントエンドの変更確認 | `pnpm dev`（HMR） | 数秒 |
+| viewer/backend または crawler の変更確認 | `tsx` 直接起動 | 数秒 |
+| コンテナ環境の再現テスト（alpine/glibc 差異の確認等） | Docker（末尾参照） | 初回 20 分以上 |
 
-#### パターン A: フロントエンドの UI テスト（pnpm dev）
+**基本方針**: Docker は使わず `tsx` 直接起動を使う。`better-sqlite3` のネイティブモジュールは `pnpm install` でホスト OS 向けにコンパイル済みのため、ローカル起動に問題はない。
+
+#### パターン A: フロントエンドのみ変更（pnpm dev）
 
 ```bash
-# viewer/frontend/vite.config.ts の proxy が localhost:3000 を向いているので
-# 本番 backend（ポート 3000）に向けて動く
-cd viewer/frontend && pnpm dev   # http://localhost:5173 でアクセス
+pnpm --filter twitter-bookmark-hub-frontend dev
+# http://localhost:5173 でアクセス（API は localhost:3000 の常用 backend にプロキシ）
 ```
 
-Vite HMR でソース変更が即反映される。本番 backend をそのまま使うため DB の変更は不要。
+HMR で即反映。常用 backend が起動中であれば追加作業不要。
 
-#### パターン B: Docker による本番に近い動作確認
+#### パターン B: viewer/backend を変更する場合
 
-常用環境は `3000`（viewer）/ `3001`（crawler）を使用。テスト環境は **`3020`（viewer）/ `3021`（crawler）** を使う。データは `./data` を共有し、`CRAWL_ON_STARTUP=false` でクロールを無効化する。
-
-##### 1. crawler のビルドと起動（crawler 変更時のみ再ビルド）
-
-**リポジトリルートで実行すること**（Dockerfile がルートの `pnpm-workspace.yaml` や `shared/` を参照するため）。
+viewer/backend の `serveStatic` は **cwd 相対**（`./public`）のため、`viewer/backend/` ディレクトリで起動する必要がある。初回のみ `public/` のシンボリックリンクを作成する。
 
 ```bash
-# ビルド（crawler/Dockerfile を変更した場合のみ）
+# 初回のみ: frontend の dist を backend の静的配信ルートにリンク
+pnpm --filter twitter-bookmark-hub-frontend build
+ln -sf "$(pwd)/viewer/frontend/dist" "$(pwd)/viewer/backend/public"
+```
+
+```bash
+# viewer/backend を起動（ポート 3000 は常用と被る場合は変更する）
+cd viewer/backend
+DATA_DIR=$(pwd)/../../data \
+  VIEWER_PORT=3000 \
+  CRAWLER_URL=http://localhost:3001 \
+  LOG_DIR=$(pwd)/../../logs \
+  ./node_modules/.bin/tsx src/main.ts
+# http://localhost:3000 でアクセス
+```
+
+frontend の変更も同時に確認したい場合は `pnpm dev`（ポート 5173）を別ターミナルで起動する。
+
+#### パターン C: crawler も変更する場合
+
+```bash
+# リポジトリルートで実行
+DATA_DIR=$(pwd)/data \
+  CRAWL_ON_STARTUP=false \
+  CRAWL_SCHEDULE="0 0 31 2 *" \
+  CRAWLER_PORT=3001 \
+  LOG_DIR=$(pwd)/logs \
+  ./crawler/node_modules/.bin/tsx crawler/src/main.ts
+```
+
+`CRAWL_SCHEDULE="0 0 31 2 *"` で cron クロールを無効化する（`CRAWL_ON_STARTUP=false` だけでは起動時クロールしか止まらない）。
+
+#### 注意点
+
+- `DATA_DIR` は絶対パスで指定する（cwd が変わると相対パスがずれる）
+- `viewer/backend/public` のシンボリックリンクを作成済みの場合、frontend のビルドを更新しても自動で反映される（シンボリックリンクが dist を指しているため）
+- ポート 3000 を常用環境が使用中の場合は `VIEWER_PORT=3020` 等に変更する
+
+#### Docker による本番再現テスト（必要な場合のみ）
+
+コンテナ環境（alpine）との差異確認が必要な場合のみ使用する。**リポジトリルートで実行すること**。
+
+```bash
+# ビルド
 docker build -t tbh-test-crawler:dev -f crawler/Dockerfile .
+docker build -t tbh-test-viewer:dev  -f viewer/Dockerfile .
 
-# 起動（同名コンテナが残っていれば先に docker rm tbh-test-crawler する）
-docker run -d \
-  --name tbh-test-crawler \
-  -v "$(pwd)/data:/data" \
-  -p 3021:3001 \
-  -e CRAWL_ON_STARTUP=false \
-  -e CRAWL_SCHEDULE="0 0 31 2 *" \
+# 起動（同名コンテナが残っていれば先に docker rm する）
+docker run -d --name tbh-test-crawler \
+  -v "$(pwd)/data:/data" -p 3021:3001 \
+  -e CRAWL_ON_STARTUP=false -e CRAWL_SCHEDULE="0 0 31 2 *" \
   tbh-test-crawler:dev
-```
 
-`CRAWL_SCHEDULE="0 0 31 2 *"` は 2 月 31 日（存在しない日付）を指定することで cron クロールを無効化する。`CRAWL_ON_STARTUP=false` だけでは起動時クロールを止めるだけで、スケジュールは動き続ける。
-
-##### 2. viewer のビルドと起動（backend 変更時のみ再ビルド）
-
-```bash
-# ビルド（viewer/Dockerfile を変更した場合のみ）
-docker build -t tbh-test-viewer:dev -f viewer/Dockerfile .
-
-# 起動（同名コンテナが残っていれば先に docker rm tbh-test-viewer する）
-docker run -d \
-  --name tbh-test-viewer \
-  -v "$(pwd)/data:/data" \
-  -p 3020:3000 \
+docker run -d --name tbh-test-viewer \
+  -v "$(pwd)/data:/data" -p 3020:3000 \
   -e CRAWLER_URL=http://host.docker.internal:3021 \
   --add-host=host.docker.internal:host-gateway \
   tbh-test-viewer:dev
-```
 
-##### フロントエンドのみ変更した場合（Docker 再ビルド不要）
-
-```bash
-# ① ローカルでビルド（約 1 分）
-pnpm --filter twitter-bookmark-hub-frontend build
-
-# ② 実行中の viewer コンテナに直接コピー
-docker cp viewer/frontend/dist/. tbh-test-viewer:/app/public/
-
-# ③ ブラウザで Ctrl+Shift+R（ハードリロード）
-```
-
-##### 動作確認
-
-```bash
-curl -s http://localhost:3021/health                              # crawler ヘルスチェック
-curl -s http://localhost:3020/api/bookmarks?limit=1 | jq .total  # viewer 確認
-```
-
-##### クリーンアップ
-
-```bash
+# クリーンアップ
 docker stop tbh-test-viewer tbh-test-crawler
 docker rm   tbh-test-viewer tbh-test-crawler
 docker rmi  tbh-test-viewer:dev tbh-test-crawler:dev
 ```
-
-##### 重要な注意点（ハマりポイント）
-
-- **`docker build` はリポジトリルートで実行する**: Dockerfile はルートの `pnpm-workspace.yaml` や `shared/` を参照するため、`cd crawler` などしてから実行してはいけない
-- **同名コンテナが残っている場合は先に削除**: `Error: Conflict. The container name is already in use` が出たら `docker rm tbh-test-crawler tbh-test-viewer` を先に実行する
-- **`docker compose -p <project> build` + `up --no-build` は使わない**: `image:` フィールドがないと compose がイメージ名を解決できず動作しない
-- **`docker compose up -d` は使わない**: 毎回フルリビルドが走り 20 分以上かかる
-- ゴーストコンテナ（`docker ps -a` に出ないが名前が使用中と言われる）が発生したら `docker ps -a --no-trunc` で確認して別名を使う
 
 ## アーキテクチャ / データフロー
 
