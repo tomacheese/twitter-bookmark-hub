@@ -15,7 +15,7 @@ interface GetBookmarksParams {
   page: number
   /** 1 ページあたりの件数 */
   limit: number
-  /** 検索クエリ（ツイート本文で部分一致） */
+  /** 検索クエリ（ツイート本文・カード情報・URL エンティティで部分一致） */
   q?: string
   /** アカウントでフィルタ */
   account?: string
@@ -220,12 +220,20 @@ export function getBookmarks(
   const bindValues: unknown[] = []
 
   if (q) {
-    // ツイート本文・カードタイトル・カード概要を対象に全文検索する
+    // ツイート本文・カードタイトル・カード概要・カード URL・URL エンティティを対象に全文検索する
     conditions.push(
-      '(t.full_text LIKE ? OR t.card_title LIKE ? OR t.card_description LIKE ?)'
+      '(t.full_text LIKE ? OR t.card_title LIKE ? OR t.card_description LIKE ? OR t.card_url LIKE ? OR t.card_vanity_url LIKE ? OR EXISTS (SELECT 1 FROM url_entities ue WHERE ue.tweet_id = t.tweet_id AND (ue.expanded_url LIKE ? OR ue.display_url LIKE ?)))'
     )
     const likeParam = `%${q}%`
-    bindValues.push(likeParam, likeParam, likeParam)
+    bindValues.push(
+      likeParam,
+      likeParam,
+      likeParam,
+      likeParam,
+      likeParam,
+      likeParam,
+      likeParam
+    )
   }
   if (account) {
     // EXISTS サブクエリでフィルタすることで、メインの bookmarks JOIN の集計
