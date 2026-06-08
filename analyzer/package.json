@@ -14,7 +14,7 @@
     "fix:prettier": "prettier --write src"
   },
   "dependencies": {
-    "@book000/node-utils": "1.24.219",
+    "@book000/node-utils": "1.24.220",
     "@hono/node-server": "2.0.4",
     "@patdx/kuromoji": "1.0.4",
     "@twitter-bookmark-hub/shared": "workspace:*",
