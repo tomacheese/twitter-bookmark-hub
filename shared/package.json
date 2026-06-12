@@ -14,7 +14,7 @@
     "fix:prettier": "prettier --write src"
   },
   "devDependencies": {
-    "prettier": "3.8.3",
+    "prettier": "3.8.4",
     "run-z": "2.1.0",
     "typescript": "6.0.3"
   }
