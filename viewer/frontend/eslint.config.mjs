@@ -41,7 +41,11 @@ export default [
     },
     rules: {
       // Vue コンポーネントは PascalCase の命名規則を使用する
-      'unicorn/filename-case': ['error', { case: 'pascalCase' }],
+      // unicorn v65 でディレクトリ名もチェック対象になったため、慣習的な src ディレクトリを除外する
+      'unicorn/filename-case': [
+        'error',
+        { case: 'pascalCase', ignore: [/^src$/] },
+      ],
       // null は Vue テンプレートおよびリアクティブ state で「未選択」を表す慣用的な値として使用する
       // unicorn は null より undefined を好むが、Vue の v-model や Optional Chaining と
       // の相性を考慮して .vue ファイルに限り無効化する

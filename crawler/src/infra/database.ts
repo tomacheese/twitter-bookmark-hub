@@ -29,7 +29,7 @@ export function initDatabase(dbPath: string): Database.Database {
  * @param db Database インスタンス
  * @param userId Twitter ユーザー ID (Snowflake)
  * @param screenName スクリーンネーム
- * @param userName 表示名
+ * @param username 表示名
  * @param profileImageUrl プロフィール画像 URL
  * @param updatedAt 更新日時 (ISO 8601)
  */
@@ -37,7 +37,7 @@ function upsertUser(
   db: Database.Database,
   userId: string,
   screenName: string,
-  userName: string,
+  username: string,
   profileImageUrl: string | null,
   updatedAt: string
 ): void {
@@ -51,7 +51,7 @@ function upsertUser(
       profile_image_url = excluded.profile_image_url,
       updated_at        = excluded.updated_at
   `
-  ).run(userId, screenName, userName, profileImageUrl, updatedAt)
+  ).run(userId, screenName, username, profileImageUrl, updatedAt)
 }
 
 /** upsertTweetRecord に渡すツイートの最小限の情報 */
