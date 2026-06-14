@@ -41,10 +41,12 @@ export default [
     },
     rules: {
       // Vue コンポーネントは PascalCase の命名規則を使用する
-      // unicorn v65 でディレクトリ名もチェック対象になったため、慣習的な src ディレクトリを除外する
+      // unicorn v65 でディレクトリ名もチェック対象になったが、ignore オプションは
+      // マッチしたセグメントを含むファイル全体をスキップするため checkDirectories: false で
+      // ディレクトリ名チェックのみを無効化し、src 等の慣習的なディレクトリ名を許容する
       'unicorn/filename-case': [
         'error',
-        { case: 'pascalCase', ignore: [/^src$/] },
+        { case: 'pascalCase', checkDirectories: false },
       ],
       // null は Vue テンプレートおよびリアクティブ state で「未選択」を表す慣用的な値として使用する
       // unicorn は null より undefined を好むが、Vue の v-model や Optional Chaining と
