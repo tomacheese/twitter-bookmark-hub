@@ -26,7 +26,7 @@
     "twitter-openapi-typescript": "0.0.56"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.14.62",
+    "@book000/eslint-config": "1.15.0",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "24.13.2",
     "@types/node-cron": "3.0.11",

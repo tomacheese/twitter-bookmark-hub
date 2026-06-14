@@ -40,15 +40,6 @@ export default [
       },
     },
     rules: {
-      // unicorn/filename-case のルールは ESLint flat config の「最後に定義したルールが勝つ」仕様により、
-      // @book000/eslint-config の **/*.vue ブロック（pascalCase + checkDirectories: false）が
-      // プロジェクト側でオーバーライドされると上書きされてしまう。
-      // @book000/eslint-config が .vue 向け pascalCase ブロックを提供した後も、
-      // プロジェクト側に vue-eslint-parser 設定ブロックが存在する限りこの override は必要。
-      'unicorn/filename-case': [
-        'error',
-        { case: 'pascalCase', checkDirectories: false },
-      ],
       // null は Vue テンプレートおよびリアクティブ state で「未選択」を表す慣用的な値として使用する
       // unicorn は null より undefined を好むが、Vue の v-model や Optional Chaining と
       // の相性を考慮して .vue ファイルに限り無効化する
