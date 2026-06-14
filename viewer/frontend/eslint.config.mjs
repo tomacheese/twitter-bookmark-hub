@@ -40,10 +40,9 @@ export default [
       },
     },
     rules: {
-      // Vue コンポーネントは PascalCase の命名規則を使用する
-      // unicorn v65 でディレクトリ名もチェック対象になったが、ignore オプションは
-      // マッチしたセグメントを含むファイル全体をスキップするため checkDirectories: false で
-      // ディレクトリ名チェックのみを無効化し、src 等の慣習的なディレクトリ名を許容する
+      // @book000/eslint-config の **/*.vue ブロックが適用される前の暫定対応。
+      // eslint-config PR #536 がリリースされた後、この override は削除できる。
+      // @see https://github.com/book000/eslint-config/pull/536
       'unicorn/filename-case': [
         'error',
         { case: 'pascalCase', checkDirectories: false },
