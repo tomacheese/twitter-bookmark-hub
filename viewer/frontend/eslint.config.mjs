@@ -40,9 +40,11 @@ export default [
       },
     },
     rules: {
-      // @book000/eslint-config の **/*.vue ブロックが適用される前の暫定対応。
-      // eslint-config PR #536 がリリースされた後、この override は削除できる。
-      // @see https://github.com/book000/eslint-config/pull/536
+      // unicorn/filename-case のルールは ESLint flat config の「最後に定義したルールが勝つ」仕様により、
+      // @book000/eslint-config の **/*.vue ブロック（pascalCase + checkDirectories: false）が
+      // プロジェクト側でオーバーライドされると上書きされてしまう。
+      // @book000/eslint-config が .vue 向け pascalCase ブロックを提供した後も、
+      // プロジェクト側に vue-eslint-parser 設定ブロックが存在する限りこの override は必要。
       'unicorn/filename-case': [
         'error',
         { case: 'pascalCase', checkDirectories: false },
