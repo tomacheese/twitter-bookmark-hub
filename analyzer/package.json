@@ -18,7 +18,7 @@
     "@hono/node-server": "2.0.4",
     "@patdx/kuromoji": "1.0.4",
     "@twitter-bookmark-hub/shared": "workspace:*",
-    "better-sqlite3": "12.10.0",
+    "better-sqlite3": "12.10.1",
     "hono": "4.12.25",
     "stopword": "3.1.5",
     "tsx": "4.22.4"
