@@ -18,7 +18,7 @@
     "@hono/node-server": "2.0.5",
     "@twitter-bookmark-hub/shared": "workspace:*",
     "better-sqlite3": "12.11.1",
-    "hono": "4.12.25",
+    "hono": "4.12.26",
     "tsx": "4.22.4"
   },
   "devDependencies": {
