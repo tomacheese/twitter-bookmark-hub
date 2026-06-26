@@ -11,8 +11,8 @@ importers:
   analyzer:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.24.243
-        version: 1.24.243
+        specifier: 1.24.245
+        version: 1.24.245
       '@hono/node-server':
         specifier: 2.0.6
         version: 2.0.6(hono@4.12.27)
@@ -60,8 +60,8 @@ importers:
   crawler:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.24.243
-        version: 1.24.243
+        specifier: 1.24.245
+        version: 1.24.245
       '@hono/node-server':
         specifier: 2.0.6
         version: 2.0.6(hono@4.12.27)
@@ -136,8 +136,8 @@ importers:
   viewer/backend:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.24.243
-        version: 1.24.243
+        specifier: 1.24.245
+        version: 1.24.245
       '@hono/node-server':
         specifier: 2.0.6
         version: 2.0.6(hono@4.12.27)
@@ -748,8 +748,8 @@ packages:
     peerDependencies:
       eslint: 10.5.0
 
-  '@book000/node-utils@1.24.243':
-    resolution: {integrity: sha512-TB9aJrcTZFDrKY99Gxi5AOHeQ/oqivIKZfuuG3snpUdQ9sM+XjX7X2HffKeJFpQoGPJuIEOlr9JtSPUrOt62qQ==}
+  '@book000/node-utils@1.24.245':
+    resolution: {integrity: sha512-y9x3R52LyPGOyHUVfQKTBETP4z4sKZa5zV2lmlLE4Q09SXC+nOoJeP/pWxEx3Mqi0cvnklWUITm17FHzj9ZIMw==}
 
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
@@ -4225,7 +4225,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@book000/node-utils@1.24.243':
+  '@book000/node-utils@1.24.245':
     dependencies:
       cycle: 1.0.3
       jsonc-parser: 3.3.1
