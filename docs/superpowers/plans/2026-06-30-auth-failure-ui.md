@@ -478,6 +478,10 @@ Insert immediately before `export async function runCrawl(...)`:
  * エラーオブジェクトからエラー種別を分類する。
  * 認証エラー ('auth') は呼び出し元で個別に捕捉するため、このヘルパーの対象外。
  *
+ * 既知の制限: Twitter はレートリミットと期限切れトークン認証失敗の両方に HTTP 403 を返す。
+ * このヘルパーは両者を区別できないため、ページネーション中に発生した
+ * 403 認証失敗は 'rate_limit' として分類される。
+ *
  * @param error エラーオブジェクト
  * @returns エラー種別
  */
@@ -489,6 +493,7 @@ function classifyError(
 
   const status = (error as { response?: { status?: number } }).response?.status
   // 429/403 はレートリミット（withRetry がリトライ上限超過後にスロー）
+  // 注意: 403 はトークン期限切れでも発生するが、応答ボディを解析しない限り判別不可
   if (status === 429 || status === 403) return 'rate_limit'
   // その他の HTTP エラー
   if (status !== undefined) return 'api'
