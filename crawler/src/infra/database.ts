@@ -1,5 +1,9 @@
 import Database from 'better-sqlite3'
-import { SCHEMA_DDL, applyColumnMigrations } from '@twitter-bookmark-hub/shared'
+import {
+  SCHEMA_DDL,
+  applyColumnMigrations,
+  type CrawlAccountResult,
+} from '@twitter-bookmark-hub/shared'
 import type { BookmarkEntry } from '../shared/types'
 
 /**
@@ -372,18 +376,95 @@ export function updateCrawlJob(
 }
 
 /**
- * 最新のクロールジョブを取得する。
+ * アカウント別クロール結果を保存する。
+ *
+ * @param db Database インスタンス
+ * @param crawlJobId クロールジョブ ID
+ * @param username アカウントのユーザー名
+ * @param status 結果ステータス
+ * @param errorType エラー種別（成功時は null）
+ * @param errorMessage エラーメッセージ（成功時は null）
+ * @param bookmarksCrawled クロールしたブックマーク数
+ */
+export function saveCrawlAccountResult(
+  db: Database.Database,
+  crawlJobId: number,
+  username: string,
+  status: 'success' | 'error',
+  errorType:
+    | 'auth'
+    | 'rate_limit'
+    | 'api'
+    | 'network'
+    | 'unknown'
+    | null,
+  errorMessage: string | null,
+  bookmarksCrawled: number
+): void {
+  db.prepare(
+    `INSERT INTO crawl_account_results
+      (crawl_job_id, username, status, error_type, error_message, bookmarks_crawled)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(crawlJobId, username, status, errorType, errorMessage, bookmarksCrawled)
+}
+
+/**
+ * 指定クロールジョブのアカウント別結果一覧を返す。
+ *
+ * @param db Database インスタンス
+ * @param crawlJobId クロールジョブ ID
+ * @returns アカウント別クロール結果の配列
+ */
+export function getCrawlAccountResults(
+  db: Database.Database,
+  crawlJobId: number
+): CrawlAccountResult[] {
+  const rows = db
+    .prepare(
+      `SELECT username, status, error_type, error_message, bookmarks_crawled
+       FROM crawl_account_results
+       WHERE crawl_job_id = ?
+       ORDER BY id ASC`
+    )
+    .all(crawlJobId) as {
+    username: string
+    status: 'success' | 'error'
+    error_type:
+      | 'auth'
+      | 'rate_limit'
+      | 'api'
+      | 'network'
+      | 'unknown'
+      | null
+    error_message: string | null
+    bookmarks_crawled: number
+  }[]
+
+  return rows.map((row) => ({
+    username: row.username,
+    status: row.status,
+    errorType: row.error_type,
+    errorMessage: row.error_message,
+    bookmarksCrawled: row.bookmarks_crawled,
+  }))
+}
+
+/**
+ * 最新のクロールジョブをアカウント別結果と合わせて取得する。
  *
  * @param db Database インスタンス
  * @returns ジョブレコードまたは null
  */
 export function getLatestCrawlJob(
   db: Database.Database
-): Record<string, unknown> | null {
+): (Record<string, unknown> & { accountResults: CrawlAccountResult[] }) | null {
   const row = db
     .prepare('SELECT * FROM crawl_jobs ORDER BY id DESC LIMIT 1')
     .get() as Record<string, unknown> | undefined
-  return row ?? null
+  if (!row) return null
+
+  const accountResults = getCrawlAccountResults(db, row.id as number)
+  return { ...row, accountResults }
 }
 
 /**
