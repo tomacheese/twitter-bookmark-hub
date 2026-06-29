@@ -35,9 +35,7 @@ const ERROR_TYPE_LABELS: Record<string, string> = {
  * @param errorType - エラー種別
  * @returns 表示用ラベル
  */
-function errorTypeLabel(
-  errorType: CrawlAccountResult['errorType']
-): string {
+function errorTypeLabel(errorType: CrawlAccountResult['errorType']): string {
   if (!errorType) return ''
   return ERROR_TYPE_LABELS[errorType] ?? '❓ 不明なエラー'
 }
