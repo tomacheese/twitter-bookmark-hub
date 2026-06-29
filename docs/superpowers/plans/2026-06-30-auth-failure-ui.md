@@ -17,6 +17,7 @@
 - All SQL queries must use parameterized statements (no string concatenation)
 - `pnpm lint` must pass in every package touched before each commit
 - Git commit messages: Conventional Commits, Japanese description
+- **Task 1 and Task 2 must be committed in sequence without pushing to CI in between.** After Task 1 alone, `viewer/backend`'s tsc will fail because `CrawlJobStatus.accountResults` is required but not yet returned. Task 2 fixes this. Only push to CI / open the PR after both commits are done.
 
 ---
 
@@ -27,15 +28,18 @@
 | `shared/src/schema.ts` | Modify | Add `crawl_account_results` DDL + index |
 | `shared/src/types.ts` | Modify | Add `CrawlAccountResult`; extend `CrawlJobStatus` |
 | `shared/src/index.ts` | Modify | Re-export `CrawlAccountResult` |
+| `viewer/backend/src/infra/database.ts` | Modify | Extend `getLatestCrawlJob` to join account results |
 | `crawler/src/infra/database.ts` | Modify | `saveCrawlAccountResult`, `getCrawlAccountResults`, extend `getLatestCrawlJob` |
 | `crawler/src/core/crawler.ts` | Modify | `classifyError` helper; separate auth try/catch; save per-account results |
-| `viewer/backend/src/infra/database.ts` | Modify | Extend `getLatestCrawlJob` to JOIN account results |
+| `crawler/src/server.ts` | No change | `getLatestCrawlJob` already returns enriched object via Task 3 |
 | `viewer/frontend/src/api.ts` | Modify | Re-export `CrawlAccountResult` |
 | `viewer/frontend/src/components/CrawlStatus.vue` | Modify | Expand toggle + failed-account list UI |
 
 ---
 
 ### Task 1: Shared — Schema DDL + Types
+
+> ⚠️ Do **not** push to CI after this commit alone — see Global Constraints. Proceed immediately to Task 2.
 
 **Files:**
 - Modify: `shared/src/schema.ts`
@@ -54,7 +58,7 @@
 
 In `shared/src/schema.ts`, insert after the `crawl_jobs` table block (before the existing `CREATE INDEX` statements):
 
-```typescript
+```sql
   CREATE TABLE IF NOT EXISTS crawl_account_results (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     crawl_job_id      INTEGER NOT NULL REFERENCES crawl_jobs(id),
@@ -71,7 +75,7 @@ In `shared/src/schema.ts`, insert after the `crawl_jobs` table block (before the
 
 - [ ] **Step 2: Add `CrawlAccountResult` interface to shared/src/types.ts**
 
-Append before the closing of the file (after `CrawlJobStatus`):
+Append after the `CrawlJobStatus` interface:
 
 ```typescript
 /** アカウント別クロール結果 */
@@ -97,7 +101,7 @@ export interface CrawlAccountResult {
 
 - [ ] **Step 3: Extend `CrawlJobStatus` in shared/src/types.ts**
 
-Add `accountResults` field to the existing `CrawlJobStatus` interface:
+Replace the existing `CrawlJobStatus` interface with:
 
 ```typescript
 /** クロールジョブのステータス */
@@ -123,7 +127,7 @@ export interface CrawlJobStatus {
 
 - [ ] **Step 4: Re-export `CrawlAccountResult` from shared/src/index.ts**
 
-Add `CrawlAccountResult` to the existing type export list:
+Replace the existing type export list:
 
 ```typescript
 export type {
@@ -151,7 +155,7 @@ cd shared && pnpm lint
 
 Expected: no errors.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Commit (do not push yet — proceed to Task 2 first)**
 
 ```bash
 git add shared/src/schema.ts shared/src/types.ts shared/src/index.ts
@@ -160,7 +164,130 @@ git commit -m "feat(shared): crawl_account_results テーブルと CrawlAccountR
 
 ---
 
-### Task 2: Crawler — DB Helper Functions
+### Task 2: Viewer Backend — Extend `getLatestCrawlJob`
+
+> Applies immediately after Task 1. Restores `viewer/backend` tsc compliance.
+
+**Files:**
+- Modify: `viewer/backend/src/infra/database.ts`
+
+**Interfaces:**
+- Consumes: `CrawlAccountResult` from `@twitter-bookmark-hub/shared`
+- Produces: `getLatestCrawlJob(db): CrawlJobStatus | null` now includes `accountResults`
+
+---
+
+- [ ] **Step 1: Import `CrawlAccountResult` in viewer/backend/src/infra/database.ts**
+
+Update the existing import from `@twitter-bookmark-hub/shared` (add `CrawlAccountResult`):
+
+```typescript
+import type {
+  CardInfo,
+  CrawlJobStatus,
+  CrawlAccountResult,
+  MediaItem,
+  QuotedTweet,
+  UrlEntity,
+} from '@twitter-bookmark-hub/shared'
+```
+
+- [ ] **Step 2: Replace `getLatestCrawlJob` function (lines 579–615)**
+
+```typescript
+/**
+ * 最新のクロールジョブをアカウント別結果と合わせて取得する
+ * @param db - Database インスタンス
+ * @returns 最新のクロールジョブ情報、存在しない場合は null
+ */
+export function getLatestCrawlJob(
+  db: Database.Database
+): CrawlJobStatus | null {
+  const row = db
+    .prepare(
+      `SELECT id, started_at, finished_at, status, error_message,
+              accounts_total, accounts_succeeded
+       FROM crawl_jobs
+       ORDER BY id DESC
+       LIMIT 1`
+    )
+    .get() as
+    | {
+        id: number
+        started_at: string
+        finished_at: string | null
+        status: 'running' | 'success' | 'error'
+        error_message: string | null
+        accounts_total: number | null
+        accounts_succeeded: number | null
+      }
+    | undefined
+
+  if (!row) return null
+
+  // アカウント別クロール結果を取得する
+  // 2 クエリ構成だが、10 秒ポーリングに対してクエリ間隔は無視できる
+  const accountResultRows = db
+    .prepare(
+      `SELECT username, status, error_type, error_message, bookmarks_crawled
+       FROM crawl_account_results
+       WHERE crawl_job_id = ?
+       ORDER BY id ASC`
+    )
+    .all(row.id) as {
+    username: string
+    status: 'success' | 'error'
+    error_type:
+      | 'auth'
+      | 'rate_limit'
+      | 'api'
+      | 'network'
+      | 'unknown'
+      | null
+    error_message: string | null
+    bookmarks_crawled: number
+  }[]
+
+  const accountResults: CrawlAccountResult[] = accountResultRows.map((r) => ({
+    username: r.username,
+    status: r.status,
+    errorType: r.error_type,
+    errorMessage: r.error_message,
+    bookmarksCrawled: r.bookmarks_crawled,
+  }))
+
+  return {
+    id: row.id,
+    startedAt: row.started_at,
+    finishedAt: row.finished_at,
+    status: row.status,
+    errorMessage: row.error_message,
+    accountsTotal: row.accounts_total,
+    accountsSucceeded: row.accounts_succeeded,
+    accountResults,
+  }
+}
+```
+
+- [ ] **Step 3: Verify lint passes for shared AND viewer/backend**
+
+```bash
+cd shared && pnpm lint
+cd ../viewer/backend && pnpm lint
+```
+
+Expected: no errors in either package.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add viewer/backend/src/infra/database.ts
+git commit -m "feat(viewer/backend): getLatestCrawlJob にアカウント別結果を追加する"
+```
+
+---
+
+### Task 3: Crawler — DB Helper Functions
 
 **Files:**
 - Modify: `crawler/src/infra/database.ts`
@@ -170,13 +297,13 @@ git commit -m "feat(shared): crawl_account_results テーブルと CrawlAccountR
 - Produces:
   - `saveCrawlAccountResult(db, crawlJobId, username, status, errorType, errorMessage, bookmarksCrawled): void`
   - `getCrawlAccountResults(db, crawlJobId): CrawlAccountResult[]`
-  - Updated `getLatestCrawlJob(db)` that returns `Record<string, unknown> & { accountResults: CrawlAccountResult[] } | null`
+  - Updated `getLatestCrawlJob(db)` that includes `accountResults`
 
 ---
 
 - [ ] **Step 1: Import `CrawlAccountResult` in crawler/src/infra/database.ts**
 
-Update the existing import from `@twitter-bookmark-hub/shared`:
+Replace the existing import from `@twitter-bookmark-hub/shared`:
 
 ```typescript
 import {
@@ -274,7 +401,7 @@ export function getCrawlAccountResults(
 
 - [ ] **Step 4: Extend `getLatestCrawlJob` in crawler/src/infra/database.ts**
 
-Replace the existing `getLatestCrawlJob` function (which returns `Record<string, unknown> | null`) with a version that also joins account results. The raw record shape is used by `crawler/src/server.ts` which serialises it directly via `c.json()`, so returning the enriched object is backward-compatible.
+Replace the existing `getLatestCrawlJob` function with:
 
 ```typescript
 /**
@@ -296,7 +423,7 @@ export function getLatestCrawlJob(
 }
 ```
 
-- [ ] **Step 5: Type-check crawler**
+- [ ] **Step 5: Verify lint passes**
 
 ```bash
 cd crawler && pnpm lint
@@ -313,21 +440,20 @@ git commit -m "feat(crawler): アカウント別クロール結果の保存・�
 
 ---
 
-### Task 3: Crawler — Error Classification + Per-Account Result Saving
+### Task 4: Crawler — Error Classification + Per-Account Result Saving
 
 **Files:**
 - Modify: `crawler/src/core/crawler.ts`
 
 **Interfaces:**
-- Consumes:
-  - `saveCrawlAccountResult(db, crawlJobId, username, status, errorType, errorMessage, bookmarksCrawled): void` from `../infra/database`
-- Produces: per-account rows inserted into `crawl_account_results` after each account completes
+- Consumes: `saveCrawlAccountResult(...)` from `../infra/database`
+- Produces: per-account rows inserted into `crawl_account_results` after each account
 
 ---
 
 - [ ] **Step 1: Import `saveCrawlAccountResult` in crawler.ts**
 
-Update the existing database import block to add `saveCrawlAccountResult`:
+Update the existing database import block:
 
 ```typescript
 import {
@@ -345,7 +471,7 @@ import {
 
 - [ ] **Step 2: Add `classifyError` helper before `runCrawl`**
 
-Insert before `export async function runCrawl(...)`:
+Insert immediately before `export async function runCrawl(...)`:
 
 ```typescript
 /**
@@ -371,108 +497,209 @@ function classifyError(
 }
 ```
 
-- [ ] **Step 3: Restructure the per-account for-loop in `runCrawl`**
+- [ ] **Step 3: Replace the per-account for-loop in `runCrawl`**
 
-Locate the existing block:
-
-```typescript
-for (const account of accounts) {
-  logger.info(`===== Account: ${account.username} =====`)
-  try {
-    const { authToken, ct0 } = await getAuthCookies(account)
-    const client = await getBookmarksClient(
-      authToken,
-      ct0,
-      config.twitter.clientLanguage
-    )
-
-    let cursor: string | undefined
-    let page = 0
-    let totalForAccount = 0
-    // ... rest of crawl loop ...
-    successCount++
-  } catch (error) {
-    logger.error(
-      `[${account.username}] Error occurred. Continuing to next account:`,
-      error instanceof Error ? error : new Error(String(error))
-    )
-  }
-}
-```
-
-Replace with:
+Locate the block starting at `for (const account of accounts) {` (line 163) and ending at the closing `}` of the outer for-loop (line 311). Replace it entirely with:
 
 ```typescript
-for (const account of accounts) {
-  logger.info(`===== Account: ${account.username} =====`)
+    for (const account of accounts) {
+      logger.info(`===== Account: ${account.username} =====`)
 
-  // 認証エラーを個別に捕捉して error_type = 'auth' として記録する
-  let authCookies: { authToken: string; ct0: string }
-  try {
-    authCookies = await getAuthCookies(account)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    logger.error(
-      `[${account.username}] Auth failed. Continuing to next account:`,
-      error instanceof Error ? error : new Error(String(error))
-    )
-    saveCrawlAccountResult(
-      db,
-      jobId,
-      account.username,
-      'error',
-      'auth',
-      message,
-      0
-    )
-    continue
-  }
+      // 認証エラーを個別に捕捉して error_type = 'auth' として記録する
+      let authCookies: { authToken: string; ct0: string }
+      try {
+        authCookies = await getAuthCookies(account)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(
+          `[${account.username}] Auth failed. Continuing to next account:`,
+          error instanceof Error ? error : new Error(String(error))
+        )
+        saveCrawlAccountResult(
+          db,
+          jobId,
+          account.username,
+          'error',
+          'auth',
+          message,
+          0
+        )
+        continue
+      }
 
-  const { authToken, ct0 } = authCookies
-  let totalForAccount = 0
-  try {
-    const client = await getBookmarksClient(
-      authToken,
-      ct0,
-      config.twitter.clientLanguage
-    )
+      const { authToken, ct0 } = authCookies
+      // totalForAccount は catch ブロックからも参照するため外側で宣言する
+      let totalForAccount = 0
+      try {
+        const client = await getBookmarksClient(
+          authToken,
+          ct0,
+          config.twitter.clientLanguage
+        )
 
-    let cursor: string | undefined
-    let page = 0
-    // ... rest of crawl loop (unchanged) ...
-    // totalForAccount is already incremented inside the loop
+        let cursor: string | undefined
+        let page = 0
+        // Twitter API は最新ブックマーク順で返すため、
+        // globalPosition = 0 が最も新しいブックマークを表す
+        let globalPosition = 0
+        const crawledAt = new Date().toISOString()
+        // クロールで取得した tweet_id の集合（差分削除に使用）
+        const crawledTweetIds = new Set<string>()
+        // MAX_PAGES に達した場合は差分削除を行わないためのフラグ
+        let reachedMaxPages = false
 
-    successCount++
-    saveCrawlAccountResult(
-      db,
-      jobId,
-      account.username,
-      'success',
-      null,
-      null,
-      totalForAccount
-    )
-  } catch (error) {
-    const errorType = classifyError(error)
-    const message = error instanceof Error ? error.message : String(error)
-    logger.error(
-      `[${account.username}] Error occurred. Continuing to next account:`,
-      error instanceof Error ? error : new Error(String(error))
-    )
-    saveCrawlAccountResult(
-      db,
-      jobId,
-      account.username,
-      'error',
-      errorType,
-      message,
-      totalForAccount
-    )
-  }
-}
+        while (true) {
+          page++
+          logger.info(
+            `[${account.username}] Fetching page ${page}... (total so far: ${totalForAccount})`
+          )
+
+          const response = await withRetry(
+            () =>
+              client.getTweetApi().getBookmarks({
+                count: BOOKMARKS_PER_PAGE,
+                ...(cursor === undefined ? {} : { cursor }),
+              }),
+            { operationName: `getBookmarks page ${page}`, maxRetries: 3 }
+          )
+
+          const tweets = response.data.data
+          let addedThisPage = 0
+          // ページ内の analyzer 呼び出しをまとめて並列実行する
+          // ANALYZER_URL が設定されている場合は analyze 対象を収集する（thunk にして後から制限付き並列実行）
+          const analyzeQueue: (() => Promise<void>)[] = []
+
+          for (const tweetResult of tweets) {
+            // プロモーション (広告) ツイートは除外
+            if (tweetResult.promotedMetadata) {
+              continue
+            }
+            const entry = extractBookmarkEntry(tweetResult)
+            if (entry) {
+              upsertTweetEntry(db, entry)
+              upsertBookmark(
+                db,
+                entry.tweetId,
+                account.username,
+                crawledAt,
+                globalPosition
+              )
+              crawledTweetIds.add(entry.tweetId)
+              // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
+              // 引用ツイート本文・カードタイトルも結合してタグ精度を高める
+              const tweetId = entry.tweetId
+              const analyzeText = [
+                entry.fullText,
+                entry.quotedTweet?.fullText,
+                entry.cardInfo?.title,
+              ]
+                .filter(Boolean)
+                .join('\n')
+              analyzeQueue.push(() => analyzeAndSave(db, tweetId, analyzeText))
+              globalPosition++
+              addedThisPage++
+            }
+          }
+
+          // ページ内の全ツイートの分析を並列で待つ（同時実行数を ANALYZER_CONCURRENCY に制限）
+          for (
+            let i = 0;
+            i < analyzeQueue.length;
+            i += ANALYZER_CONCURRENCY
+          ) {
+            await Promise.all(
+              analyzeQueue.slice(i, i + ANALYZER_CONCURRENCY).map((fn) => fn())
+            )
+          }
+
+          totalForAccount += addedThisPage
+          logger.info(
+            `[${account.username}] Page ${page} done. ${addedThisPage} added. Total: ${totalForAccount}`
+          )
+
+          // 次ページのカーソルを取得
+          // プロモーション (広告) を除いた実ツイート数が 0 の場合は全件取得済みとみなす。
+          // addedThisPage だけでなく processableTweetsCount で判定することで、
+          // プロモーションのみのページで誤って早期終了するのを防ぐ。
+          const processableTweetsCount = tweets.filter(
+            (t) => !t.promotedMetadata
+          ).length
+          const nextCursor = response.data.cursor.bottom?.value
+          if (!nextCursor || processableTweetsCount === 0) {
+            logger.info(`[${account.username}] All bookmarks fetched.`)
+            break
+          }
+          if (page >= MAX_PAGES) {
+            logger.warn(
+              `[${account.username}] Reached MAX_PAGES (${MAX_PAGES}). Stopping to prevent infinite loop.`
+            )
+            reachedMaxPages = true
+            break
+          }
+          cursor = nextCursor
+        }
+
+        // MAX_PAGES に達した場合は全件取得できていないため差分削除を行わない
+        if (reachedMaxPages) {
+          logger.warn(
+            `[${account.username}] Skipping stale bookmark deletion because MAX_PAGES was reached.`
+          )
+        } else {
+          // DB 上の tweet_id のうち今回のクロールで取得できなかったものを削除する
+          const existingIds = getBookmarkTweetIds(db, account.username)
+          if (crawledTweetIds.size === 0 && existingIds.length > 0) {
+            // クロール結果が空かつ DB にブックマークが存在する場合は
+            // Twitter API の一時的エラーによる誤削除を防ぐためスキップする
+            logger.warn(
+              `[${account.username}] Skipping stale bookmark deletion: no bookmarks fetched but ${existingIds.length} exist in DB.`
+            )
+          } else {
+            const staleIds = existingIds.filter(
+              (id) => !crawledTweetIds.has(id)
+            )
+            if (staleIds.length > 0) {
+              logger.info(
+                `[${account.username}] Deleting ${staleIds.length} stale bookmark(s) not found in crawl results.`
+              )
+              // 部分削除によるデータ不整合を防ぐためトランザクション内で一括削除する
+              db.transaction(() => {
+                for (const tweetId of staleIds) {
+                  deleteBookmark(db, tweetId, account.username)
+                }
+              })()
+            }
+          }
+        }
+
+        successCount++
+        saveCrawlAccountResult(
+          db,
+          jobId,
+          account.username,
+          'success',
+          null,
+          null,
+          totalForAccount
+        )
+      } catch (error) {
+        const errorType = classifyError(error)
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(
+          `[${account.username}] Error occurred. Continuing to next account:`,
+          error instanceof Error ? error : new Error(String(error))
+        )
+        saveCrawlAccountResult(
+          db,
+          jobId,
+          account.username,
+          'error',
+          errorType,
+          message,
+          totalForAccount
+        )
+      }
+    }
 ```
-
-> **Note:** `totalForAccount` must be declared **before** the inner `try` block so the `catch` block can read it. Move the existing `let totalForAccount = 0` declaration to sit between the two `try` blocks as shown above.
 
 - [ ] **Step 4: Verify lint passes**
 
@@ -491,127 +718,6 @@ git commit -m "feat(crawler): エラー種別を分類しアカウント別ク�
 
 ---
 
-### Task 4: Viewer Backend — Extend `getLatestCrawlJob`
-
-**Files:**
-- Modify: `viewer/backend/src/infra/database.ts`
-
-**Interfaces:**
-- Consumes: `CrawlAccountResult` from `@twitter-bookmark-hub/shared`
-- Produces: `getLatestCrawlJob(db): CrawlJobStatus | null` now includes `accountResults`
-
----
-
-- [ ] **Step 1: Import `CrawlAccountResult` in viewer/backend/src/infra/database.ts**
-
-Update the existing import:
-
-```typescript
-import type {
-  CardInfo,
-  CrawlJobStatus,
-  CrawlAccountResult,
-  MediaItem,
-  QuotedTweet,
-  UrlEntity,
-} from '@twitter-bookmark-hub/shared'
-```
-
-- [ ] **Step 2: Replace `getLatestCrawlJob` function body**
-
-The current function (lines 579–615) returns `CrawlJobStatus | null` without `accountResults`. Replace it in full:
-
-```typescript
-/**
- * 最新のクロールジョブをアカウント別結果と合わせて取得する
- * @param db - Database インスタンス
- * @returns 最新のクロールジョブ情報、存在しない場合は null
- */
-export function getLatestCrawlJob(
-  db: Database.Database
-): CrawlJobStatus | null {
-  const row = db
-    .prepare(
-      `SELECT id, started_at, finished_at, status, error_message,
-              accounts_total, accounts_succeeded
-       FROM crawl_jobs
-       ORDER BY id DESC
-       LIMIT 1`
-    )
-    .get() as
-    | {
-        id: number
-        started_at: string
-        finished_at: string | null
-        status: 'running' | 'success' | 'error'
-        error_message: string | null
-        accounts_total: number | null
-        accounts_succeeded: number | null
-      }
-    | undefined
-
-  if (!row) return null
-
-  // アカウント別クロール結果を取得する
-  const accountResultRows = db
-    .prepare(
-      `SELECT username, status, error_type, error_message, bookmarks_crawled
-       FROM crawl_account_results
-       WHERE crawl_job_id = ?
-       ORDER BY id ASC`
-    )
-    .all(row.id) as {
-    username: string
-    status: 'success' | 'error'
-    error_type:
-      | 'auth'
-      | 'rate_limit'
-      | 'api'
-      | 'network'
-      | 'unknown'
-      | null
-    error_message: string | null
-    bookmarks_crawled: number
-  }[]
-
-  const accountResults: CrawlAccountResult[] = accountResultRows.map((r) => ({
-    username: r.username,
-    status: r.status,
-    errorType: r.error_type,
-    errorMessage: r.error_message,
-    bookmarksCrawled: r.bookmarks_crawled,
-  }))
-
-  return {
-    id: row.id,
-    startedAt: row.started_at,
-    finishedAt: row.finished_at,
-    status: row.status,
-    errorMessage: row.error_message,
-    accountsTotal: row.accounts_total,
-    accountsSucceeded: row.accounts_succeeded,
-    accountResults,
-  }
-}
-```
-
-- [ ] **Step 3: Verify lint passes**
-
-```bash
-cd viewer/backend && pnpm lint
-```
-
-Expected: no errors.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add viewer/backend/src/infra/database.ts
-git commit -m "feat(viewer/backend): getLatestCrawlJob にアカウント別結果を追加する"
-```
-
----
-
 ### Task 5: Viewer Frontend — API Export + CrawlStatus UI
 
 **Files:**
@@ -619,14 +725,14 @@ git commit -m "feat(viewer/backend): getLatestCrawlJob にアカウント別結�
 - Modify: `viewer/frontend/src/components/CrawlStatus.vue`
 
 **Interfaces:**
-- Consumes: `CrawlAccountResult` from `@twitter-bookmark-hub/shared` (via api.ts re-export)
-- Consumes: `status.value.accountResults: CrawlAccountResult[]` (populated by Task 4)
+- Consumes: `CrawlAccountResult` from `@twitter-bookmark-hub/shared`
+- Consumes: `status.value.accountResults: CrawlAccountResult[]` (populated since Task 2)
 
 ---
 
 - [ ] **Step 1: Re-export `CrawlAccountResult` from viewer/frontend/src/api.ts**
 
-Update the export block:
+Replace the export block:
 
 ```typescript
 export type {
@@ -645,23 +751,28 @@ export type {
 } from '@twitter-bookmark-hub/shared'
 ```
 
-- [ ] **Step 2: Add `CrawlAccountResult` import to CrawlStatus.vue**
+- [ ] **Step 2: Replace the `<script setup>` block in CrawlStatus.vue**
 
-Update the script block imports at the top of `CrawlStatus.vue`:
+Replace the entire existing `<script setup lang="ts">` block (lines 1–21) with:
 
-```typescript
-import { ref, computed } from 'vue'
+```html
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import { useCrawlStatus } from '../composables/useCrawlStatus'
 import type { CrawlAccountResult } from '../api'
-```
 
-- [ ] **Step 3: Add reactive state + computed helpers in CrawlStatus.vue script block**
-
-```typescript
 const { status, triggering, triggerCrawl } = useCrawlStatus()
 
 /** 詳細パネルの開閉状態 */
 const showDetails = ref(false)
+
+// クロールジョブが切り替わったら詳細パネルを自動で閉じる
+watch(
+  () => status.value?.id,
+  () => {
+    showDetails.value = false
+  }
+)
 
 /** 失敗したアカウント結果の一覧 */
 const failedAccounts = computed<CrawlAccountResult[]>(
@@ -704,11 +815,12 @@ function relativeTime(dateString: string): string {
   if (diff < 86_400) return `${Math.floor(diff / 3600)} 時間前`
   return `${Math.floor(diff / 86_400)} 日前`
 }
+</script>
 ```
 
-- [ ] **Step 4: Replace the template in CrawlStatus.vue**
+- [ ] **Step 3: Replace the `<template>` block in CrawlStatus.vue**
 
-Replace the entire `<template>` block with:
+Replace the entire existing `<template>` block with:
 
 ```html
 <template>
@@ -795,9 +907,9 @@ Replace the entire `<template>` block with:
 </template>
 ```
 
-- [ ] **Step 5: Replace the styles in CrawlStatus.vue**
+- [ ] **Step 4: Replace the `<style scoped>` block in CrawlStatus.vue**
 
-Replace the entire `<style scoped>` block with:
+Replace the entire existing `<style scoped>` block with:
 
 ```html
 <style scoped>
@@ -970,7 +1082,7 @@ Replace the entire `<style scoped>` block with:
 </style>
 ```
 
-- [ ] **Step 6: Verify lint passes**
+- [ ] **Step 5: Verify lint passes**
 
 ```bash
 cd viewer/frontend && pnpm lint
@@ -978,7 +1090,7 @@ cd viewer/frontend && pnpm lint
 
 Expected: no errors.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add viewer/frontend/src/api.ts viewer/frontend/src/components/CrawlStatus.vue
@@ -992,19 +1104,20 @@ git commit -m "feat(viewer/frontend): 失敗アカウント詳細パネルを Cr
 - [x] **Spec coverage**
   - `crawl_account_results` DDL → Task 1 Step 1
   - `CrawlAccountResult` + `CrawlJobStatus.accountResults` → Task 1 Steps 2–3
-  - `saveCrawlAccountResult` / `getCrawlAccountResults` → Task 2 Steps 2–3
-  - `classifyError` helper → Task 3 Step 2
-  - Separate auth try/catch → Task 3 Step 3
-  - Viewer backend `getLatestCrawlJob` join → Task 4 Step 2
-  - Frontend expand toggle + error list → Task 5 Steps 3–5
-  - Error type labels (auth/rate_limit/api/network/unknown) → Task 5 Step 3
+  - viewer/backend `getLatestCrawlJob` join → Task 2 Step 2
+  - `saveCrawlAccountResult` / `getCrawlAccountResults` → Task 3 Steps 2–3
+  - `classifyError` helper → Task 4 Step 2
+  - Separate auth try/catch → Task 4 Step 3
+  - Frontend expand toggle + error list → Task 5 Steps 2–4
+  - Error type labels (auth/rate_limit/api/network/unknown) → Task 5 Step 2
 
-- [x] **Placeholder scan** — no TBD, TODO, or "fill in" phrases found
+- [x] **Placeholder scan** — no TBD, TODO, or "fill in" phrases; full for-loop in Task 4 Step 3
 
 - [x] **Type consistency**
-  - `errorType` field name used consistently across Tasks 1–5
-  - `bookmarksCrawled` (camelCase) used in TypeScript; `bookmarks_crawled` (snake_case) in SQL — mapping consistent in every task
-  - `saveCrawlAccountResult` parameter order identical in Tasks 2 and 3
-  - `getCrawlAccountResults` return type is `CrawlAccountResult[]` in Task 2; consumed as `accountResults` in Tasks 4 and 5
+  - `errorType` field name consistent across Tasks 1–5
+  - `bookmarksCrawled` (camelCase) ↔ `bookmarks_crawled` (snake_case) mapping consistent in every task
+  - `saveCrawlAccountResult` parameter order identical in Tasks 3 and 4
 
 - [x] **Migration safety** — `CREATE TABLE IF NOT EXISTS` ensures existing databases auto-migrate without data loss
+
+- [x] **CI break window** — Task 1 + Task 2 are ordered consecutively; Global Constraints note prohibits pushing to CI between them
