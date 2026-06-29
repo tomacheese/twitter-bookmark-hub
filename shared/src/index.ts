@@ -8,6 +8,7 @@ export type {
   BookmarksResponse,
   AccountInfo,
   CrawlJobStatus,
+  CrawlAccountResult,
   TagItem,
   CategoryItem,
   AnalyzeResponse,

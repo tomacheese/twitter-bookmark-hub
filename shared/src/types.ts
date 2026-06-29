@@ -183,6 +183,20 @@ export interface FeaturesResponse {
   analyzer: boolean;
 }
 
+/** アカウント別クロール結果 */
+export interface CrawlAccountResult {
+  /** アカウントのユーザー名 */
+  username: string;
+  /** 結果ステータス */
+  status: "success" | "error";
+  /** エラー種別（成功時は null） */
+  errorType: "auth" | "rate_limit" | "api" | "network" | "unknown" | null;
+  /** エラーメッセージ（成功時は null） */
+  errorMessage: string | null;
+  /** クロールしたブックマーク数 */
+  bookmarksCrawled: number;
+}
+
 /** クロールジョブのステータス */
 export interface CrawlJobStatus {
   /** ジョブ ID */
@@ -199,4 +213,6 @@ export interface CrawlJobStatus {
   accountsTotal: number | null;
   /** 成功アカウント数 */
   accountsSucceeded: number | null;
+  /** アカウント別クロール結果一覧 */
+  accountResults: CrawlAccountResult[];
 }
