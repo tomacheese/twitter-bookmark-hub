@@ -196,7 +196,13 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       try {
         authCookies = await getAuthCookies(account)
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
+        // エラーメッセージ先頭の "[username] " プレフィックスを除去して UI 表示用に簡潔にする
+        const rawMessage =
+          error instanceof Error ? error.message : String(error)
+        const message = rawMessage.replace(
+          new RegExp(String.raw`^\[${account.username}\]\s*`),
+          ''
+        )
         logger.error(
           `[${account.username}] Auth failed. Continuing to next account:`,
           error instanceof Error ? error : new Error(String(error))
@@ -363,9 +369,19 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           null,
           totalForAccount
         )
+        // 成功のたびに accounts_succeeded を更新してポーリング UI に進捗を反映する
+        updateCrawlJob(db, jobId, 'running', {
+          accountsSucceeded: successCount,
+        })
       } catch (error) {
         const errorType = classifyError(error)
-        const message = error instanceof Error ? error.message : String(error)
+        // エラーメッセージ先頭の "[username] " プレフィックスを除去して UI 表示用に簡潔にする
+        const rawMessage =
+          error instanceof Error ? error.message : String(error)
+        const message = rawMessage.replace(
+          new RegExp(String.raw`^\[${account.username}\]\s*`),
+          ''
+        )
         logger.error(
           `[${account.username}] Error occurred. Continuing to next account:`,
           error instanceof Error ? error : new Error(String(error))

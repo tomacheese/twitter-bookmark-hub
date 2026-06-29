@@ -96,7 +96,7 @@ function relativeTime(dateString: string): string {
         v-if="failedAccounts.length > 0"
         class="details-toggle"
         :aria-expanded="showDetails"
-        aria-label="失敗アカウントの詳細を表示"
+        :aria-label="showDetails ? '失敗アカウントの詳細を閉じる' : '失敗アカウントの詳細を表示'"
         @click="showDetails = !showDetails">
         {{ showDetails ? '▲' : '▼' }}
       </button>
