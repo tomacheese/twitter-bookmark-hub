@@ -15,6 +15,7 @@ import {
   getBookmarkTweetIds,
   upsertTweetTags,
   upsertTweetCategories,
+  saveCrawlAccountResult,
 } from '../infra/database'
 import { Logger } from '@book000/node-utils'
 
@@ -131,6 +132,33 @@ export function isRunning(): boolean {
 }
 
 /**
+ * エラーオブジェクトからエラー種別を分類する。
+ * 認証エラー ('auth') は呼び出し元で個別に捕捉するため、このヘルパーの対象外。
+ *
+ * 既知の制限: Twitter はレートリミットと期限切れトークン認証失敗の両方に HTTP 403 を返す。
+ * このヘルパーは両者を区別できないため、ページネーション中に発生した
+ * 403 認証失敗は 'rate_limit' として分類される。
+ *
+ * @param error エラーオブジェクト
+ * @returns エラー種別
+ */
+function classifyError(
+  error: unknown
+): 'rate_limit' | 'api' | 'network' | 'unknown' {
+  // TypeError はネットワーク接続失敗（DNS 解決失敗・接続拒否等）を示す
+  if (error instanceof TypeError) return 'network'
+
+  const status = (error as { response?: { status?: number } }).response?.status
+  // 429/403 はレートリミット（withRetry がリトライ上限超過後にスロー）
+  // 注意: 403 はトークン期限切れでも発生するが、応答ボディを解析しない限り判別不可
+  if (status === 429 || status === 403) return 'rate_limit'
+  // その他の HTTP エラー
+  if (status !== undefined) return 'api'
+
+  return 'unknown'
+}
+
+/**
  * 全アカウントのブックマークをクロールしてデータベースに保存する。
  * クロール完了後、Twitter 側で削除済みのブックマークを DB から自動削除する。
  * MAX_PAGES 到達・クロール結果が空で既存ブックマークがある場合は
@@ -162,8 +190,33 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
     for (const account of accounts) {
       logger.info(`===== Account: ${account.username} =====`)
+
+      // 認証エラーを個別に捕捉して error_type = 'auth' として記録する
+      let authCookies: { authToken: string; ct0: string }
       try {
-        const { authToken, ct0 } = await getAuthCookies(account)
+        authCookies = await getAuthCookies(account)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(
+          `[${account.username}] Auth failed. Continuing to next account:`,
+          error instanceof Error ? error : new Error(String(error))
+        )
+        saveCrawlAccountResult(
+          db,
+          jobId,
+          account.username,
+          'error',
+          'auth',
+          message,
+          0
+        )
+        continue
+      }
+
+      const { authToken, ct0 } = authCookies
+      // totalForAccount は catch ブロックからも参照するため外側で宣言する
+      let totalForAccount = 0
+      try {
         const client = await getBookmarksClient(
           authToken,
           ct0,
@@ -172,7 +225,6 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
         let cursor: string | undefined
         let page = 0
-        let totalForAccount = 0
         // Twitter API は最新ブックマーク順で返すため、
         // globalPosition = 0 が最も新しいブックマークを表す
         let globalPosition = 0
@@ -236,7 +288,11 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           }
 
           // ページ内の全ツイートの分析を並列で待つ（同時実行数を ANALYZER_CONCURRENCY に制限）
-          for (let i = 0; i < analyzeQueue.length; i += ANALYZER_CONCURRENCY) {
+          for (
+            let i = 0;
+            i < analyzeQueue.length;
+            i += ANALYZER_CONCURRENCY
+          ) {
             await Promise.all(
               analyzeQueue.slice(i, i + ANALYZER_CONCURRENCY).map((fn) => fn())
             )
@@ -302,10 +358,30 @@ export async function runCrawl(db: Database.Database): Promise<void> {
         }
 
         successCount++
+        saveCrawlAccountResult(
+          db,
+          jobId,
+          account.username,
+          'success',
+          null,
+          null,
+          totalForAccount
+        )
       } catch (error) {
+        const errorType = classifyError(error)
+        const message = error instanceof Error ? error.message : String(error)
         logger.error(
           `[${account.username}] Error occurred. Continuing to next account:`,
           error instanceof Error ? error : new Error(String(error))
+        )
+        saveCrawlAccountResult(
+          db,
+          jobId,
+          account.username,
+          'error',
+          errorType,
+          message,
+          totalForAccount
         )
       }
     }
