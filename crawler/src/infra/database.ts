@@ -391,13 +391,7 @@ export function saveCrawlAccountResult(
   crawlJobId: number,
   username: string,
   status: 'success' | 'error',
-  errorType:
-    | 'auth'
-    | 'rate_limit'
-    | 'api'
-    | 'network'
-    | 'unknown'
-    | null,
+  errorType: 'auth' | 'rate_limit' | 'api' | 'network' | 'unknown' | null,
   errorMessage: string | null,
   bookmarksCrawled: number
 ): void {
@@ -429,13 +423,7 @@ export function getCrawlAccountResults(
     .all(crawlJobId) as {
     username: string
     status: 'success' | 'error'
-    error_type:
-      | 'auth'
-      | 'rate_limit'
-      | 'api'
-      | 'network'
-      | 'unknown'
-      | null
+    error_type: 'auth' | 'rate_limit' | 'api' | 'network' | 'unknown' | null
     error_message: string | null
     bookmarks_crawled: number
   }[]

@@ -288,11 +288,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           }
 
           // ページ内の全ツイートの分析を並列で待つ（同時実行数を ANALYZER_CONCURRENCY に制限）
-          for (
-            let i = 0;
-            i < analyzeQueue.length;
-            i += ANALYZER_CONCURRENCY
-          ) {
+          for (let i = 0; i < analyzeQueue.length; i += ANALYZER_CONCURRENCY) {
             await Promise.all(
               analyzeQueue.slice(i, i + ANALYZER_CONCURRENCY).map((fn) => fn())
             )
