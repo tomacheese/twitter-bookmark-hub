@@ -301,8 +301,7 @@ export async function addBookmark(
   // DefaultFlag は { [key: string]: { [key: string]: any } } 型だが、
   // 実行時に Twitter 初期ページから取得した queryId が格納されており存在しない場合がある
   const flagEntry = postApiUtils.flag.CreateBookmark as
-    | { queryId: string }
-    | undefined
+    { queryId: string } | undefined
   // flagEntry が存在しない、または queryId が文字列でない・空文字の場合は実行不可
   if (
     !flagEntry ||
@@ -349,8 +348,7 @@ export async function removeBookmark(
   // DefaultFlag は { [key: string]: { [key: string]: any } } 型だが、
   // 実行時に Twitter 初期ページから取得した queryId が格納されており存在しない場合がある
   const flagEntry = postApiUtils.flag.DeleteBookmark as
-    | { queryId: string }
-    | undefined
+    { queryId: string } | undefined
   // flagEntry が存在しない、または queryId が文字列でない・空文字の場合は実行不可
   if (
     !flagEntry ||
