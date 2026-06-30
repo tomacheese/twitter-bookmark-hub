@@ -2,7 +2,7 @@
   "name": "twitter-bookmark-hub-analyzer",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@11.5.0",
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "start": "tsx src/main.ts",
     "lint": "run-z lint:prettier,lint:eslint,lint:tsc",
@@ -14,21 +14,21 @@
     "fix:prettier": "prettier --write src"
   },
   "dependencies": {
-    "@book000/node-utils": "1.24.211",
-    "@hono/node-server": "2.0.4",
+    "@book000/node-utils": "1.24.247",
+    "@hono/node-server": "2.0.6",
     "@patdx/kuromoji": "1.0.4",
     "@twitter-bookmark-hub/shared": "workspace:*",
-    "better-sqlite3": "12.10.0",
-    "hono": "4.12.23",
+    "better-sqlite3": "12.11.1",
+    "hono": "4.12.27",
     "stopword": "3.1.5",
     "tsx": "4.22.4"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.14.51",
+    "@book000/eslint-config": "1.15.4",
     "@types/better-sqlite3": "7.6.13",
-    "@types/node": "24.12.4",
-    "eslint": "10.4.1",
-    "prettier": "3.8.3",
+    "@types/node": "24.13.2",
+    "eslint": "10.5.0",
+    "prettier": "3.8.5",
     "run-z": "2.1.0",
     "typescript": "6.0.3"
   }

@@ -71,6 +71,19 @@ export const SCHEMA_DDL = `
     accounts_succeeded INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS crawl_account_results (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    crawl_job_id      INTEGER NOT NULL REFERENCES crawl_jobs(id),
+    username          TEXT    NOT NULL,
+    status            TEXT    NOT NULL CHECK(status IN ('success', 'error')),
+    error_type        TEXT    CHECK(error_type IN ('auth', 'rate_limit', 'api', 'network', 'unknown')),
+    error_message     TEXT,
+    bookmarks_crawled INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_crawl_account_results_job
+    ON crawl_account_results(crawl_job_id);
+
   CREATE INDEX IF NOT EXISTS idx_tweets_user_id         ON tweets(user_id);
   CREATE INDEX IF NOT EXISTS idx_tweets_created_at      ON tweets(created_at);
   CREATE INDEX IF NOT EXISTS idx_media_items_tweet_id   ON media_items(tweet_id);

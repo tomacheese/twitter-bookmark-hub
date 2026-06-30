@@ -139,7 +139,7 @@ export function extractBookmarkEntry(
   const fullText = legacy?.fullText
   // Twitter API 変更により screenName/name は user.core に移動した（user.legacy をフォールバックとして保持）
   const screenName = user.core?.screenName ?? userLegacy.screenName
-  const userName = user.core?.name ?? userLegacy.name
+  const username = user.core?.name ?? userLegacy.name
   // Twitter API は "Wed Sep 24 11:28:06 +0000 2025" 形式で返すため ISO 8601 に変換する
   const createdAt = legacy?.createdAt
     ? new Date(legacy.createdAt).toISOString()
@@ -152,7 +152,7 @@ export function extractBookmarkEntry(
     !fullText ||
     !createdAt ||
     !screenName ||
-    !userName
+    !username
   ) {
     return null
   }
@@ -173,8 +173,8 @@ export function extractBookmarkEntry(
 
     // Twitter API 変更により screenName/name は qtUser.core に移動した（qtUserLegacy をフォールバックとして保持）
     const qtScreenName = qtUser.core?.screenName ?? qtUserLegacy.screenName
-    const qtUserName = qtUser.core?.name ?? qtUserLegacy.name
-    if (qtLegacy && qtScreenName && qtUserName) {
+    const qtUsername = qtUser.core?.name ?? qtUserLegacy.name
+    if (qtLegacy && qtScreenName && qtUsername) {
       const qtGrok = extractGrokTranslation(qt.tweet)
       quotedTweet = {
         tweetId: qtLegacy.idStr,
@@ -182,7 +182,7 @@ export function extractBookmarkEntry(
         fullText: qtLegacy.fullText,
         createdAt: new Date(qtLegacy.createdAt).toISOString(),
         screenName: qtScreenName,
-        userName: qtUserName,
+        userName: qtUsername,
         profileImageUrl:
           qtUser.avatar?.imageUrl ?? qtUserLegacy.profileImageUrlHttps ?? null,
         mediaItems: extractMediaItems(qtLegacy),
@@ -269,7 +269,7 @@ export function extractBookmarkEntry(
     userId,
     fullText,
     screenName,
-    userName,
+    userName: username,
     profileImageUrl:
       user.avatar?.imageUrl ?? userLegacy.profileImageUrlHttps ?? null,
     createdAt,

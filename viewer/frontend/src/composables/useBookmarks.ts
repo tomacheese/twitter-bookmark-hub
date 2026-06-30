@@ -14,12 +14,12 @@ function debounce<T extends () => void>(
   delay: number
 ): { fn: T; cancel: () => void } {
   let timer: ReturnType<typeof setTimeout> | null = null
-  const debouncedFn = function (this: unknown) {
+  const debouncedFn = (() => {
     if (timer !== null) clearTimeout(timer)
     timer = setTimeout(() => {
-      fn.call(this)
+      fn()
     }, delay)
-  } as T
+  }) as unknown as T
   const cancel = () => {
     if (timer !== null) {
       clearTimeout(timer)

@@ -2,7 +2,7 @@
   "name": "twitter-bookmark-hub-crawler",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@11.5.0",
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "start": "tsx src/main.ts",
     "lint": "run-z lint:prettier,lint:eslint,lint:tsc",
@@ -14,26 +14,26 @@
     "fix:prettier": "prettier --write src"
   },
   "dependencies": {
-    "@book000/node-utils": "1.24.211",
-    "@hono/node-server": "2.0.4",
+    "@book000/node-utils": "1.24.247",
+    "@hono/node-server": "2.0.6",
     "@the-convocation/twitter-scraper": "0.22.3",
     "@twitter-bookmark-hub/shared": "workspace:*",
-    "better-sqlite3": "12.10.0",
+    "better-sqlite3": "12.11.1",
     "cycletls": "2.0.5",
-    "hono": "4.12.23",
-    "node-cron": "4.2.1",
+    "hono": "4.12.27",
+    "node-cron": "4.5.0",
     "tsx": "4.22.4",
     "twitter-openapi-typescript": "0.0.56"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.14.51",
+    "@book000/eslint-config": "1.15.4",
     "@types/better-sqlite3": "7.6.13",
-    "@types/node": "24.12.4",
+    "@types/node": "24.13.2",
     "@types/node-cron": "3.0.11",
     "@types/tough-cookie": "4.0.5",
     "@types/ws": "8.18.1",
-    "eslint": "10.4.1",
-    "prettier": "3.8.3",
+    "eslint": "10.5.0",
+    "prettier": "3.8.5",
     "run-z": "2.1.0",
     "typescript": "6.0.3"
   }
