@@ -30,12 +30,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# ワークフロー全体のデフォルト権限（最小権限の原則）
-# docker-ci-* ジョブが ghcr.io への push に packages: write を必要とするため設定
-permissions:
-  contents: read
-  packages: write
-
 jobs:
   post-approval-request:
     name: Post approval request
