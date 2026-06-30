@@ -30,12 +30,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# reusable-docker.yml が要求する最小権限を明示する (CodeQL: actions-missing-workflow-permissions)
-# - contents: write   — タグ・リリース作成 (calc-version / release ジョブ)
-# - packages: write   — ghcr.io へのイメージ push
-# - deployments: write — GitHub Deployments API によるステータス更新
-# - actions: read     — ビルド失敗チェック
-# post-approval-request / approval-gate は各ジョブレベルで上書きする
 permissions:
   contents: write
   packages: write
