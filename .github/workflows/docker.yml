@@ -30,6 +30,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# ワークフロー全体のデフォルト権限（最小権限の原則）
+# docker-ci-* ジョブが ghcr.io への push に packages: write を必要とするため設定
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   post-approval-request:
     name: Post approval request
@@ -79,9 +85,6 @@ jobs:
     name: Docker CI (crawler)
     needs: approval-gate
     if: always() && needs.approval-gate.result == 'success' && (github.event.action != 'closed' || github.event.pull_request.merged == true)
-    permissions:
-      contents: read
-      packages: write
     uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
@@ -97,9 +100,6 @@ jobs:
     name: Docker CI (viewer)
     needs: docker-ci-crawler
     if: always() && needs.docker-ci-crawler.result == 'success'
-    permissions:
-      contents: read
-      packages: write
     uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
@@ -115,9 +115,6 @@ jobs:
     name: Docker CI (analyzer)
     needs: docker-ci-viewer
     if: always() && needs.docker-ci-viewer.result == 'success'
-    permissions:
-      contents: read
-      packages: write
     uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
