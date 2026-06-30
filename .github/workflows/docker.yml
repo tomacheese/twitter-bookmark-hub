@@ -75,20 +75,47 @@ jobs:
       - name: Approval granted
         run: echo "Approval gate passed"
 
-  docker-ci:
-    name: Docker CI
+  docker-ci-crawler:
+    name: Docker CI (crawler)
     needs: approval-gate
     if: always() && needs.approval-gate.result == 'success' && (github.event.action != 'closed' || github.event.pull_request.merged == true)
     uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
         [
-          { imageName: "tomacheese/twitter-bookmark-hub-crawler", context: ".", file: "crawler/Dockerfile", packageName: "twitter-bookmark-hub-crawler" },
-          { imageName: "tomacheese/twitter-bookmark-hub-viewer", context: ".", file: "viewer/Dockerfile", packageName: "twitter-bookmark-hub-backend" },
+          { imageName: "tomacheese/twitter-bookmark-hub-crawler", context: ".", file: "crawler/Dockerfile", packageName: "twitter-bookmark-hub-crawler" }
+        ]
+      # registry: registry.hub.docker.com # default: ghcr.io
+    secrets:
+      DOCKER_USERNAME: ${{ github.actor }}
+      DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  docker-ci-viewer:
+    name: Docker CI (viewer)
+    needs: docker-ci-crawler
+    if: always() && needs.docker-ci-crawler.result == 'success'
+    uses: book000/templates/.github/workflows/reusable-docker.yml@master
+    with:
+      targets: >-
+        [
+          { imageName: "tomacheese/twitter-bookmark-hub-viewer", context: ".", file: "viewer/Dockerfile", packageName: "twitter-bookmark-hub-backend" }
+        ]
+      # registry: registry.hub.docker.com # default: ghcr.io
+    secrets:
+      DOCKER_USERNAME: ${{ github.actor }}
+      DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  docker-ci-analyzer:
+    name: Docker CI (analyzer)
+    needs: docker-ci-viewer
+    if: always() && needs.docker-ci-viewer.result == 'success'
+    uses: book000/templates/.github/workflows/reusable-docker.yml@master
+    with:
+      targets: >-
+        [
           { imageName: "tomacheese/twitter-bookmark-hub-analyzer", context: ".", file: "analyzer/Dockerfile", packageName: "twitter-bookmark-hub-analyzer" }
         ]
       # registry: registry.hub.docker.com # default: ghcr.io
-      # platforms: linux/amd64 # default: linux/amd64,linux/arm64
     secrets:
       DOCKER_USERNAME: ${{ github.actor }}
       DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
