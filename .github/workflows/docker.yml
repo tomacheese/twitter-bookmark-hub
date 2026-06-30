@@ -79,6 +79,9 @@ jobs:
     name: Docker CI (crawler)
     needs: approval-gate
     if: always() && needs.approval-gate.result == 'success' && (github.event.action != 'closed' || github.event.pull_request.merged == true)
+    permissions:
+      contents: read
+      packages: write
     uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
@@ -94,6 +97,9 @@ jobs:
     name: Docker CI (viewer)
     needs: docker-ci-crawler
     if: always() && needs.docker-ci-crawler.result == 'success'
+    permissions:
+      contents: read
+      packages: write
     uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
@@ -109,6 +115,9 @@ jobs:
     name: Docker CI (analyzer)
     needs: docker-ci-viewer
     if: always() && needs.docker-ci-viewer.result == 'success'
+    permissions:
+      contents: read
+      packages: write
     uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
