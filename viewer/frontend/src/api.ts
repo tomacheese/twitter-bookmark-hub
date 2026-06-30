@@ -16,6 +16,7 @@ export type {
   BookmarksResponse,
   AccountInfo,
   CrawlJobStatus,
+  CrawlAccountResult,
   FeaturesResponse,
   CategoryItem,
   TagItem,

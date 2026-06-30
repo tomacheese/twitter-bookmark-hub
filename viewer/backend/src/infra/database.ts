@@ -3,6 +3,7 @@ import { SCHEMA_DDL, applyColumnMigrations } from '@twitter-bookmark-hub/shared'
 import type {
   CardInfo,
   CrawlJobStatus,
+  CrawlAccountResult,
   MediaItem,
   QuotedTweet,
   UrlEntity,
@@ -572,7 +573,7 @@ export function getAccounts(db: Database.Database): AccountInfo[] {
 }
 
 /**
- * 最新のクロールジョブを取得する
+ * 最新のクロールジョブをアカウント別結果と合わせて取得する
  * @param db - Database インスタンス
  * @returns 最新のクロールジョブ情報、存在しない場合は null
  */
@@ -581,13 +582,11 @@ export function getLatestCrawlJob(
 ): CrawlJobStatus | null {
   const row = db
     .prepare(
-      `
-    SELECT id, started_at, finished_at, status, error_message,
-           accounts_total, accounts_succeeded
-    FROM crawl_jobs
-    ORDER BY id DESC
-    LIMIT 1
-  `
+      `SELECT id, started_at, finished_at, status, error_message,
+              accounts_total, accounts_succeeded
+       FROM crawl_jobs
+       ORDER BY id DESC
+       LIMIT 1`
     )
     .get() as
     | {
@@ -603,6 +602,31 @@ export function getLatestCrawlJob(
 
   if (!row) return null
 
+  // アカウント別クロール結果を取得する
+  // 2 クエリ構成だが、10 秒ポーリングに対してクエリ間隔は無視できる
+  const accountResultRows = db
+    .prepare(
+      `SELECT username, status, error_type, error_message, bookmarks_crawled
+       FROM crawl_account_results
+       WHERE crawl_job_id = ?
+       ORDER BY id ASC`
+    )
+    .all(row.id) as {
+    username: string
+    status: 'success' | 'error'
+    error_type: 'auth' | 'rate_limit' | 'api' | 'network' | 'unknown' | null
+    error_message: string | null
+    bookmarks_crawled: number
+  }[]
+
+  const accountResults: CrawlAccountResult[] = accountResultRows.map((r) => ({
+    username: r.username,
+    status: r.status,
+    errorType: r.error_type,
+    errorMessage: r.error_message,
+    bookmarksCrawled: r.bookmarks_crawled,
+  }))
+
   return {
     id: row.id,
     startedAt: row.started_at,
@@ -611,5 +635,6 @@ export function getLatestCrawlJob(
     errorMessage: row.error_message,
     accountsTotal: row.accounts_total,
     accountsSucceeded: row.accounts_succeeded,
+    accountResults,
   }
 }
