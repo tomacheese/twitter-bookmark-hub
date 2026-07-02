@@ -85,7 +85,7 @@ jobs:
     name: Docker CI (crawler)
     needs: approval-gate
     if: always() && needs.approval-gate.result == 'success' && (github.event.action != 'closed' || github.event.pull_request.merged == true)
-    uses: book000/templates/.github/workflows/reusable-docker.yml@efed8dba8320df4c5c04656891b9aa0865cc28fd # master
+    uses: book000/templates/.github/workflows/reusable-docker.yml@4091346aebf8db3122590690201d9c9cacdf0245 # master
     with:
       targets: >-
         [
@@ -100,7 +100,7 @@ jobs:
     name: Docker CI (viewer)
     needs: docker-ci-crawler
     if: always() && needs.docker-ci-crawler.result == 'success'
-    uses: book000/templates/.github/workflows/reusable-docker.yml@efed8dba8320df4c5c04656891b9aa0865cc28fd # master
+    uses: book000/templates/.github/workflows/reusable-docker.yml@4091346aebf8db3122590690201d9c9cacdf0245 # master
     with:
       targets: >-
         [
@@ -115,7 +115,7 @@ jobs:
     name: Docker CI (analyzer)
     needs: docker-ci-viewer
     if: always() && needs.docker-ci-viewer.result == 'success'
-    uses: book000/templates/.github/workflows/reusable-docker.yml@efed8dba8320df4c5c04656891b9aa0865cc28fd # master
+    uses: book000/templates/.github/workflows/reusable-docker.yml@4091346aebf8db3122590690201d9c9cacdf0245 # master
     with:
       targets: >-
         [
