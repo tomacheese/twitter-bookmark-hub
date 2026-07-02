@@ -21,7 +21,7 @@
   "devDependencies": {
     "@book000/eslint-config": "1.15.4",
     "@types/node": "25.9.4",
-    "@typescript-eslint/parser": "8.62.0",
+    "@typescript-eslint/parser": "8.62.1",
     "@vitejs/plugin-vue": "6.0.7",
     "eslint": "10.6.0",
     "eslint-plugin-vue": "10.9.2",
