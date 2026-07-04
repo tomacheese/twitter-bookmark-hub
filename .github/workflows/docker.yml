@@ -85,7 +85,7 @@ jobs:
     name: Docker CI (crawler)
     needs: approval-gate
     if: always() && needs.approval-gate.result == 'success' && (github.event.action != 'closed' || github.event.pull_request.merged == true)
-    uses: book000/templates/.github/workflows/reusable-docker.yml@a8b7f3c4f10d3da67893d91f84f8a019bf79ed4d # master
+    uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
         [
@@ -101,13 +101,14 @@ jobs:
     name: Docker CI (viewer)
     needs: docker-ci-crawler
     if: always() && needs.docker-ci-crawler.result == 'success'
-    uses: book000/templates/.github/workflows/reusable-docker.yml@a8b7f3c4f10d3da67893d91f84f8a019bf79ed4d # master
+    uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
         [
           { imageName: "tomacheese/twitter-bookmark-hub-viewer", context: ".", file: "viewer/Dockerfile", packageName: "twitter-bookmark-hub-backend" }
         ]
       # registry: registry.hub.docker.com # default: ghcr.io
+      allow-unsafe-pr-checkout: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository }}
     secrets:
       DOCKER_USERNAME: ${{ github.actor }}
       DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -116,13 +117,14 @@ jobs:
     name: Docker CI (analyzer)
     needs: docker-ci-viewer
     if: always() && needs.docker-ci-viewer.result == 'success'
-    uses: book000/templates/.github/workflows/reusable-docker.yml@a8b7f3c4f10d3da67893d91f84f8a019bf79ed4d # master
+    uses: book000/templates/.github/workflows/reusable-docker.yml@master
     with:
       targets: >-
         [
           { imageName: "tomacheese/twitter-bookmark-hub-analyzer", context: ".", file: "analyzer/Dockerfile", packageName: "twitter-bookmark-hub-analyzer" }
         ]
       # registry: registry.hub.docker.com # default: ghcr.io
+      allow-unsafe-pr-checkout: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository }}
     secrets:
       DOCKER_USERNAME: ${{ github.actor }}
       DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
