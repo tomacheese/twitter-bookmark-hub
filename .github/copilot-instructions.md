@@ -1,82 +1,35 @@
 # GitHub Copilot Instructions
 
+このファイルは GitHub Copilot のコードレビュー機能向けの指示です。開発手順の詳細は `CLAUDE.md` を参照してください。ここではレビュー時に重点確認すべき点に絞ります。
+
 ## プロジェクト概要
-- 目的: 複数の Twitter/X アカウントのブックマークを自動収集し、一元的に閲覧する
-- 主な機能: マルチアカウント対応ブックマーク収集、SQLite 保存、Twitter 風 Web UI での閲覧
-- 対象ユーザー: 複数の Twitter アカウントを持つ開発者
 
-## リポジトリ構成
-- `crawler/` — ブックマーク収集サービス（Node.js + Hono + SQLite）
-- `viewer/backend/` — 閲覧 API サーバー（Node.js + Hono + SQLite）
-- `viewer/frontend/` — Web UI（Vue 3 + Vite）
-- `compose.yaml` — Docker Compose によるサービス起動定義
+複数の Twitter/X アカウントのブックマークを収集し、Twitter 風 Web UI で閲覧するアプリ。TypeScript の pnpm workspace モノレポで、`crawler`（収集）・`viewer/backend`（API）・`viewer/frontend`（Vue 3 UI）・`analyzer`（任意のタグ/カテゴリ分類）・`shared`（共有型・SQLite DDL）で構成される。
 
-## 共通ルール
-- 会話は日本語で行う。
-- PR とコミットは Conventional Commits に従う。
-- 日本語と英数字の間には半角スペースを入れる。
-- エラーメッセージは英語で記載する。
+## 強制されている規約（lint で検査）
 
-## 技術スタック
-- 言語: TypeScript（crawler・backend）、Vue 3 + TypeScript（frontend）
-- ランタイム: Node.js (v24)
-- パッケージマネージャー: pnpm
-- 主要ライブラリ:
-  - crawler: `twitter-openapi-typescript`, `@the-convocation/twitter-scraper`, `cycletls`, `better-sqlite3`, `hono`
-  - backend: `better-sqlite3`, `hono`
-  - frontend: `vue`, `vite`
+各パッケージの `pnpm lint` は Prettier チェック・ESLint・`tsc --noEmit` を実行する。以下は自動検査されるため、レビューでは lint に任せてよい:
 
-## コーディング規約
-- フォーマット: Prettier
-- Lint: ESLint (`@book000/eslint-config`)
-- 関数・インターフェースには日本語で JSDoc を記載する。
-- TypeScript の `skipLibCheck` は使用しない。
+- Prettier: セミコロンなし（`semi: false`）、シングルクォート、`printWidth: 80`、末尾カンマは ES5。
+- ESLint: `@book000/eslint-config`。
+- 型チェック: `tsc --noEmit`。`skipLibCheck` を `true` にする変更は**必ず指摘する**（このリポジトリでは禁止）。
 
-## 開発コマンド
+## レビュー時の重点確認
 
-### crawler
-```bash
-cd crawler
-pnpm install
-pnpm start   # 実行
-pnpm lint    # Lint チェック
-pnpm fix     # 自動修正
-```
+- **SQL インジェクション**: DB クエリはパラメータ化する。ソート・オーダー・検索対象などユーザー入力に基づく識別子はホワイトリストで検証する（`viewer/backend/src/infra/database.ts` 参照）。文字列連結でクエリを組み立てる変更は指摘する。
+- **認証・機密情報**: `data/config.json`（Twitter 認証情報）・`data/cookies-*.json`・`.env`・`data/db.sqlite` をコミットに含めていないか。Cookie・トークン・パスワードをログ出力していないか。
+- **エラーハンドリング**: crawler の認証（`infra/auth.ts` の戦略ローテーション）・レートリミット（`shared/retry.ts` の 429/403 待機）で、失敗時のリトライ・待機が握り潰されていないか。
+- **並行処理**: `viewer/frontend` の `useBookmarks` は並行フェッチの競合を cancel フラグで防いでいる。フェッチ結果の反映順序を壊す変更に注意する。
+- **外部サービス連携**: analyzer は任意機能。`ANALYZER_URL` 未設定時に例外を投げず握り潰す設計（crawler・viewer/backend のプロキシ）を壊していないか。
+- **ドキュメント整合性**: 環境変数・API・DB スキーマ・サービス構成を変更した場合、`README.md` と `CLAUDE.md` の該当箇所も更新されているか。
 
-### viewer/backend
-```bash
-cd viewer/backend
-pnpm install
-pnpm start   # 実行
-pnpm lint    # Lint チェック
-pnpm fix     # 自動修正
-```
+## フラグすべきでない既知パターン（誤検知防止）
 
-### viewer/frontend
-```bash
-cd viewer/frontend
-pnpm install
-pnpm dev     # 開発サーバー起動
-pnpm build   # プロダクションビルド
-pnpm lint    # Lint チェック
-pnpm fix     # 自動修正
-```
+- **日本語のコメント・JSDoc**: 関数・インターフェースの JSDoc とコード内コメントは日本語で書く方針。エラーメッセージのみ英語。日本語コメントを英語化する提案はしない。
+- **日本語と英数字の間の半角スペース**: 意図的な表記ルール。除去を提案しない。
+- **analyzer 用テーブルの存在チェック**: `viewer/backend` が `tweet_tags`・`tweet_categories` 等の存在を実行時に確認してクエリを分岐するのは、analyzer がオプショナルで当該テーブルが無い場合があるため。冗長・デッドコードとして指摘しない。
+- **`better-sqlite3` の同期 API**: 同期呼び出しは意図的（このプロジェクトの想定負荷では問題ない）。async 化を一律に提案しない。
 
-### Docker Compose（全サービス起動）
-```bash
-docker compose up -d
-```
+## コミット / PR
 
-## セキュリティ / 機密情報
-- `data/config.json` に含まれる Twitter 認証情報（パスワード・OTP シークレット）はコミットしない。
-- `data/cookies-*.json` の Cookie ファイルはコミットしない。
-- `.env` に含まれる環境変数はコミットしない（`.env.example` のみコミット可）。
-
-## ドキュメント更新
-- `README.md`（仕様変更・環境変数追加時）
-
-## リポジトリ固有
-- Docker Compose での実行を主とする（`docker compose up -d`）。
-- データは `data/` ディレクトリに保存される（`.gitignore` 済み）。
-- crawler は HTTP API（port 3001）を持ち、viewer backend からクロール状態を参照する。
-- viewer は port 3000 で Web UI を提供する。
+- Conventional Commits に従う。description は日本語。
