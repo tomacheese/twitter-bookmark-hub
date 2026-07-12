@@ -53,7 +53,7 @@ const sidebarOpen = ref(false)
  * @returns タグ名、またはタグパラメータがない・空の場合は null
  */
 function parseTagFromHash(): string | null {
-  const hash = globalThis.location.hash
+  const hash = location.hash
   const queryStart = hash.indexOf('?')
   if (queryStart === -1) return null
   const tag = new URLSearchParams(hash.slice(queryStart + 1)).get('tag')
@@ -67,7 +67,7 @@ function parseTagFromHash(): string | null {
  * @returns 現在のビュー名
  */
 function resolveView(): 'main' | 'settings' {
-  const hash = globalThis.location.hash
+  const hash = location.hash
   const path = hash.includes('?') ? hash.slice(0, hash.indexOf('?')) : hash
   return path === '#/settings' ? 'settings' : 'main'
 }
@@ -96,7 +96,7 @@ function onHashChange() {
 }
 
 onMounted(() => {
-  globalThis.addEventListener('hashchange', onHashChange)
+  addEventListener('hashchange', onHashChange)
   // 初回マウント時にハッシュからタグフィルタを復元する（直リンク対応）。
   // タグをセットすると watchEffect がフィルタ変更を検知して再取得する
   const tag = parseTagFromHash()
@@ -106,7 +106,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  globalThis.removeEventListener('hashchange', onHashChange)
+  removeEventListener('hashchange', onHashChange)
 })
 
 /**
@@ -116,11 +116,11 @@ onUnmounted(() => {
  */
 function navigateTo(view: 'main' | 'settings') {
   if (view === 'settings') {
-    globalThis.location.hash = '#/settings'
+    location.hash = '#/settings'
   } else {
     // 設定から戻る際、タグフィルタが有効な場合は URL に保持する
     const tag = selectedTag.value
-    globalThis.location.hash = tag
+    location.hash = tag
       ? '#/?' + new URLSearchParams({ tag }).toString()
       : '#/'
   }
@@ -150,7 +150,7 @@ function onCategoryChange(categoryId: number | null) {
  * @param tag - クリックされたタグ名
  */
 function onTagClick(tag: string) {
-  globalThis.location.hash = '#/?' + new URLSearchParams({ tag }).toString()
+  location.hash = '#/?' + new URLSearchParams({ tag }).toString()
 }
 
 /**
@@ -158,7 +158,7 @@ function onTagClick(tag: string) {
  * hashchange が発火し、onHashChange が selectedTag = null をセットする。
  */
 function clearTagFilter() {
-  globalThis.location.hash = '#/'
+  location.hash = '#/'
 }
 
 /**

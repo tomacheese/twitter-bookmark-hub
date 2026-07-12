@@ -483,24 +483,26 @@ export function getBookmarks(
 
   const items: BookmarkItem[] = rows.map((row) => {
     // 引用ツイートの組み立て
-    let quotedTweet: QuotedTweet | null = null
-    if (row.qt_tweet_id && row.qt_full_text !== null) {
-      quotedTweet = {
-        tweetId: row.qt_tweet_id,
-        fullText: row.qt_full_text,
-        userId: row.qt_user_id ?? '',
-        createdAt: row.qt_created_at ?? '',
-        screenName: row.qt_screen_name ?? '',
-        userName: row.qt_user_name ?? '',
-        profileImageUrl: row.qt_profile_image_url,
-        mediaItems: parseMediaItems(row.qt_media_items),
-        urlEntities: parseUrlEntities(row.qt_url_entities),
-        translatedText: row.qt_translated_text,
-        sourceLanguage: row.qt_source_language,
-        destinationLanguage: row.qt_destination_language,
-        translatedUrlEntities: parseUrlEntities(row.qt_translated_url_entities),
-      }
-    }
+    const quotedTweet: QuotedTweet | null =
+      row.qt_tweet_id && row.qt_full_text !== null
+        ? {
+            tweetId: row.qt_tweet_id,
+            fullText: row.qt_full_text,
+            userId: row.qt_user_id ?? '',
+            createdAt: row.qt_created_at ?? '',
+            screenName: row.qt_screen_name ?? '',
+            userName: row.qt_user_name ?? '',
+            profileImageUrl: row.qt_profile_image_url,
+            mediaItems: parseMediaItems(row.qt_media_items),
+            urlEntities: parseUrlEntities(row.qt_url_entities),
+            translatedText: row.qt_translated_text,
+            sourceLanguage: row.qt_source_language,
+            destinationLanguage: row.qt_destination_language,
+            translatedUrlEntities: parseUrlEntities(
+              row.qt_translated_url_entities
+            ),
+          }
+        : null
 
     // カード情報の組み立て
     let cardPlayerUrl: string | null = null

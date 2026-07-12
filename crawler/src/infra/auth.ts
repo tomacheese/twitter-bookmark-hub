@@ -183,15 +183,15 @@ export async function loginWithRetry(
       )
       return scraper
     } catch (error: unknown) {
+      if (attempt >= maxAttempts) {
+        throw error
+      }
+
       const message = error instanceof Error ? error.message : String(error)
       const is503 =
         message.includes('503') || message.includes('Service Unavailable')
       const is399 = /\b399\b/.test(message)
       const isDeny = message.includes('DenyLoginSubtask')
-
-      if (attempt >= maxAttempts) {
-        throw error
-      }
 
       if (is503) {
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30_000)

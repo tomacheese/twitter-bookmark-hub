@@ -63,7 +63,7 @@ export function categoriesRoute(db: Database.Database): Hono {
   /** PUT /categories/:id - カテゴリを更新する */
   app.put('/categories/:id', async (c) => {
     const id = Number(c.req.param('id'))
-    if (!Number.isInteger(id) || id < 1) {
+    if (!Number.isSafeInteger(id) || id < 1) {
       return c.json({ error: 'Invalid id' }, 400)
     }
 
@@ -111,7 +111,7 @@ export function categoriesRoute(db: Database.Database): Hono {
   /** DELETE /categories/:id - カテゴリを削除する */
   app.delete('/categories/:id', (c) => {
     const id = Number(c.req.param('id'))
-    if (!Number.isInteger(id) || id < 1) {
+    if (!Number.isSafeInteger(id) || id < 1) {
       return c.json({ error: 'Invalid id' }, 400)
     }
     deleteCategory(db, id)

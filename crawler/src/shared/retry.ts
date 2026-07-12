@@ -24,7 +24,7 @@ async function waitForRateLimit(
   status: number
 ): Promise<void> {
   const resetHeader = response.headers.get('x-rate-limit-reset')
-  const resetAt = resetHeader ? Number(resetHeader) * 1000 : Number.NaN
+  const resetAt = resetHeader ? Number(resetHeader) * 1000 : NaN
   const delay = Number.isNaN(resetAt)
     ? 60_000
     : Math.max(resetAt - Date.now() + 1000, 1000)
