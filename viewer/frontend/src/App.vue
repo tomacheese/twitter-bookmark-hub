@@ -120,9 +120,7 @@ function navigateTo(view: 'main' | 'settings') {
   } else {
     // 設定から戻る際、タグフィルタが有効な場合は URL に保持する
     const tag = selectedTag.value
-    location.hash = tag
-      ? '#/?' + new URLSearchParams({ tag }).toString()
-      : '#/'
+    location.hash = tag ? '#/?' + new URLSearchParams({ tag }).toString() : '#/'
   }
 }
 
