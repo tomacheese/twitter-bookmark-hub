@@ -7,26 +7,26 @@ import { initTokenizer } from './core/tagger'
 
 const logger = Logger.configure('main')
 
-const dataDir = process.env.DATA_DIR ?? '/data'
+const dataDirectory = process.env.DATA_DIR ?? '/data'
 const port = Number(process.env.ANALYZER_PORT ?? '3002')
-const dbPath = path.join(dataDir, 'db.sqlite')
+const databasePath = path.join(dataDirectory, 'db.sqlite')
 
-logger.info(`Initializing database at ${dbPath}...`)
-const db = openDatabase(dbPath)
-
-logger.info('Initializing kuromoji tokenizer...')
-initTokenizer()
-  .then((tokenizer) => {
+logger.info(`Initializing database at ${databasePath}...`)
+const database = openDatabase(databasePath)
+;(async () => {
+  logger.info('Initializing kuromoji tokenizer...')
+  try {
+    const tokenizer = await initTokenizer()
     logger.info('Tokenizer ready.')
-    const app = createServer(db, tokenizer)
+    const app = createServer(database, tokenizer)
     logger.info(`Starting HTTP server on port ${port}...`)
     serve({ fetch: app.fetch, port })
-  })
-  .catch((error: unknown) => {
+  } catch (error) {
     logger.error(
       'Failed to initialize tokenizer:',
       error instanceof Error ? error : new Error(String(error))
     )
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1)
-  })
+  }
+})()

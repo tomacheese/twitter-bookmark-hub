@@ -135,14 +135,13 @@ export interface KuromojiTokenizer {
  * 辞書の読み込みに時間がかかるため Promise を返す。
  * @returns 初期化済みトークナイザー
  */
-export function initTokenizer(): Promise<KuromojiTokenizer> {
-  return (
-    new kuromoji.TokenizerBuilder({
-      loader: new NodeDictionaryLoader({
-        dic_path: 'node_modules/@patdx/kuromoji/dict/',
-      }),
-    }).build() as Promise<unknown>
-  ).then((t) => t as KuromojiTokenizer)
+export async function initTokenizer(): Promise<KuromojiTokenizer> {
+  const tokenizer = await (new kuromoji.TokenizerBuilder({
+    loader: new NodeDictionaryLoader({
+      dic_path: 'node_modules/@patdx/kuromoji/dict/',
+    }),
+  }).build() as Promise<unknown>)
+  return tokenizer as KuromojiTokenizer
 }
 
 /**
@@ -183,11 +182,11 @@ const VERBAL_BASIC_FORMS = new Set([
  * @returns 動詞的用法なら true
  */
 function isUsedAsVerbalNoun(tokens: KuromojiToken[], index: number): boolean {
-  let j = index + 1
+  let index_ = index + 1
   // 空白トークンを読み飛ばす
-  while (j < tokens.length && isSpaceToken(tokens[j])) j++
-  if (j >= tokens.length) return false
-  const next = tokens[j]
+  while (index_ < tokens.length && isSpaceToken(tokens[index_])) index_++
+  if (index_ >= tokens.length) return false
+  const next = tokens[index_]
 
   // パターン 1: 直後が する/できる/させる/なる 系動詞
   if (next.pos === '動詞' && VERBAL_BASIC_FORMS.has(next.basic_form))
@@ -195,7 +194,7 @@ function isUsedAsVerbalNoun(tokens: KuromojiToken[], index: number): boolean {
 
   // パターン 2: 直後が「に」(格助詞) → その後に する/なる 系動詞（"参考になる" 型）
   if (next.pos === '助詞' && next.surface_form === 'に') {
-    let k = j + 1
+    let k = index_ + 1
     // 記号・助詞をスキップ（補助動詞が挟まる場合を考慮）
     while (
       k < tokens.length &&
@@ -228,13 +227,13 @@ function isUsedAsAdverbialTeki(
   tokens: KuromojiToken[],
   index: number
 ): boolean {
-  let j = index + 1
-  while (j < tokens.length && isSpaceToken(tokens[j])) j++
-  if (j >= tokens.length) return false
+  let index_ = index + 1
+  while (index_ < tokens.length && isSpaceToken(tokens[index_])) index_++
+  if (index_ >= tokens.length) return false
   // 直後が「的」
-  if (tokens[j].surface_form !== '的') return false
+  if (tokens[index_].surface_form !== '的') return false
   // 「的」の次が「に」(助詞)
-  let k = j + 1
+  let k = index_ + 1
   while (k < tokens.length && isSpaceToken(tokens[k])) k++
   return (
     k < tokens.length &&
@@ -258,15 +257,15 @@ function isUsedAsAdverbialTeki(
  * @returns 形式名詞的用法なら true
  */
 function isUsedAsFormalNoun(tokens: KuromojiToken[], index: number): boolean {
-  let j = index - 1
-  while (j >= 0 && isSpaceToken(tokens[j])) j--
+  let index_ = index - 1
+  while (index_ >= 0 && isSpaceToken(tokens[index_])) index_--
   // 先頭に来た場合も形式名詞扱い（前文脈への指示・依存関係）
-  if (j < 0) return true
-  const prev = tokens[j]
+  if (index_ < 0) return true
+  const previous = tokens[index_]
   return (
-    prev.pos === '動詞' ||
-    prev.pos === '助動詞' ||
-    (prev.pos === '助詞' && prev.surface_form === 'の')
+    previous.pos === '動詞' ||
+    previous.pos === '助動詞' ||
+    (previous.pos === '助詞' && previous.surface_form === 'の')
   )
 }
 
@@ -281,39 +280,52 @@ function isUsedAsFormalNoun(tokens: KuromojiToken[], index: number): boolean {
  * @param tokens - kuromoji トークン列
  * @returns 複合語を結合済みのトークン列
  */
+/**
+ * index から始まる英字大文字始まりトークンの連続を検出する。
+ *
+ * @param tokens - kuromoji トークン列
+ * @param index - 検出開始インデックス
+ * @returns 結合対象のインデックス列と、検出後に処理を再開すべきインデックス
+ */
+function collectConsecutiveEnglishWordIndices(
+  tokens: KuromojiToken[],
+  index: number
+): { wordIndices: number[]; nextIndex: number } {
+  const wordIndices: number[] = [index]
+  let index_ = index + 1
+  while (index_ < tokens.length) {
+    if (isSpaceToken(tokens[index_])) {
+      // 空白の次も英字大文字始まりなら読み飛ばして続行、そうでなければ終了
+      const hasNextWord =
+        index_ + 1 < tokens.length &&
+        /^[A-Z][A-Za-z]+$/.test(tokens[index_ + 1].surface_form)
+      if (!hasNextWord) break
+      index_++
+      continue
+    }
+    if (!/^[A-Z][A-Za-z]+$/.test(tokens[index_].surface_form)) break
+    wordIndices.push(index_)
+    index_++
+  }
+  return { wordIndices, nextIndex: index_ }
+}
+
 function mergeConsecutiveEnglishTokens(
   tokens: KuromojiToken[]
 ): KuromojiToken[] {
   const result: KuromojiToken[] = []
-  let i = 0
-  while (i < tokens.length) {
+  let index = 0
+  while (index < tokens.length) {
     // 英字大文字始まり 2 文字以上のトークンを連続する限り結合する
-    if (/^[A-Z][A-Za-z]+$/.test(tokens[i].surface_form)) {
-      const wordIndices: number[] = [i]
-      let j = i + 1
-      while (j < tokens.length) {
-        if (isSpaceToken(tokens[j])) {
-          // 空白の次も英字大文字始まりなら読み飛ばして続行、そうでなければ終了
-          if (
-            j + 1 < tokens.length &&
-            /^[A-Z][A-Za-z]+$/.test(tokens[j + 1].surface_form)
-          ) {
-            j++
-            continue
-          }
-          break
-        }
-        if (/^[A-Z][A-Za-z]+$/.test(tokens[j].surface_form)) {
-          wordIndices.push(j)
-          j++
-        } else {
-          break
-        }
-      }
+    if (/^[A-Z][A-Za-z]+$/.test(tokens[index].surface_form)) {
+      const { wordIndices, nextIndex } = collectConsecutiveEnglishWordIndices(
+        tokens,
+        index
+      )
       if (wordIndices.length > 1) {
         // 2 語以上連続した場合は結合して固有名詞として扱う
         const combined = wordIndices
-          .map((idx) => tokens[idx].surface_form)
+          .map((index__) => tokens[index__].surface_form)
           .join(' ')
         result.push({
           surface_form: combined,
@@ -321,14 +333,14 @@ function mergeConsecutiveEnglishTokens(
           pos_detail_1: '固有名詞',
           basic_form: combined,
         })
-        i = j
+        index = nextIndex
       } else {
-        result.push(tokens[i])
-        i++
+        result.push(tokens[index])
+        index++
       }
     } else {
-      result.push(tokens[i])
-      i++
+      result.push(tokens[index])
+      index++
     }
   }
   return result
@@ -351,29 +363,48 @@ function mergeConsecutiveEnglishTokens(
  * @returns カタカナ複合語を結合済みのトークン列
  */
 /** カタカナのみ（長音符ー含む）かつ 2 文字以上かどうかを判定する */
-const isKatakana = (s: string) => /^[\u30A0-\u30FF]{2,}$/.test(s)
+const isKatakana = (s: string) => /^[\u{30A0}-\u{30FF}]{2,}$/u.test(s)
+
+/**
+ * index から始まるカタカナ名詞トークンの連続を検出する。
+ *
+ * @param tokens - mergeConsecutiveEnglishTokens 適用後のトークン列
+ * @param index - 検出開始インデックス
+ * @returns 結合対象の表層形一覧と、検出後に処理を再開すべきインデックス
+ */
+function collectConsecutiveKatakanaParts(
+  tokens: KuromojiToken[],
+  index: number
+): { parts: string[]; nextIndex: number } {
+  const parts: string[] = [tokens[index].surface_form]
+  let index_ = index + 1
+  while (index_ < tokens.length) {
+    // 空白トークンが来たら終了（元テキストにスペースがある）
+    if (isSpaceToken(tokens[index_])) break
+    // 次もカタカナ名詞でなければ終了
+    if (
+      tokens[index_].pos !== '名詞' ||
+      !isKatakana(tokens[index_].surface_form)
+    )
+      break
+    parts.push(tokens[index_].surface_form)
+    index_++
+  }
+  return { parts, nextIndex: index_ }
+}
 
 function mergeConsecutiveKatakanaTokens(
   tokens: KuromojiToken[]
 ): KuromojiToken[] {
   const result: KuromojiToken[] = []
-  let i = 0
-  while (i < tokens.length) {
-    const t = tokens[i]
+  let index = 0
+  while (index < tokens.length) {
+    const t = tokens[index]
     if (t.pos === '名詞' && isKatakana(t.surface_form)) {
-      const parts: string[] = [t.surface_form]
-      let j = i + 1
-      while (j < tokens.length) {
-        // 空白トークンが来たら終了（元テキストにスペースがある）
-        if (isSpaceToken(tokens[j])) break
-        // 次もカタカナ名詞なら結合
-        if (tokens[j].pos === '名詞' && isKatakana(tokens[j].surface_form)) {
-          parts.push(tokens[j].surface_form)
-          j++
-        } else {
-          break
-        }
-      }
+      const { parts, nextIndex } = collectConsecutiveKatakanaParts(
+        tokens,
+        index
+      )
       if (parts.length > 1) {
         const combined = parts.join('')
         result.push({
@@ -382,14 +413,14 @@ function mergeConsecutiveKatakanaTokens(
           pos_detail_1: '一般',
           basic_form: combined,
         })
-        i = j
+        index = nextIndex
       } else {
         result.push(t)
-        i++
+        index++
       }
     } else {
       result.push(t)
-      i++
+      index++
     }
   }
   return result
@@ -418,15 +449,15 @@ function scoreWord(
   frequency: number
 ): number {
   // 位置スコア: 先頭に近いほど高い（前半 1.0 → 後半 0.5）
-  const relPos = firstTokenIndex / Math.max(totalTokens - 1, 1)
-  const posScore = 1 - relPos * 0.5
+  const relativePos = firstTokenIndex / Math.max(totalTokens - 1, 1)
+  const posScore = 1 - relativePos * 0.5
 
   // 文字種スコア: 英大文字始まり固有名詞を最重要視する
-  const startsWithUpper = /^[A-Z]/.test(word)
-  const hasKanji = /[\u4E00-\u9FFF]/.test(word)
-  const hasKatakana = /[\u30A0-\u30FF]/.test(word)
-  const isHiraganaOnly = /^[\u3040-\u309F]+$/.test(word)
-  const scriptScore = startsWithUpper
+  const isStartsWithUpper = /^[A-Z]/.test(word)
+  const hasKanji = /[\u{4E00}-\u{9FFF}]/u.test(word)
+  const hasKatakana = /[\u{30A0}-\u{30FF}]/u.test(word)
+  const isHiraganaOnly = /^[\u{3040}-\u{309F}]+$/u.test(word)
+  const scriptScore = isStartsWithUpper
     ? 1
     : hasKanji
       ? 0.7
@@ -486,7 +517,7 @@ export function extractNouns(
     { firstIndex: number; frequency: number }
   >()
 
-  for (const [i, token] of tokens.entries()) {
+  for (const [index, token] of tokens.entries()) {
     if (token.pos !== '名詞') continue
     if (!NOUN_DETAIL_ALLOWLIST.has(token.pos_detail_1)) continue
 
@@ -500,7 +531,7 @@ export function extractNouns(
     if (word.length <= 1) continue
 
     // 文字（英数字・仮名・漢字）を含まない記号のみトークンは除外（"://" 等）
-    if (!/[a-zA-Z0-9\u3040-\u9FFF]/.test(word)) continue
+    if (!/[a-zA-Z0-9\u{3040}-\u{9FFF}]/u.test(word)) continue
 
     // 英語トークン（ASCII のみ）は stopword ライブラリで stop word 判定
     if (/^[a-zA-Z]+$/.test(word) && ENGLISH_STOP_WORDS.has(word.toLowerCase()))
@@ -521,17 +552,20 @@ export function extractNouns(
     // サ変接続名詞が動詞的用法（〜する/できる/させる/なる 系）で使われている場合は除外
     // パターン 1: "確認する", "利用できる", "追加しました" 等の行為語
     // パターン 2: "参考になる", "勉強になる" 等の「〜に + なる/する」型
-    if (token.pos_detail_1 === 'サ変接続' && isUsedAsVerbalNoun(tokens, i))
+    if (token.pos_detail_1 === 'サ変接続' && isUsedAsVerbalNoun(tokens, index))
       continue
 
     // 名詞が「〜的に」の形で副詞的に使われている場合は除外
     // （"個人的に", "基本的に", "定期的に", "効率的に" 等）
-    if (isUsedAsAdverbialTeki(tokens, i)) continue
+    if (isUsedAsAdverbialTeki(tokens, index)) continue
 
     // ひらがな表記の名詞が動詞・助動詞・助詞「の」に後続する場合は形式名詞と見なして除外。
     // 日本語の内容語は漢字・カタカナ表記が基本のため、ひらがな名詞が後続位置に来た場合は
     // おかげ・とこ・ゆえ・せい 等の文法的機能語（形式名詞）である可能性が高い。
-    if (/^[\u3040-\u309F]+$/.test(word) && isUsedAsFormalNoun(tokens, i))
+    if (
+      /^[\u{3040}-\u{309F}]+$/u.test(word) &&
+      isUsedAsFormalNoun(tokens, index)
+    )
       continue
 
     // アルゴリズムで除去できない代名詞・スラング・断片等を除外
@@ -541,14 +575,14 @@ export function extractNouns(
     if (existing) {
       existing.frequency++
     } else {
-      candidates.set(word, { firstIndex: i, frequency: 1 })
+      candidates.set(word, { firstIndex: index, frequency: 1 })
     }
   }
 
   const totalTokens = tokens.length
 
   // YAKE インスパイアのスコアで降順ソートし、上位 MAX_TAGS_PER_TWEET 件を返す
-  return [...candidates.entries()]
+  return [...candidates]
     .map(([word, { firstIndex, frequency }]) => ({
       word,
       score: scoreWord(word, firstIndex, totalTokens, frequency),

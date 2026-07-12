@@ -9,15 +9,15 @@ import {
 
 /**
  * カテゴリ CRUD ルートを作成する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns Hono アプリケーション
  */
-export function categoriesRoute(db: Database.Database): Hono {
+export function categoriesRoute(database: Database.Database): Hono {
   const app = new Hono()
 
   /** GET /categories - カテゴリ一覧を取得する */
   app.get('/categories', (c) => {
-    return c.json(getCategories(db))
+    return c.json(getCategories(database))
   })
 
   /** POST /categories - カテゴリを作成する */
@@ -45,8 +45,8 @@ export function categoriesRoute(db: Database.Database): Hono {
     ]
 
     try {
-      const id = createCategory(db, name, color, keywords)
-      const categories = getCategories(db)
+      const id = createCategory(database, name, color, keywords)
+      const categories = getCategories(database)
       const created = categories.find((cat) => cat.id === id)
       return c.json(created, 201)
     } catch (error) {
@@ -63,7 +63,7 @@ export function categoriesRoute(db: Database.Database): Hono {
   /** PUT /categories/:id - カテゴリを更新する */
   app.put('/categories/:id', async (c) => {
     const id = Number(c.req.param('id'))
-    if (!Number.isInteger(id) || id < 1) {
+    if (!Number.isSafeInteger(id) || id < 1) {
       return c.json({ error: 'Invalid id' }, 400)
     }
 
@@ -90,7 +90,7 @@ export function categoriesRoute(db: Database.Database): Hono {
     ]
 
     try {
-      updateCategory(db, id, name, color, keywords)
+      updateCategory(database, id, name, color, keywords)
     } catch (error) {
       if (
         error instanceof Error &&
@@ -100,7 +100,7 @@ export function categoriesRoute(db: Database.Database): Hono {
       }
       throw error
     }
-    const categories = getCategories(db)
+    const categories = getCategories(database)
     const updated = categories.find((cat) => cat.id === id)
     if (!updated) {
       return c.json({ error: 'Category not found' }, 404)
@@ -111,10 +111,10 @@ export function categoriesRoute(db: Database.Database): Hono {
   /** DELETE /categories/:id - カテゴリを削除する */
   app.delete('/categories/:id', (c) => {
     const id = Number(c.req.param('id'))
-    if (!Number.isInteger(id) || id < 1) {
+    if (!Number.isSafeInteger(id) || id < 1) {
       return c.json({ error: 'Invalid id' }, 400)
     }
-    deleteCategory(db, id)
+    deleteCategory(database, id)
     return c.body(null, 204)
   })
 

@@ -6,15 +6,15 @@ import { CRAWLER_URL } from '../shared/config'
 
 /**
  * クロール API ルートを作成する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns Hono アプリケーション
  */
-export function crawlRoute(db: Database.Database): Hono {
+export function crawlRoute(database: Database.Database): Hono {
   const app = new Hono()
 
   /** GET /api/crawl/status - クロールステータスをローカル DB から取得する。クロール未実行時は null を返す */
   app.get('/api/crawl/status', (c) => {
-    const job = getLatestCrawlJob(db)
+    const job = getLatestCrawlJob(database)
     return c.json(job)
   })
 
@@ -26,16 +26,16 @@ export function crawlRoute(db: Database.Database): Hono {
       controller.abort()
     }, 30_000)
     try {
-      const res = await fetch(`${CRAWLER_URL}/crawl`, {
+      const response = await fetch(`${CRAWLER_URL}/crawl`, {
         method: 'POST',
         signal: controller.signal,
       })
-      // Content-Type が JSON でない場合（エラーページ等）に res.json() が例外になるのを防ぐ
-      const contentType = res.headers.get('content-type') ?? ''
+      // Content-Type が JSON でない場合（エラーページ等）に response.json() が例外になるのを防ぐ
+      const contentType = response.headers.get('content-type') ?? ''
       const data: unknown = contentType.includes('application/json')
-        ? await res.json()
-        : { message: await res.text() }
-      return c.json(data, res.status as ContentfulStatusCode)
+        ? await response.json()
+        : { message: await response.text() }
+      return c.json(data, response.status as ContentfulStatusCode)
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return c.json({ error: 'Crawler service timed out.' }, 504)

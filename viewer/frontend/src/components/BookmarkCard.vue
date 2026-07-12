@@ -60,18 +60,20 @@ function formatRelativeTime(dateString: string): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
-  const diffHr = Math.floor(diffMs / 3_600_000)
-  const diffDay = Math.floor(diffMs / 86_400_000)
 
   if (diffMin < 1) return 'たった今'
   if (diffMin < 60) return `${diffMin}分`
+
+  const diffHr = Math.floor(diffMs / 3_600_000)
   if (diffHr < 24) return `${diffHr}時間`
+
+  const diffDay = Math.floor(diffMs / 86_400_000)
   if (diffDay < 7) return `${diffDay}日`
 
-  const sameYear = date.getFullYear() === now.getFullYear()
+  const isSameYear = date.getFullYear() === now.getFullYear()
   const m = date.getMonth() + 1
   const d = date.getDate()
-  if (sameYear) return `${m}月${d}日`
+  if (isSameYear) return `${m}月${d}日`
   return `${date.getFullYear()}年${m}月${d}日`
 }
 
@@ -188,7 +190,7 @@ function parseTextSegments(
 ): TextSegment[] {
   const urlMap = buildUrlMap(urlEntities)
   const segments: TextSegment[] = []
-  const regex = /(https?:\/\/[^\s]+|#[\w\u3000-\u9FFF\uAC00-\uD7A3]+)/g
+  const regex = /(https?:\/\/[^\s]+|#[\w\u{3000}-\u{9FFF}\u{AC00}-\u{D7A3}]+)/gu
   let lastIndex = 0
   let match: RegExpExecArray | null
 
@@ -369,11 +371,12 @@ function upgradedImageUrl(
   url: string,
   size: 'medium' | 'large' = 'medium'
 ): string {
+  // 置換文字列に $ を含む可能性を排除するため、リテラルではなく関数で置換する
   return url
-    .replace(/\bname=small\b/, `name=${size}`)
-    .replace(/\bname=thumb\b/, `name=${size}`)
-    .replace(/:small$/, `:${size}`)
-    .replace(/:thumb$/, `:${size}`)
+    .replace(/\bname=small\b/, () => `name=${size}`)
+    .replace(/\bname=thumb\b/, () => `name=${size}`)
+    .replace(/:small$/, () => `:${size}`)
+    .replace(/:thumb$/, () => `:${size}`)
 }
 
 // ---- その他 ----------------------------------------------------------------
@@ -399,8 +402,8 @@ async function onDeleteBookmark(account: string) {
   try {
     await deleteBookmark(properties.item.tweetId, account)
     emit('bookmark-deleted', { tweetId: properties.item.tweetId, account })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
     alert(`Failed to remove bookmark: ${message}`)
   } finally {
     const next = new Set(deletingAccounts.value)

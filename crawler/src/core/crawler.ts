@@ -1,4 +1,9 @@
 import type Database from 'better-sqlite3'
+import type {
+  TwitterOpenApiClient,
+  TweetApiUtilsData,
+} from 'twitter-openapi-typescript'
+import type { AccountConfig } from '../shared/types'
 import { loadConfig } from '../shared/config'
 import { withRetry } from '../shared/retry'
 import { getAuthCookies } from '../infra/auth'
@@ -64,12 +69,12 @@ async function pruneNoiseTagsViaAnalyzer(threshold = 0.1): Promise<void> {
  * ANALYZER_URL が設定されていない場合は何もしない。
  * 分析の失敗はログに記録するが、クロール全体は続行する。
  *
- * @param db Database インスタンス
+ * @param database Database インスタンス
  * @param tweetId ツイート ID
  * @param text 分析対象テキスト
  */
 async function analyzeAndSave(
-  db: Database.Database,
+  database: Database.Database,
   tweetId: string,
   text: string
 ): Promise<void> {
@@ -98,10 +103,10 @@ async function analyzeAndSave(
     }
 
     if (Array.isArray(result.tags)) {
-      upsertTweetTags(db, tweetId, result.tags)
+      upsertTweetTags(database, tweetId, result.tags)
     }
     if (Array.isArray(result.categories)) {
-      upsertTweetCategories(db, tweetId, result.categories)
+      upsertTweetCategories(database, tweetId, result.categories)
     }
   } catch (error) {
     logger.warn(
@@ -120,15 +125,16 @@ const ANALYZER_CONCURRENCY = 10
 /** 1 回のクロールで取得するページ数の上限（API 異常時の無限ループ防止） */
 const MAX_PAGES = 500
 
-/** クロール実行中フラグ */
-let running = false
+// トップレベル変数への関数内代入 (unicorn/no-top-level-assignment-in-function) を避けるため、
+// クロール実行中フラグはオブジェクトのプロパティとして保持する
+const crawlState = { isRunning: false }
 
 /**
  * クロールが実行中かどうかを返す。
  * @returns 実行中なら true
  */
 export function isRunning(): boolean {
-  return running
+  return crawlState.isRunning
 }
 
 /**
@@ -158,22 +164,195 @@ function classifyError(
   return 'unknown'
 }
 
+/** 1 ページ分のツイート処理結果 */
+interface PageProcessResult {
+  /** このページで新規追加・更新した件数 */
+  addedThisPage: number
+  /** 次のページで使用する globalPosition */
+  nextGlobalPosition: number
+  /** ページ内の analyzer 呼び出し thunk 一覧（後で並列数制限付きで実行する） */
+  analyzeQueue: (() => Promise<void>)[]
+}
+
+/**
+ * 1 ページ分のツイートを DB へ保存し、analyzer 呼び出し thunk を収集する。
+ * プロモーション (広告) ツイートは除外する。
+ *
+ * @param tweets ページ内のツイート一覧
+ * @param account アカウント設定
+ * @param database Database インスタンス
+ * @param crawledAt クロール日時
+ * @param globalPosition ページ開始時点の globalPosition
+ * @param crawledTweetIds クロールで取得済みの tweet_id 集合（このページの結果を追加する）
+ * @returns このページの処理結果
+ */
+function processPageTweets(
+  tweets: TweetApiUtilsData[],
+  account: AccountConfig,
+  database: Database.Database,
+  crawledAt: string,
+  globalPosition: number,
+  crawledTweetIds: Set<string>
+): PageProcessResult {
+  let addedThisPage = 0
+  const analyzeQueue: (() => Promise<void>)[] = []
+
+  for (const tweetResult of tweets) {
+    // プロモーション (広告) ツイートは除外
+    if (tweetResult.promotedMetadata) {
+      continue
+    }
+    const entry = extractBookmarkEntry(tweetResult)
+    if (entry) {
+      upsertTweetEntry(database, entry)
+      upsertBookmark(
+        database,
+        entry.tweetId,
+        account.username,
+        crawledAt,
+        globalPosition
+      )
+      crawledTweetIds.add(entry.tweetId)
+      // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
+      // 引用ツイート本文・カードタイトルも結合してタグ精度を高める
+      const tweetId = entry.tweetId
+      const analyzeText = [
+        entry.fullText,
+        entry.quotedTweet?.fullText,
+        entry.cardInfo?.title,
+      ]
+        .filter(Boolean)
+        .join('\n')
+      analyzeQueue.push(() => analyzeAndSave(database, tweetId, analyzeText))
+      globalPosition++
+      addedThisPage++
+    }
+  }
+
+  return { addedThisPage, nextGlobalPosition: globalPosition, analyzeQueue }
+}
+
+/** 1 アカウント分のページネーション取得結果 */
+interface AccountCrawlResult {
+  /** 今回のクロールで新規追加・更新した件数 */
+  totalForAccount: number
+  /** クロールで取得できた tweet_id の集合（差分削除に使用） */
+  crawledTweetIds: Set<string>
+  /** MAX_PAGES に達したため全件取得できなかったか */
+  isReachedMaxPages: boolean
+}
+
+/**
+ * 1 アカウント分のブックマークをページネーションしながら取得し、DB へ保存する。
+ *
+ * @param account アカウント設定
+ * @param client Bookmarks API クライアント
+ * @param database Database インスタンス
+ * @returns 追加件数・取得済み tweet_id 集合・MAX_PAGES 到達フラグ
+ */
+async function crawlAccountBookmarks(
+  account: AccountConfig,
+  client: TwitterOpenApiClient,
+  database: Database.Database
+): Promise<AccountCrawlResult> {
+  let cursor: string | undefined
+  let page = 0
+  // Twitter API は最新ブックマーク順で返すため、
+  // globalPosition = 0 が最も新しいブックマークを表す
+  let globalPosition = 0
+  let totalForAccount = 0
+  const crawledAt = new Date().toISOString()
+  // クロールで取得した tweet_id の集合（差分削除に使用）
+  const crawledTweetIds = new Set<string>()
+  // MAX_PAGES に達した場合は差分削除を行わないためのフラグ
+  let isReachedMaxPages = false
+
+  while (true) {
+    page++
+    logger.info(
+      `[${account.username}] Fetching page ${page}... (total so far: ${totalForAccount})`
+    )
+
+    const response = await withRetry(
+      () =>
+        client.getTweetApi().getBookmarks({
+          count: BOOKMARKS_PER_PAGE,
+          ...(cursor !== undefined && { cursor }),
+        }),
+      { operationName: `getBookmarks page ${page}`, maxRetries: 3 }
+    )
+
+    const tweets = response.data.data
+    const { addedThisPage, nextGlobalPosition, analyzeQueue } =
+      processPageTweets(
+        tweets,
+        account,
+        database,
+        crawledAt,
+        globalPosition,
+        crawledTweetIds
+      )
+    globalPosition = nextGlobalPosition
+
+    // ページ内の全ツイートの分析を並列で待つ（同時実行数を ANALYZER_CONCURRENCY に制限）
+    for (
+      let index = 0;
+      index < analyzeQueue.length;
+      index += ANALYZER_CONCURRENCY
+    ) {
+      await Promise.all(
+        analyzeQueue
+          .slice(index, index + ANALYZER_CONCURRENCY)
+          .map((function_) => function_())
+      )
+    }
+
+    totalForAccount += addedThisPage
+    logger.info(
+      `[${account.username}] Page ${page} done. ${addedThisPage} added. Total: ${totalForAccount}`
+    )
+
+    // 次ページのカーソルを取得
+    // プロモーション (広告) を除いた実ツイート数が 0 の場合は全件取得済みとみなす。
+    // addedThisPage だけでなく processableTweetsCount で判定することで、
+    // プロモーションのみのページで誤って早期終了するのを防ぐ。
+    const processableTweetsCount = tweets.filter(
+      (t) => !t.promotedMetadata
+    ).length
+    const nextCursor = response.data.cursor.bottom?.value
+    if (!nextCursor || processableTweetsCount === 0) {
+      logger.info(`[${account.username}] All bookmarks fetched.`)
+      break
+    }
+    if (page >= MAX_PAGES) {
+      logger.warn(
+        `[${account.username}] Reached MAX_PAGES (${MAX_PAGES}). Stopping to prevent infinite loop.`
+      )
+      isReachedMaxPages = true
+      break
+    }
+    cursor = nextCursor
+  }
+
+  return { totalForAccount, crawledTweetIds, isReachedMaxPages }
+}
+
 /**
  * 全アカウントのブックマークをクロールしてデータベースに保存する。
  * クロール完了後、Twitter 側で削除済みのブックマークを DB から自動削除する。
  * MAX_PAGES 到達・クロール結果が空で既存ブックマークがある場合は
  * 誤削除防止のため差分削除をスキップする。
  *
- * @param db Database インスタンス
+ * @param database Database インスタンス
  */
-export async function runCrawl(db: Database.Database): Promise<void> {
-  if (running) {
+export async function runCrawl(database: Database.Database): Promise<void> {
+  if (crawlState.isRunning) {
     logger.warn('Crawl is already running. Skipping.')
     return
   }
 
-  running = true
-  const jobId = createCrawlJob(db)
+  crawlState.isRunning = true
+  const jobId = createCrawlJob(database)
   logger.info(`Crawl job #${jobId} started.`)
 
   try {
@@ -185,7 +364,9 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       throw new Error('No accounts found in config.json.')
     }
 
-    updateCrawlJob(db, jobId, 'running', { accountsTotal: accounts.length })
+    updateCrawlJob(database, jobId, 'running', {
+      accountsTotal: accounts.length,
+    })
     let successCount = 0
 
     for (const account of accounts) {
@@ -208,7 +389,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           error instanceof Error ? error : new Error(String(error))
         )
         saveCrawlAccountResult(
-          db,
+          database,
           jobId,
           account.username,
           'error',
@@ -229,112 +410,22 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           config.twitter.clientLanguage
         )
 
-        let cursor: string | undefined
-        let page = 0
-        // Twitter API は最新ブックマーク順で返すため、
-        // globalPosition = 0 が最も新しいブックマークを表す
-        let globalPosition = 0
-        const crawledAt = new Date().toISOString()
-        // クロールで取得した tweet_id の集合（差分削除に使用）
-        const crawledTweetIds = new Set<string>()
-        // MAX_PAGES に達した場合は差分削除を行わないためのフラグ
-        let reachedMaxPages = false
-
-        while (true) {
-          page++
-          logger.info(
-            `[${account.username}] Fetching page ${page}... (total so far: ${totalForAccount})`
-          )
-
-          const response = await withRetry(
-            () =>
-              client.getTweetApi().getBookmarks({
-                count: BOOKMARKS_PER_PAGE,
-                ...(cursor === undefined ? {} : { cursor }),
-              }),
-            { operationName: `getBookmarks page ${page}`, maxRetries: 3 }
-          )
-
-          const tweets = response.data.data
-          let addedThisPage = 0
-          // ページ内の analyzer 呼び出しをまとめて並列実行する
-          // ANALYZER_URL が設定されている場合は analyze 対象を収集する（thunk にして後から制限付き並列実行）
-          const analyzeQueue: (() => Promise<void>)[] = []
-
-          for (const tweetResult of tweets) {
-            // プロモーション (広告) ツイートは除外
-            if (tweetResult.promotedMetadata) {
-              continue
-            }
-            const entry = extractBookmarkEntry(tweetResult)
-            if (entry) {
-              upsertTweetEntry(db, entry)
-              upsertBookmark(
-                db,
-                entry.tweetId,
-                account.username,
-                crawledAt,
-                globalPosition
-              )
-              crawledTweetIds.add(entry.tweetId)
-              // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
-              // 引用ツイート本文・カードタイトルも結合してタグ精度を高める
-              const tweetId = entry.tweetId
-              const analyzeText = [
-                entry.fullText,
-                entry.quotedTweet?.fullText,
-                entry.cardInfo?.title,
-              ]
-                .filter(Boolean)
-                .join('\n')
-              analyzeQueue.push(() => analyzeAndSave(db, tweetId, analyzeText))
-              globalPosition++
-              addedThisPage++
-            }
-          }
-
-          // ページ内の全ツイートの分析を並列で待つ（同時実行数を ANALYZER_CONCURRENCY に制限）
-          for (let i = 0; i < analyzeQueue.length; i += ANALYZER_CONCURRENCY) {
-            await Promise.all(
-              analyzeQueue.slice(i, i + ANALYZER_CONCURRENCY).map((fn) => fn())
-            )
-          }
-
-          totalForAccount += addedThisPage
-          logger.info(
-            `[${account.username}] Page ${page} done. ${addedThisPage} added. Total: ${totalForAccount}`
-          )
-
-          // 次ページのカーソルを取得
-          // プロモーション (広告) を除いた実ツイート数が 0 の場合は全件取得済みとみなす。
-          // addedThisPage だけでなく processableTweetsCount で判定することで、
-          // プロモーションのみのページで誤って早期終了するのを防ぐ。
-          const processableTweetsCount = tweets.filter(
-            (t) => !t.promotedMetadata
-          ).length
-          const nextCursor = response.data.cursor.bottom?.value
-          if (!nextCursor || processableTweetsCount === 0) {
-            logger.info(`[${account.username}] All bookmarks fetched.`)
-            break
-          }
-          if (page >= MAX_PAGES) {
-            logger.warn(
-              `[${account.username}] Reached MAX_PAGES (${MAX_PAGES}). Stopping to prevent infinite loop.`
-            )
-            reachedMaxPages = true
-            break
-          }
-          cursor = nextCursor
-        }
+        const crawlResult = await crawlAccountBookmarks(
+          account,
+          client,
+          database
+        )
+        const { crawledTweetIds, isReachedMaxPages } = crawlResult
+        totalForAccount = crawlResult.totalForAccount
 
         // MAX_PAGES に達した場合は全件取得できていないため差分削除を行わない
-        if (reachedMaxPages) {
+        if (isReachedMaxPages) {
           logger.warn(
             `[${account.username}] Skipping stale bookmark deletion because MAX_PAGES was reached.`
           )
         } else {
           // DB 上の tweet_id のうち今回のクロールで取得できなかったものを削除する
-          const existingIds = getBookmarkTweetIds(db, account.username)
+          const existingIds = getBookmarkTweetIds(database, account.username)
           if (crawledTweetIds.size === 0 && existingIds.length > 0) {
             // クロール結果が空かつ DB にブックマークが存在する場合は
             // Twitter API の一時的エラーによる誤削除を防ぐためスキップする
@@ -350,9 +441,9 @@ export async function runCrawl(db: Database.Database): Promise<void> {
                 `[${account.username}] Deleting ${staleIds.length} stale bookmark(s) not found in crawl results.`
               )
               // 部分削除によるデータ不整合を防ぐためトランザクション内で一括削除する
-              db.transaction(() => {
+              database.transaction(() => {
                 for (const tweetId of staleIds) {
-                  deleteBookmark(db, tweetId, account.username)
+                  deleteBookmark(database, tweetId, account.username)
                 }
               })()
             }
@@ -361,7 +452,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
         successCount++
         saveCrawlAccountResult(
-          db,
+          database,
           jobId,
           account.username,
           'success',
@@ -370,7 +461,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           totalForAccount
         )
         // 成功のたびに accounts_succeeded を更新してポーリング UI に進捗を反映する
-        updateCrawlJob(db, jobId, 'running', {
+        updateCrawlJob(database, jobId, 'running', {
           accountsSucceeded: successCount,
         })
       } catch (error) {
@@ -387,7 +478,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           error instanceof Error ? error : new Error(String(error))
         )
         saveCrawlAccountResult(
-          db,
+          database,
           jobId,
           account.username,
           'error',
@@ -398,7 +489,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       }
     }
 
-    updateCrawlJob(db, jobId, 'success', {
+    updateCrawlJob(database, jobId, 'success', {
       finishedAt: new Date().toISOString(),
       accountsSucceeded: successCount,
     })
@@ -410,7 +501,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
     await pruneNoiseTagsViaAnalyzer(0.25)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    updateCrawlJob(db, jobId, 'error', {
+    updateCrawlJob(database, jobId, 'error', {
       finishedAt: new Date().toISOString(),
       errorMessage: message,
     })
@@ -419,6 +510,6 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       error instanceof Error ? error : new Error(String(error))
     )
   } finally {
-    running = false
+    crawlState.isRunning = false
   }
 }

@@ -9,10 +9,10 @@ import { analyzerProxyRoute } from './routes/proxy'
 
 /**
  * Hono サーバーを作成する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns 設定済みの Hono アプリケーション
  */
-export function createServer(db: Database.Database): Hono {
+export function createServer(database: Database.Database): Hono {
   const app = new Hono()
 
   // video.twimg.com のホットリンク保護を回避するために Referer を送らないよう指示する
@@ -22,9 +22,9 @@ export function createServer(db: Database.Database): Hono {
   })
 
   // API ルートをマウント
-  app.route('/', bookmarksRoute(db))
-  app.route('/', accountsRoute(db))
-  app.route('/', crawlRoute(db))
+  app.route('/', bookmarksRoute(database))
+  app.route('/', accountsRoute(database))
+  app.route('/', crawlRoute(database))
   app.route('/', featuresRoute())
   app.route('/', analyzerProxyRoute())
 

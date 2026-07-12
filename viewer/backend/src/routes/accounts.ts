@@ -4,15 +4,15 @@ import { getAccounts } from '../infra/database'
 
 /**
  * アカウント API ルートを作成する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns Hono アプリケーション
  */
-export function accountsRoute(db: Database.Database): Hono {
+export function accountsRoute(database: Database.Database): Hono {
   const app = new Hono()
 
   /** GET /api/accounts - アカウント一覧を取得する */
   app.get('/api/accounts', (c) => {
-    const accounts = getAccounts(db)
+    const accounts = getAccounts(database)
     return c.json(accounts)
   })
 

@@ -3,15 +3,19 @@ import { cycleTLSExit } from '@the-convocation/twitter-scraper/cycletls'
 
 // ===== CycleTLS シングルトン =====
 
-let cycleTLSInstancePromise: Promise<CycleTLSClient> | null = null
+// トップレベル変数への関数内代入 (unicorn/no-top-level-assignment-in-function) を避けるため、
+// シングルトンの状態はオブジェクトのプロパティとして保持する
+const cycleTLSState: { instancePromise: Promise<CycleTLSClient> | null } = {
+  instancePromise: null,
+}
 
 /**
  * CycleTLS クライアントをシングルトンで初期化して返す。
  * @returns CycleTLS クライアント
  */
 export async function getCycleTLSInstance(): Promise<CycleTLSClient> {
-  cycleTLSInstancePromise ??= initCycleTLS()
-  return cycleTLSInstancePromise
+  cycleTLSState.instancePromise ??= initCycleTLS()
+  return cycleTLSState.instancePromise
 }
 
 /**
@@ -32,7 +36,7 @@ export async function cycleTLSFetch(
     typeof input === 'string'
       ? input
       : input instanceof URL
-        ? input.toString()
+        ? input.href
         : input.url
 
   const method = (init?.method ?? 'GET').toUpperCase()
@@ -87,7 +91,7 @@ export async function cycleTLSFetch(
       const proxyUrl = new URL(normalized)
       proxyUrl.username = proxyUsername
       proxyUrl.password = proxyPassword
-      proxy = proxyUrl.toString()
+      proxy = proxyUrl.href
     } else {
       proxy = normalized
     }
@@ -147,9 +151,9 @@ export async function cycleTLSFetch(
  * プロセス終了時に呼び出す。
  */
 export async function cleanupCycleTLS(): Promise<void> {
-  if (cycleTLSInstancePromise) {
+  if (cycleTLSState.instancePromise) {
     try {
-      const instance = await cycleTLSInstancePromise
+      const instance = await cycleTLSState.instancePromise
       await instance.exit()
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

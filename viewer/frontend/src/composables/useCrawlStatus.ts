@@ -19,8 +19,8 @@ export function useCrawlStatus() {
       status.value = await fetchCrawlStatus()
       // 成功時は過去のエラーをクリアする
       error.value = null
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error'
+    } catch (error_) {
+      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
     }
   }
 
@@ -30,28 +30,37 @@ export function useCrawlStatus() {
     try {
       await apiTriggerCrawl()
       await refresh()
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error'
+    } catch (error_) {
+      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
     } finally {
       triggering.value = false
     }
   }
 
   onMounted(() => {
-    refresh().catch((err: unknown) => {
-      error.value = err instanceof Error ? err.message : 'Unknown error'
-    })
+    // onMounted のコールバックは void を期待するため、async にはせず IIFE にする
+    ;(async () => {
+      try {
+        await refresh()
+      } catch (error_: unknown) {
+        error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+      }
+    })()
     // 10 秒ごとにポーリング（前回のリクエストが完了していない場合はスキップ）
     intervalId = setInterval(() => {
       if (isPolling) return
       isPolling = true
-      refresh()
-        .catch((err: unknown) => {
-          error.value = err instanceof Error ? err.message : 'Unknown error'
-        })
-        .finally(() => {
+      // setInterval のコールバックは void を期待するため、async にはせず IIFE にする
+      ;(async () => {
+        try {
+          await refresh()
+        } catch (error_: unknown) {
+          error.value =
+            error_ instanceof Error ? error_.message : 'Unknown error'
+        } finally {
           isPolling = false
-        })
+        }
+      })()
     }, 10_000)
   })
 

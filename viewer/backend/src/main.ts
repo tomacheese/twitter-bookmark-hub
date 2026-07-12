@@ -9,11 +9,11 @@ const logger = Logger.configure('main')
 const DATA_DIR = process.env.DATA_DIR ?? '/data'
 const PORT = Number(process.env.VIEWER_PORT ?? '3000')
 
-const dbPath = path.join(DATA_DIR, 'db.sqlite')
-logger.info(`Opening database: ${dbPath}`)
+const databasePath = path.join(DATA_DIR, 'db.sqlite')
+logger.info(`Opening database: ${databasePath}`)
 
-const db = openDatabase(dbPath)
-const app = createServer(db)
+const database = openDatabase(databasePath)
+const app = createServer(database)
 
 serve({ fetch: app.fetch, port: PORT }, () => {
   logger.info(`Server listening on port ${PORT}`)

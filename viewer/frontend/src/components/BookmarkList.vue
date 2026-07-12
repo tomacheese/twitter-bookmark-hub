@@ -25,7 +25,11 @@ const emit = defineEmits<{
 
 /** センチネル要素（スクロール末端の検知用） */
 const sentinel = ref<HTMLElement | null>(null)
-let observer: IntersectionObserver | null = null
+// トップレベル変数への関数内代入 (unicorn/no-top-level-assignment-in-function) を避けるため、
+// IntersectionObserver インスタンスはオブジェクトのプロパティとして保持する
+const observerState: { observer: IntersectionObserver | null } = {
+  observer: null,
+}
 
 /**
  * センチネル要素が画面内に入ったら load-more イベントを発火する。
@@ -40,19 +44,19 @@ function onIntersect(entries: IntersectionObserverEntry[]) {
 }
 
 onMounted(() => {
-  observer = new IntersectionObserver(onIntersect, {
+  observerState.observer = new IntersectionObserver(onIntersect, {
     // 画面下端から 200px 手前で発火させてスムーズに感じさせる
     rootMargin: '0px 0px 200px 0px',
     threshold: 0,
   })
   if (sentinel.value) {
-    observer.observe(sentinel.value)
+    observerState.observer.observe(sentinel.value)
   }
 })
 
 onUnmounted(() => {
-  observer?.disconnect()
-  observer = null
+  observerState.observer?.disconnect()
+  observerState.observer = null
 })
 </script>
 

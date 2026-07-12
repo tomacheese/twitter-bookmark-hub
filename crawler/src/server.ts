@@ -13,10 +13,10 @@ import { loadConfig } from './shared/config'
 /**
  * HTTP API サーバーを作成する。
  *
- * @param db Database インスタンス
+ * @param database Database インスタンス
  * @returns Hono アプリケーション
  */
-export function createServer(db: Database.Database): Hono {
+export function createServer(database: Database.Database): Hono {
   const app = new Hono()
 
   /** ヘルスチェックエンドポイント */
@@ -30,15 +30,19 @@ export function createServer(db: Database.Database): Hono {
       return c.json({ error: 'Crawl is already running.' }, 409)
     }
     // 非同期で実行 (レスポンスは即座に返す)
-    runCrawl(db).catch((error: unknown) => {
-      console.error('Manual crawl failed unexpectedly:', error)
-    })
+    ;(async () => {
+      try {
+        await runCrawl(database)
+      } catch (error) {
+        console.error('Manual crawl failed unexpectedly:', error)
+      }
+    })()
     return c.json({ message: 'Crawl started.' }, 202)
   })
 
   /** クロールステータス取得エンドポイント */
   app.get('/crawl/status', (c) => {
-    const job = getLatestCrawlJob(db)
+    const job = getLatestCrawlJob(database)
     // ジョブが存在しない場合は null を返してレスポンス型を固定する
     return c.json(job)
   })
@@ -109,7 +113,7 @@ export function createServer(db: Database.Database): Hono {
       const { authToken, ct0 } = await getAuthCookies(accountConfig)
       const client = await getBookmarksClient(authToken, ct0)
       await removeBookmark(client, tweetId)
-      deleteBookmark(db, tweetId, account)
+      deleteBookmark(database, tweetId, account)
       return c.json({ message: 'Bookmark deleted.' })
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)

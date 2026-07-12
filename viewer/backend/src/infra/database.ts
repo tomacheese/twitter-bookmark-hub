@@ -30,7 +30,7 @@ const ALL_SEARCH_GROUPS: SearchInGroup[] = [
 ]
 
 /** ブックマーク取得時のパラメータ */
-interface GetBookmarksParams {
+interface GetBookmarksParameters {
   /** ページ番号 */
   page: number
   /** 1 ページあたりの件数 */
@@ -64,22 +64,22 @@ interface GetBookmarksResult {
  * crawler が先に起動していない場合に備えてテーブルを作成し、
  * WAL モードと外部キー制約を有効にする。
  *
- * @param dbPath - データベースファイルのパス
+ * @param databasePath - データベースファイルのパス
  * @returns Database インスタンス
  */
-export function openDatabase(dbPath: string): Database.Database {
-  const db = new Database(dbPath)
-  db.pragma('journal_mode=WAL')
-  db.pragma('busy_timeout=5000')
-  db.pragma('foreign_keys=ON')
+export function openDatabase(databasePath: string): Database.Database {
+  const database = new Database(databasePath)
+  database.pragma('journal_mode=WAL')
+  database.pragma('busy_timeout=5000')
+  database.pragma('foreign_keys=ON')
 
   // crawler が先に起動していない場合に備えてテーブルを作成
-  db.exec(SCHEMA_DDL)
+  database.exec(SCHEMA_DDL)
 
   // 既存 DB に対してカラム追加マイグレーションを適用する
-  applyColumnMigrations(db)
+  applyColumnMigrations(database)
 
-  return db
+  return database
 }
 
 /**
@@ -170,12 +170,15 @@ function parseCategories(
  * 指定テーブルが SQLite に存在するかどうかを確認する。
  * analyzer がオプショナルなため、タグ・カテゴリテーブルが存在しない場合がある。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @param tableName - テーブル名
  * @returns テーブルが存在すれば true
  */
-function tableExists(db: Database.Database, tableName: string): boolean {
-  const row = db
+function isTableExists(
+  database: Database.Database,
+  tableName: string
+): boolean {
+  const row = database
     .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
     .get(tableName)
   return row !== undefined
@@ -185,22 +188,22 @@ function tableExists(db: Database.Database, tableName: string): boolean {
  * tweet_categories テーブルが存在するかどうかを確認する。
  * analyzer がオプショナルなため、テーブルが存在しない場合がある。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns テーブルが存在すれば true
  */
-export function hasCategoriesTable(db: Database.Database): boolean {
-  return tableExists(db, 'tweet_categories')
+export function hasCategoriesTable(database: Database.Database): boolean {
+  return isTableExists(database, 'tweet_categories')
 }
 
 /**
  * ブックマーク一覧を取得する
- * @param db - Database インスタンス
- * @param params - 取得パラメータ
+ * @param database - Database インスタンス
+ * @param parameters - 取得パラメータ
  * @returns ブックマークアイテム一覧と総件数
  */
 export function getBookmarks(
-  db: Database.Database,
-  params: GetBookmarksParams
+  database: Database.Database,
+  parameters: GetBookmarksParameters
 ): GetBookmarksResult {
   const {
     page,
@@ -209,13 +212,13 @@ export function getBookmarks(
     account,
     sort = 'desc',
     sortBy = 'bookmarked_at',
-  } = params
+  } = parameters
 
   // tweet_tags / tweet_categories テーブルが存在しない場合はサブクエリを省略する
-  const tagsTableExists = tableExists(db, 'tweet_tags')
-  const categoriesTableExists = hasCategoriesTable(db)
-  const effectiveCategoryId = categoriesTableExists
-    ? params.categoryId
+  const isTagsTableExists = isTableExists(database, 'tweet_tags')
+  const isCategoriesTableExists = hasCategoriesTable(database)
+  const effectiveCategoryId = isCategoriesTableExists
+    ? parameters.categoryId
     : undefined
 
   // ソートキーと方向を決定する（SQL インジェクション防止のためホワイトリスト方式）
@@ -225,7 +228,7 @@ export function getBookmarks(
   //   position は Twitter API のレスポンス順（小さいほど新しいブックマーク）。
   //
   // 投稿日ソート: tweet_id は Snowflake ID で時系列単調増加のため数値比較を使用する。
-  const orderDir = sort === 'asc' ? 'ASC' : 'DESC'
+  const orderDirection = sort === 'asc' ? 'ASC' : 'DESC'
   let primaryKey: string
   let secondaryClause: string
   if (sortBy === 'created_at') {
@@ -233,8 +236,8 @@ export function getBookmarks(
     secondaryClause = ''
   } else {
     primaryKey = 'MAX(b.last_seen_at)'
-    const posDir = sort === 'desc' ? 'ASC' : 'DESC'
-    secondaryClause = `, MIN(b.position) ${posDir}`
+    const posDirection = sort === 'desc' ? 'ASC' : 'DESC'
+    secondaryClause = `, MIN(b.position) ${posDirection}`
   }
 
   // WHERE 句の構築
@@ -243,16 +246,16 @@ export function getBookmarks(
 
   if (q) {
     const activeGroups = new Set<SearchInGroup>(
-      params.searchIn && params.searchIn.length > 0
-        ? params.searchIn
+      parameters.searchIn && parameters.searchIn.length > 0
+        ? parameters.searchIn
         : ALL_SEARCH_GROUPS
     )
-    const likeParam = `%${q}%`
+    const likeParameter = `%${q}%`
     const clauses: string[] = []
 
     if (activeGroups.has('text')) {
       clauses.push('t.full_text LIKE ?', 't.translated_text LIKE ?')
-      bindValues.push(likeParam, likeParam)
+      bindValues.push(likeParameter, likeParameter)
     }
     if (activeGroups.has('card')) {
       clauses.push(
@@ -261,27 +264,32 @@ export function getBookmarks(
         't.card_url LIKE ?',
         't.card_vanity_url LIKE ?'
       )
-      bindValues.push(likeParam, likeParam, likeParam, likeParam)
+      bindValues.push(
+        likeParameter,
+        likeParameter,
+        likeParameter,
+        likeParameter
+      )
     }
     if (activeGroups.has('url')) {
       clauses.push(
         'EXISTS (SELECT 1 FROM url_entities ue WHERE ue.tweet_id = t.tweet_id AND (ue.expanded_url LIKE ? OR ue.display_url LIKE ?))'
       )
-      bindValues.push(likeParam, likeParam)
+      bindValues.push(likeParameter, likeParameter)
     }
     if (activeGroups.has('author')) {
       // users テーブルはカウントクエリに JOIN されないためサブクエリで参照する
       clauses.push(
         'EXISTS (SELECT 1 FROM users u2 WHERE u2.user_id = t.user_id AND (u2.screen_name LIKE ? OR u2.user_name LIKE ?))'
       )
-      bindValues.push(likeParam, likeParam)
+      bindValues.push(likeParameter, likeParameter)
     }
     if (activeGroups.has('quoted')) {
       // 引用ツイートはカウントクエリに JOIN されないためサブクエリで参照する
       clauses.push(
         'EXISTS (SELECT 1 FROM tweets qt2 WHERE qt2.tweet_id = t.quoted_tweet_id AND (qt2.full_text LIKE ? OR qt2.translated_text LIKE ?))'
       )
-      bindValues.push(likeParam, likeParam)
+      bindValues.push(likeParameter, likeParameter)
     }
 
     if (clauses.length > 0) {
@@ -302,11 +310,11 @@ export function getBookmarks(
     )
     bindValues.push(effectiveCategoryId)
   }
-  if (params.tag && tagsTableExists) {
+  if (parameters.tag && isTagsTableExists) {
     conditions.push(
       'EXISTS (SELECT 1 FROM tweet_tags tt JOIN tags tg ON tt.tag_id = tg.id WHERE tt.tweet_id = t.tweet_id AND tg.name = ?)'
     )
-    bindValues.push(params.tag)
+    bindValues.push(parameters.tag)
   }
 
   const whereClause =
@@ -319,7 +327,9 @@ export function getBookmarks(
     INNER JOIN bookmarks b ON t.tweet_id = b.tweet_id
     ${whereClause}
   `
-  const countRow = db.prepare(countSql).get(...bindValues) as { cnt: number }
+  const countRow = database.prepare(countSql).get(...bindValues) as {
+    cnt: number
+  }
   const total = countRow.cnt
 
   // ブックマーク一覧を取得
@@ -411,7 +421,7 @@ export function getBookmarks(
         FROM url_entities ue
         WHERE ue.tweet_id = t.quoted_tweet_id AND ue.kind = 'translated'
       ) AS qt_translated_url_entities${
-        tagsTableExists
+        isTagsTableExists
           ? `,
       (
         SELECT json_group_array(tg.name)
@@ -421,7 +431,7 @@ export function getBookmarks(
       ) AS tweet_tags_json`
           : ''
       }${
-        categoriesTableExists
+        isCategoriesTableExists
           ? `,
       (
         SELECT json_group_array(json_object('id', c.id, 'name', c.name, 'color', c.color))
@@ -438,11 +448,11 @@ export function getBookmarks(
     LEFT JOIN users qu ON qt.user_id = qu.user_id
     ${whereClause}
     GROUP BY t.tweet_id
-    ORDER BY ${primaryKey} ${orderDir}${secondaryClause}
+    ORDER BY ${primaryKey} ${orderDirection}${secondaryClause}
     LIMIT ? OFFSET ?
   `
 
-  const rows = db.prepare(dataSql).all(...bindValues, limit, offset) as {
+  const rows = database.prepare(dataSql).all(...bindValues, limit, offset) as {
     tweet_id: string
     full_text: string
     created_at: string
@@ -483,24 +493,26 @@ export function getBookmarks(
 
   const items: BookmarkItem[] = rows.map((row) => {
     // 引用ツイートの組み立て
-    let quotedTweet: QuotedTweet | null = null
-    if (row.qt_tweet_id && row.qt_full_text !== null) {
-      quotedTweet = {
-        tweetId: row.qt_tweet_id,
-        fullText: row.qt_full_text,
-        userId: row.qt_user_id ?? '',
-        createdAt: row.qt_created_at ?? '',
-        screenName: row.qt_screen_name ?? '',
-        userName: row.qt_user_name ?? '',
-        profileImageUrl: row.qt_profile_image_url,
-        mediaItems: parseMediaItems(row.qt_media_items),
-        urlEntities: parseUrlEntities(row.qt_url_entities),
-        translatedText: row.qt_translated_text,
-        sourceLanguage: row.qt_source_language,
-        destinationLanguage: row.qt_destination_language,
-        translatedUrlEntities: parseUrlEntities(row.qt_translated_url_entities),
-      }
-    }
+    const quotedTweet: QuotedTweet | null =
+      row.qt_tweet_id && row.qt_full_text !== null
+        ? {
+            tweetId: row.qt_tweet_id,
+            fullText: row.qt_full_text,
+            userId: row.qt_user_id ?? '',
+            createdAt: row.qt_created_at ?? '',
+            screenName: row.qt_screen_name ?? '',
+            userName: row.qt_user_name ?? '',
+            profileImageUrl: row.qt_profile_image_url,
+            mediaItems: parseMediaItems(row.qt_media_items),
+            urlEntities: parseUrlEntities(row.qt_url_entities),
+            translatedText: row.qt_translated_text,
+            sourceLanguage: row.qt_source_language,
+            destinationLanguage: row.qt_destination_language,
+            translatedUrlEntities: parseUrlEntities(
+              row.qt_translated_url_entities
+            ),
+          }
+        : null
 
     // カード情報の組み立て
     let cardPlayerUrl: string | null = null
@@ -551,11 +563,11 @@ export function getBookmarks(
 
 /**
  * アカウント一覧とブックマーク件数を取得する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns アカウント情報の配列
  */
-export function getAccounts(db: Database.Database): AccountInfo[] {
-  const rows = db
+export function getAccounts(database: Database.Database): AccountInfo[] {
+  const rows = database
     .prepare(
       `
     SELECT account_username AS username, COUNT(*) AS bookmark_count
@@ -574,13 +586,13 @@ export function getAccounts(db: Database.Database): AccountInfo[] {
 
 /**
  * 最新のクロールジョブをアカウント別結果と合わせて取得する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns 最新のクロールジョブ情報、存在しない場合は null
  */
 export function getLatestCrawlJob(
-  db: Database.Database
+  database: Database.Database
 ): CrawlJobStatus | null {
-  const row = db
+  const row = database
     .prepare(
       `SELECT id, started_at, finished_at, status, error_message,
               accounts_total, accounts_succeeded
@@ -604,7 +616,7 @@ export function getLatestCrawlJob(
 
   // アカウント別クロール結果を取得する
   // 2 クエリ構成だが、10 秒ポーリングに対してクエリ間隔は無視できる
-  const accountResultRows = db
+  const accountResultRows = database
     .prepare(
       `SELECT username, status, error_type, error_message, bookmarks_crawled
        FROM crawl_account_results

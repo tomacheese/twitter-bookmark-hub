@@ -297,10 +297,10 @@ export async function addBookmark(
   client: TwitterOpenApiClient,
   tweetId: string
 ): Promise<void> {
-  const postApiUtils = client.getPostApi()
+  const postApiUtilities = client.getPostApi()
   // DefaultFlag は { [key: string]: { [key: string]: any } } 型だが、
   // 実行時に Twitter 初期ページから取得した queryId が格納されており存在しない場合がある
-  const flagEntry = postApiUtils.flag.CreateBookmark as
+  const flagEntry = postApiUtilities.flag.CreateBookmark as
     { queryId: string } | undefined
   // flagEntry が存在しない、または queryId が文字列でない・空文字の場合は実行不可
   if (
@@ -315,7 +315,7 @@ export async function addBookmark(
   const queryId = flagEntry.queryId
   await withRetry(
     () =>
-      postApiUtils.api.postCreateBookmark(
+      postApiUtilities.api.postCreateBookmark(
         {
           pathQueryId: queryId,
           postCreateBookmarkRequest: {
@@ -323,7 +323,7 @@ export async function addBookmark(
             variables: { tweetId },
           },
         },
-        postApiUtils.initOverrides(flagEntry)
+        postApiUtilities.initOverrides(flagEntry)
       ),
     { operationName: `addBookmark(${tweetId})` }
   )
@@ -344,10 +344,10 @@ export async function removeBookmark(
   client: TwitterOpenApiClient,
   tweetId: string
 ): Promise<void> {
-  const postApiUtils = client.getPostApi()
+  const postApiUtilities = client.getPostApi()
   // DefaultFlag は { [key: string]: { [key: string]: any } } 型だが、
   // 実行時に Twitter 初期ページから取得した queryId が格納されており存在しない場合がある
-  const flagEntry = postApiUtils.flag.DeleteBookmark as
+  const flagEntry = postApiUtilities.flag.DeleteBookmark as
     { queryId: string } | undefined
   // flagEntry が存在しない、または queryId が文字列でない・空文字の場合は実行不可
   if (
@@ -363,7 +363,7 @@ export async function removeBookmark(
   await withRetry(
     async () => {
       try {
-        return await postApiUtils.api.postDeleteBookmark(
+        return await postApiUtilities.api.postDeleteBookmark(
           {
             pathQueryId: queryId,
             postDeleteBookmarkRequest: {
@@ -371,7 +371,7 @@ export async function removeBookmark(
               variables: { tweetId },
             },
           },
-          postApiUtils.initOverrides(flagEntry)
+          postApiUtilities.initOverrides(flagEntry)
         )
       } catch (error) {
         // twitter-openapi-typescript は存在しないブックマークを削除しようとすると

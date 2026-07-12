@@ -22,13 +22,13 @@ const COOKIE_EXPIRY_DAYS = 7
  * @param username アカウントのユーザー名
  * @returns Cookie または null
  */
-export function getCookiesFromEnv(
+export function getCookiesFromEnvironment(
   username: string
 ): { authToken: string; ct0: string } | null {
   // Twitter のユーザー名は [A-Za-z0-9_] のみのため toUpperCase() で十分
-  const envSuffix = username.toUpperCase()
-  const authToken = process.env[`TWITTER_AUTH_TOKEN_${envSuffix}`]
-  const ct0 = process.env[`TWITTER_CT0_${envSuffix}`]
+  const environmentSuffix = username.toUpperCase()
+  const authToken = process.env[`TWITTER_AUTH_TOKEN_${environmentSuffix}`]
+  const ct0 = process.env[`TWITTER_CT0_${environmentSuffix}`]
   if (authToken && ct0) {
     return { authToken, ct0 }
   }
@@ -184,14 +184,15 @@ export async function loginWithRetry(
       return scraper
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
-      const is503 =
-        message.includes('503') || message.includes('Service Unavailable')
-      const is399 = /\b399\b/.test(message)
-      const isDeny = message.includes('DenyLoginSubtask')
 
       if (attempt >= maxAttempts) {
         throw error
       }
+
+      const is503 =
+        message.includes('503') || message.includes('Service Unavailable')
+      const is399 = /\b399\b/.test(message)
+      const isDeny = message.includes('DenyLoginSubtask')
 
       if (is503) {
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30_000)
@@ -234,12 +235,12 @@ export async function getAuthCookies(
   account: AccountConfig
 ): Promise<{ authToken: string; ct0: string }> {
   // 環境変数から Cookie を取得 (手動設定用)
-  const fromEnv = getCookiesFromEnv(account.username)
-  if (fromEnv) {
+  const fromEnvironment = getCookiesFromEnvironment(account.username)
+  if (fromEnvironment) {
     logger.info(
       `[${account.username}] Using cookies from environment variables.`
     )
-    return fromEnv
+    return fromEnvironment
   }
 
   // キャッシュファイルから Cookie を取得

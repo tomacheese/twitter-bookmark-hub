@@ -6,27 +6,27 @@ import type { CategoryItem, TagItem } from '@twitter-bookmark-hub/shared'
  * データベースを開く。
  * SCHEMA_DDL で tags / tweet_tags / categories / tweet_categories テーブルを作成する。
  *
- * @param dbPath - データベースファイルのパス
+ * @param databasePath - データベースファイルのパス
  * @returns Database インスタンス
  */
-export function openDatabase(dbPath: string): Database.Database {
-  const db = new Database(dbPath)
-  db.pragma('journal_mode=WAL')
-  db.pragma('busy_timeout=5000')
-  db.pragma('foreign_keys=ON')
-  db.exec(SCHEMA_DDL)
-  return db
+export function openDatabase(databasePath: string): Database.Database {
+  const database = new Database(databasePath)
+  database.pragma('journal_mode=WAL')
+  database.pragma('busy_timeout=5000')
+  database.pragma('foreign_keys=ON')
+  database.exec(SCHEMA_DDL)
+  return database
 }
 
 /**
  * カテゴリ一覧を取得する。
  * 各カテゴリのブックマーク件数を含む。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns カテゴリアイテムの配列
  */
-export function getCategories(db: Database.Database): CategoryItem[] {
-  const rows = db
+export function getCategories(database: Database.Database): CategoryItem[] {
+  const rows = database
     .prepare(
       `
       SELECT
@@ -64,19 +64,19 @@ export function getCategories(db: Database.Database): CategoryItem[] {
 /**
  * カテゴリを新規作成する。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @param name - カテゴリ名
  * @param color - カラーコード
  * @param keywords - マッチングキーワード一覧
  * @returns 作成されたカテゴリの ID
  */
 export function createCategory(
-  db: Database.Database,
+  database: Database.Database,
   name: string,
   color: string,
   keywords: string[]
 ): number {
-  const result = db
+  const result = database
     .prepare('INSERT INTO categories (name, color, keywords) VALUES (?, ?, ?)')
     .run(name, color, JSON.stringify(keywords))
   return Number(result.lastInsertRowid)
@@ -85,44 +85,48 @@ export function createCategory(
 /**
  * カテゴリを更新する。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @param id - カテゴリ ID
  * @param name - カテゴリ名
  * @param color - カラーコード
  * @param keywords - マッチングキーワード一覧
  */
 export function updateCategory(
-  db: Database.Database,
+  database: Database.Database,
   id: number,
   name: string,
   color: string,
   keywords: string[]
 ): void {
-  db.prepare(
-    'UPDATE categories SET name = ?, color = ?, keywords = ? WHERE id = ?'
-  ).run(name, color, JSON.stringify(keywords), id)
+  database
+    .prepare(
+      'UPDATE categories SET name = ?, color = ?, keywords = ? WHERE id = ?'
+    )
+    .run(name, color, JSON.stringify(keywords), id)
 }
 
 /**
  * カテゴリを削除する（tweet_categories も CASCADE 削除）。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @param id - カテゴリ ID
  */
-export function deleteCategory(db: Database.Database, id: number): void {
-  db.prepare('DELETE FROM categories WHERE id = ?').run(id)
+export function deleteCategory(database: Database.Database, id: number): void {
+  database.prepare('DELETE FROM categories WHERE id = ?').run(id)
 }
 
 /**
  * マッチング用にすべてのカテゴリのキーワードリストを取得する。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns id と keywords の配列
  */
 export function getCategoryKeywords(
-  db: Database.Database
+  database: Database.Database
 ): { id: number; keywords: string[] }[] {
-  const rows = db.prepare('SELECT id, keywords FROM categories').all() as {
+  const rows = database
+    .prepare('SELECT id, keywords FROM categories')
+    .all() as {
     id: number
     keywords: string
   }[]
@@ -138,27 +142,27 @@ export function getCategoryKeywords(
  * 解析済みツイート総数に対して threshold 以上の割合に出現するタグは
  * 汎用語とみなして tweet_tags から削除し、孤立した tags レコードも削除する。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @param threshold - 出現割合の閾値（例: 0.1 = 全ツイートの 10% 以上に出現したら除去）
  * @returns 削除した tweet_tags レコード数
  */
 export function pruneNoiseTags(
-  db: Database.Database,
+  database: Database.Database,
   threshold: number
 ): number {
   // tweet_tags に登録されたツイート総数（タグ付き = 解析済みツイート）
-  const totalRow = db
+  const totalRow = database
     .prepare('SELECT COUNT(DISTINCT tweet_id) AS cnt FROM tweet_tags')
     .get() as { cnt: number }
   const totalTweets = totalRow.cnt
   if (totalTweets === 0) return 0
 
   // ノイズ判定の最低出現件数（threshold 未満なら除去対象としない）
-  const minDocCount = Math.ceil(totalTweets * threshold)
-  if (minDocCount < 2) return 0
+  const minDocumentCount = Math.ceil(totalTweets * threshold)
+  if (minDocumentCount < 2) return 0
 
   // threshold 以上の割合に出現するタグの tweet_tags レコードを削除する
-  const result = db
+  const result = database
     .prepare(
       `
       DELETE FROM tweet_tags
@@ -170,12 +174,14 @@ export function pruneNoiseTags(
       )
       `
     )
-    .run(minDocCount)
+    .run(minDocumentCount)
 
   // 孤立した tags レコードを削除する
-  db.prepare(
-    'DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM tweet_tags)'
-  ).run()
+  database
+    .prepare(
+      'DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM tweet_tags)'
+    )
+    .run()
 
   return result.changes
 }
@@ -183,12 +189,15 @@ export function pruneNoiseTags(
 /**
  * 頻出タグ一覧を取得する。
  *
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @param limit - 上限件数
  * @returns タグアイテムの配列（出現数降順）
  */
-export function getTopTags(db: Database.Database, limit: number): TagItem[] {
-  const rows = db
+export function getTopTags(
+  database: Database.Database,
+  limit: number
+): TagItem[] {
+  const rows = database
     .prepare(
       `
       SELECT t.id, t.name, COUNT(tt.tweet_id) AS count

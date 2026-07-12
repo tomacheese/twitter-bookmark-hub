@@ -4,10 +4,10 @@ import { getTopTags } from '../infra/database'
 
 /**
  * タグ API ルートを作成する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns Hono アプリケーション
  */
-export function tagsRoute(db: Database.Database): Hono {
+export function tagsRoute(database: Database.Database): Hono {
   const app = new Hono()
 
   /** GET /tags - 頻出タグ一覧を取得する（カテゴリ定義 UI のサジェスト用） */
@@ -17,7 +17,7 @@ export function tagsRoute(db: Database.Database): Hono {
       200,
       Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 50)
     )
-    return c.json(getTopTags(db, limit))
+    return c.json(getTopTags(database, limit))
   })
 
   return app

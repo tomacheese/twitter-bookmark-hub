@@ -5,28 +5,30 @@ import type { BookmarkItem, SearchInGroup } from '../api'
 /**
  * 指定した関数を delay ミリ秒デバウンスするユーティリティ。
  * 前回の呼び出しから delay ms 経過するまで実行を遅延する。
- * @param fn - デバウンス対象の関数
+ * @param function_ - デバウンス対象の関数
  * @param delay - 遅延時間（ミリ秒）
  * @returns デバウンスされた関数と、保留中タイマーをキャンセルする cancel 関数
  */
 function debounce<T extends () => void>(
-  fn: T,
+  function_: T,
   delay: number
-): { fn: T; cancel: () => void } {
+): { function_: T; cancel: () => void } {
   let timer: ReturnType<typeof setTimeout> | null = null
-  const debouncedFn = (() => {
+  const debouncedFunction = (() => {
     if (timer !== null) clearTimeout(timer)
     timer = setTimeout(() => {
-      fn()
+      function_()
     }, delay)
   }) as unknown as T
   const cancel = () => {
-    if (timer !== null) {
-      clearTimeout(timer)
-      timer = null
+    if (timer === null) {
+      return
     }
+
+    clearTimeout(timer)
+    timer = null
   }
-  return { fn: debouncedFn, cancel }
+  return { function_: debouncedFunction, cancel }
 }
 
 /** localStorage のキー定数 */
@@ -77,22 +79,25 @@ export function useBookmarks() {
   const sortOrder = ref<'desc' | 'asc'>(rawSortOrder === 'asc' ? 'asc' : 'desc')
 
   /** sortBy 変更時に localStorage へ保存 */
-  watch(sortBy, (val) => {
-    localStorage.setItem(LS_SORT_BY, val)
+  watch(sortBy, (value) => {
+    localStorage.setItem(LS_SORT_BY, value)
   })
   /** sortOrder 変更時に localStorage へ保存 */
-  watch(sortOrder, (val) => {
-    localStorage.setItem(LS_SORT_ORDER, val)
+  watch(sortOrder, (value) => {
+    localStorage.setItem(LS_SORT_ORDER, value)
   })
   /** searchIn 変更時に localStorage へ保存 */
-  watch(searchIn, (val) => {
-    localStorage.setItem(LS_SEARCH_IN, val.join(','))
+  watch(searchIn, (value) => {
+    localStorage.setItem(LS_SEARCH_IN, value.join(','))
   })
 
   /** 検索クエリ変更時に 200ms デバウンスして debouncedSearchQuery を更新する */
-  const { fn: updateDebouncedQuery, cancel: cancelDebounce } = debounce(() => {
-    debouncedSearchQuery.value = searchQuery.value
-  }, 200)
+  const { function_: updateDebouncedQuery, cancel: cancelDebounce } = debounce(
+    () => {
+      debouncedSearchQuery.value = searchQuery.value
+    },
+    200
+  )
   watch(searchQuery, updateDebouncedQuery)
   // スコープ破棄時に保留中タイマーをキャンセルして不要な state 更新を防ぐ
   onScopeDispose(cancelDebounce)
@@ -104,7 +109,7 @@ export function useBookmarks() {
   const error = ref<string | null>(null)
 
   /** まだ読み込めるページが残っているか */
-  const hasMore = ref(true)
+  const moreAvailable = ref(true)
 
   /**
    * loadMore リクエストのバージョンカウンター。
@@ -120,26 +125,26 @@ export function useBookmarks() {
    * @param targetPage - 取得するページ番号
    * @returns fetchBookmarks に渡すパラメータオブジェクト
    */
-  function buildParams(targetPage: number) {
+  function buildParameters(targetPage: number) {
     return {
       page: targetPage,
       limit: limit.value,
       sort: sortOrder.value,
       sortBy: sortBy.value,
-      ...(debouncedSearchQuery.value ? { q: debouncedSearchQuery.value } : {}),
-      ...(debouncedSearchQuery.value ? { searchIn: searchIn.value } : {}),
-      ...(selectedAccount.value ? { account: selectedAccount.value } : {}),
-      ...(selectedCategory.value === null
-        ? {}
-        : { category: selectedCategory.value }),
-      ...(selectedTag.value ? { tag: selectedTag.value } : {}),
+      ...(debouncedSearchQuery.value && { q: debouncedSearchQuery.value }),
+      ...(debouncedSearchQuery.value && { searchIn: searchIn.value }),
+      ...(selectedAccount.value && { account: selectedAccount.value }),
+      ...(selectedCategory.value !== null && {
+        category: selectedCategory.value,
+      }),
+      ...(selectedTag.value && { tag: selectedTag.value }),
     }
   }
 
   /** フィルタ変更を監視し、変更時にページをリセットして再取得する */
   watchEffect((onCleanup) => {
     // buildParams でリアクティブ値を同期的に読み取り、変更検知を登録する
-    const params = buildParams(1)
+    const parameters = buildParameters(1)
 
     // フィルタ変更時に古いレスポンスが state を上書きするレース条件を防ぐため、
     // クリーンアップ時にキャンセルフラグを立てる。loadMore の in-flight リクエストはバージョンをインクリメントして無効化する
@@ -149,7 +154,7 @@ export function useBookmarks() {
       loadMoreVersion++
     })
     page.value = 1
-    hasMore.value = true
+    moreAvailable.value = true
     loading.value = true
     error.value = null
     // フィルタ変更を検知したタイミングで古いリストと件数をクリアし、
@@ -157,52 +162,52 @@ export function useBookmarks() {
     items.value = []
     total.value = 0
 
-    fetchBookmarks(params)
-      .then((res) => {
+    // onCleanup は同期的に登録する必要があるため watchEffect のコールバック自体は async にせず、
+    // 非同期処理は IIFE に切り出す
+    ;(async () => {
+      try {
+        const response = await fetchBookmarks(parameters)
         if (cancel.value) return
-        items.value = res.items
-        total.value = res.total
-        hasMore.value = items.value.length < res.total
-      })
-      .catch((err: unknown) => {
+        items.value = response.items
+        total.value = response.total
+        moreAvailable.value = items.value.length < response.total
+      } catch (error_: unknown) {
         if (cancel.value) return
-        error.value = err instanceof Error ? err.message : 'Unknown error'
-      })
-      .finally(() => {
+        error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+      } finally {
         if (!cancel.value) loading.value = false
-      })
+      }
+    })()
   })
 
   /**
    * 次のページを追加で読み込む（無限スクロール用）。
    * フィルタ変更後に in-flight のリクエストがある場合はバージョン不一致により破棄される。
    */
-  function loadMore() {
-    if (loading.value || !hasMore.value) return
+  async function loadMore() {
+    if (loading.value || !moreAvailable.value) return
     const nextPage = page.value + 1
     // ページ番号はリクエスト成功後に確定させ、失敗時は巻き戻す
     loading.value = true
 
     // 呼び出し時点のバージョンをキャプチャし、レスポンス到着時に一致チェックする
     const capturedVersion = loadMoreVersion
-    const params = buildParams(nextPage)
-    fetchBookmarks(params)
-      .then((res) => {
-        if (capturedVersion !== loadMoreVersion) return
-        // 成功時のみページ番号を進める
-        page.value = nextPage
-        items.value = [...items.value, ...res.items]
-        total.value = res.total
-        hasMore.value = items.value.length < res.total
-      })
-      .catch((err: unknown) => {
-        if (capturedVersion !== loadMoreVersion) return
-        error.value = err instanceof Error ? err.message : 'Unknown error'
-        // 失敗時はページ番号を据え置きにする（次回 loadMore で同ページを再試行できる）
-      })
-      .finally(() => {
-        if (capturedVersion === loadMoreVersion) loading.value = false
-      })
+    const parameters = buildParameters(nextPage)
+    try {
+      const response = await fetchBookmarks(parameters)
+      if (capturedVersion !== loadMoreVersion) return
+      // 成功時のみページ番号を進める
+      page.value = nextPage
+      items.value = [...items.value, ...response.items]
+      total.value = response.total
+      moreAvailable.value = items.value.length < response.total
+    } catch (error_: unknown) {
+      if (capturedVersion !== loadMoreVersion) return
+      error.value = error_ instanceof Error ? error_.message : 'Unknown error'
+      // 失敗時はページ番号を据え置きにする（次回 loadMore で同ページを再試行できる）
+    } finally {
+      if (capturedVersion === loadMoreVersion) loading.value = false
+    }
   }
 
   /** ソート順を切り替える（desc ⇔ asc） */
@@ -217,26 +222,26 @@ export function useBookmarks() {
    * @param account - 解除したアカウント名
    */
   function removeItemAccount(tweetId: string, account: string) {
-    const idx = items.value.findIndex((item) => item.tweetId === tweetId)
-    if (idx === -1) return
-    const item = items.value[idx]
+    const index = items.value.findIndex((item) => item.tweetId === tweetId)
+    if (index === -1) return
+    const item = items.value[index]
     const newBookmarkedBy = item.bookmarkedBy.filter((a) => a !== account)
 
     // アカウントフィルタ中に、そのアカウントのブックマークを解除した場合は
     // newBookmarkedBy に他アカウントが残っていても現在の一覧からは除去する。
     // フィルタ済みリストにはそのアカウントがブックマークしたツイートのみが含まれるため。
     if (selectedAccount.value === account) {
-      items.value = items.value.filter((_, i) => i !== idx)
+      items.value = items.value.filter((_, index_) => index_ !== index)
       total.value = Math.max(0, total.value - 1)
       return
     }
 
     if (newBookmarkedBy.length === 0) {
-      items.value = items.value.filter((_, i) => i !== idx)
+      items.value = items.value.filter((_, index_) => index_ !== index)
       total.value = Math.max(0, total.value - 1)
     } else {
-      items.value = items.value.map((it, i) =>
-        i === idx ? { ...it, bookmarkedBy: newBookmarkedBy } : it
+      items.value = items.value.map((it, index_) =>
+        index_ === index ? { ...it, bookmarkedBy: newBookmarkedBy } : it
       )
     }
   }
@@ -255,7 +260,7 @@ export function useBookmarks() {
     total,
     loading,
     error,
-    hasMore,
+    hasMore: moreAvailable,
     loadMore,
     toggleSortOrder,
     removeItemAccount,

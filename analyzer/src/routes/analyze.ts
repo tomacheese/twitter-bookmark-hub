@@ -8,12 +8,12 @@ import { getCategoryKeywords, pruneNoiseTags } from '../infra/database'
 
 /**
  * 分析 API ルートを作成する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @param tokenizer - kuromoji トークナイザー
  * @returns Hono アプリケーション
  */
 export function analyzeRoute(
-  db: Database.Database,
+  database: Database.Database,
   tokenizer: KuromojiTokenizer
 ): Hono {
   const app = new Hono()
@@ -31,7 +31,7 @@ export function analyzeRoute(
     }
 
     const tags = extractNouns(tokenizer, text)
-    const categoryDefs = getCategoryKeywords(db)
+    const categoryDefs = getCategoryKeywords(database)
     const categories = matchCategories(tags, categoryDefs)
 
     const response: AnalyzeResponse = { tags, categories }
@@ -50,7 +50,7 @@ export function analyzeRoute(
         ? rawThreshold
         : 0.25
 
-    const deleted = pruneNoiseTags(db, threshold)
+    const deleted = pruneNoiseTags(database, threshold)
     return c.json({ deleted, threshold })
   })
 

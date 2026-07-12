@@ -8,10 +8,10 @@ import { CRAWLER_URL } from '../shared/config'
 
 /**
  * ブックマーク API ルートを作成する
- * @param db - Database インスタンス
+ * @param database - Database インスタンス
  * @returns Hono アプリケーション
  */
-export function bookmarksRoute(db: Database.Database): Hono {
+export function bookmarksRoute(database: Database.Database): Hono {
   const app = new Hono()
 
   /** GET /api/bookmarks - ブックマーク一覧を取得する */
@@ -38,7 +38,7 @@ export function bookmarksRoute(db: Database.Database): Hono {
     let categoryId: number | undefined
     if (rawCategory !== undefined && rawCategory !== '') {
       const parsedCategory = Number(rawCategory)
-      if (Number.isInteger(parsedCategory) && parsedCategory >= 1) {
+      if (Number.isSafeInteger(parsedCategory) && parsedCategory >= 1) {
         categoryId = parsedCategory
       }
     }
@@ -63,7 +63,7 @@ export function bookmarksRoute(db: Database.Database): Hono {
             )
         : undefined
 
-    const result = getBookmarks(db, {
+    const result = getBookmarks(database, {
       page,
       limit,
       q,
@@ -103,15 +103,15 @@ export function bookmarksRoute(db: Database.Database): Hono {
         `${CRAWLER_URL}/bookmarks/${encodeURIComponent(tweetId)}`
       )
       url.searchParams.set('account', account)
-      const res = await fetch(url.toString(), {
+      const response = await fetch(url.href, {
         method: 'DELETE',
         signal: controller.signal,
       })
-      const contentType = res.headers.get('content-type') ?? ''
+      const contentType = response.headers.get('content-type') ?? ''
       const data: unknown = contentType.includes('application/json')
-        ? await res.json()
-        : { message: await res.text() }
-      return c.json(data, res.status as ContentfulStatusCode)
+        ? await response.json()
+        : { message: await response.text() }
+      return c.json(data, response.status as ContentfulStatusCode)
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return c.json({ error: 'Crawler service timed out.' }, 504)

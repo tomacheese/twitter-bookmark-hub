@@ -42,12 +42,12 @@ async function waitForRateLimit(
  * 429/403 はレートリミットとして x-rate-limit-reset まで待機し（リトライ回数に含めない）、
  * それ以外は指数バックオフでリトライする。
  *
- * @param fn 実行する処理
+ * @param function_ 実行する処理
  * @param options リトライ設定
  * @returns 処理結果
  */
 export async function withRetry<T>(
-  fn: () => Promise<T>,
+  function_: () => Promise<T>,
   options: {
     maxRetries?: number
     baseDelayMs?: number
@@ -66,7 +66,7 @@ export async function withRetry<T>(
 
   for (;;) {
     try {
-      return await fn()
+      return await function_()
     } catch (error: unknown) {
       const response = (error as { response?: Response }).response
       const status = response?.status

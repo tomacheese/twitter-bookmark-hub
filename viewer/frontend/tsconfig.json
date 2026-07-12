@@ -10,5 +10,5 @@
     "jsx": "preserve",
     "verbatimModuleSyntax": true
   },
-  "include": ["src", "env.d.ts"]
+  "include": ["src", "environment.d.ts"]
 }
