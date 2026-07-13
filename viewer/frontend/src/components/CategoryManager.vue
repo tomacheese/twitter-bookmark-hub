@@ -137,10 +137,9 @@ async function handleDelete(id: number) {
  * Enter キーでキーワードを追加する
  */
 function onNewKeywordKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    addNewKeyword(newKeyword.value)
-  }
+  if (event.key !== 'Enter') return
+  event.preventDefault()
+  addNewKeyword(newKeyword.value)
 }
 
 /**
@@ -148,10 +147,9 @@ function onNewKeywordKeydown(event: KeyboardEvent) {
  * Enter キーでキーワードを追加する
  */
 function onEditKeywordKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    addEditKeyword(editKeyword.value)
-  }
+  if (event.key !== 'Enter') return
+  event.preventDefault()
+  addEditKeyword(editKeyword.value)
 }
 
 /** 新規フォームに表示するサジェストタグ（すでに追加済みのものは除外） */

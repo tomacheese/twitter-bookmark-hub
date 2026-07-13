@@ -60,12 +60,14 @@ function formatRelativeTime(dateString: string): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
-  const diffHr = Math.floor(diffMs / 3_600_000)
-  const diffDay = Math.floor(diffMs / 86_400_000)
 
   if (diffMin < 1) return 'たった今'
   if (diffMin < 60) return `${diffMin}分`
+
+  const diffHr = Math.floor(diffMs / 3_600_000)
   if (diffHr < 24) return `${diffHr}時間`
+
+  const diffDay = Math.floor(diffMs / 86_400_000)
   if (diffDay < 7) return `${diffDay}日`
 
   const sameYear = date.getFullYear() === now.getFullYear()
@@ -370,10 +372,10 @@ function upgradedImageUrl(
   size: 'medium' | 'large' = 'medium'
 ): string {
   return url
-    .replace(/\bname=small\b/, `name=${size}`)
-    .replace(/\bname=thumb\b/, `name=${size}`)
-    .replace(/:small$/, `:${size}`)
-    .replace(/:thumb$/, `:${size}`)
+    .replace(/\bname=small\b/, () => `name=${size}`)
+    .replace(/\bname=thumb\b/, () => `name=${size}`)
+    .replace(/:small$/, () => `:${size}`)
+    .replace(/:thumb$/, () => `:${size}`)
 }
 
 // ---- その他 ----------------------------------------------------------------

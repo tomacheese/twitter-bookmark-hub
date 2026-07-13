@@ -38,7 +38,7 @@ export function bookmarksRoute(db: Database.Database): Hono {
     let categoryId: number | undefined
     if (rawCategory !== undefined && rawCategory !== '') {
       const parsedCategory = Number(rawCategory)
-      if (Number.isInteger(parsedCategory) && parsedCategory >= 1) {
+      if (Number.isSafeInteger(parsedCategory) && parsedCategory >= 1) {
         categoryId = parsedCategory
       }
     }
@@ -103,7 +103,7 @@ export function bookmarksRoute(db: Database.Database): Hono {
         `${CRAWLER_URL}/bookmarks/${encodeURIComponent(tweetId)}`
       )
       url.searchParams.set('account', account)
-      const res = await fetch(url.toString(), {
+      const res = await fetch(url.href, {
         method: 'DELETE',
         signal: controller.signal,
       })

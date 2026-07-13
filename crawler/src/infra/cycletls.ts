@@ -32,7 +32,7 @@ export async function cycleTLSFetch(
     typeof input === 'string'
       ? input
       : input instanceof URL
-        ? input.toString()
+        ? input.href
         : input.url
 
   const method = (init?.method ?? 'GET').toUpperCase()
@@ -87,7 +87,7 @@ export async function cycleTLSFetch(
       const proxyUrl = new URL(normalized)
       proxyUrl.username = proxyUsername
       proxyUrl.password = proxyPassword
-      proxy = proxyUrl.toString()
+      proxy = proxyUrl.href
     } else {
       proxy = normalized
     }

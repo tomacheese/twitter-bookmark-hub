@@ -21,10 +21,9 @@ function debounce<T extends () => void>(
     }, delay)
   }) as unknown as T
   const cancel = () => {
-    if (timer !== null) {
-      clearTimeout(timer)
-      timer = null
-    }
+    if (timer === null) return
+    clearTimeout(timer)
+    timer = null
   }
   return { fn: debouncedFn, cancel }
 }
@@ -126,13 +125,13 @@ export function useBookmarks() {
       limit: limit.value,
       sort: sortOrder.value,
       sortBy: sortBy.value,
-      ...(debouncedSearchQuery.value ? { q: debouncedSearchQuery.value } : {}),
-      ...(debouncedSearchQuery.value ? { searchIn: searchIn.value } : {}),
-      ...(selectedAccount.value ? { account: selectedAccount.value } : {}),
-      ...(selectedCategory.value === null
-        ? {}
-        : { category: selectedCategory.value }),
-      ...(selectedTag.value ? { tag: selectedTag.value } : {}),
+      ...(debouncedSearchQuery.value && { q: debouncedSearchQuery.value }),
+      ...(debouncedSearchQuery.value && { searchIn: searchIn.value }),
+      ...(selectedAccount.value && { account: selectedAccount.value }),
+      ...(selectedCategory.value !== null && {
+        category: selectedCategory.value,
+      }),
+      ...(selectedTag.value && { tag: selectedTag.value }),
     }
   }
 

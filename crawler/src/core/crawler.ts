@@ -250,7 +250,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
             () =>
               client.getTweetApi().getBookmarks({
                 count: BOOKMARKS_PER_PAGE,
-                ...(cursor === undefined ? {} : { cursor }),
+                ...(cursor !== undefined && { cursor }),
               }),
             { operationName: `getBookmarks page ${page}`, maxRetries: 3 }
           )

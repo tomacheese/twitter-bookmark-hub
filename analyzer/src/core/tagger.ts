@@ -548,6 +548,9 @@ export function extractNouns(
   const totalTokens = tokens.length
 
   // YAKE インスパイアのスコアで降順ソートし、上位 MAX_TAGS_PER_TWEET 件を返す
+  // Iterator#toArray() は tsconfig の lib (ES2023) が対応していないため、
+  // 型解決できず any 化してしまう。lib を上げずスプレッドのままにする。
+  // eslint-disable-next-line unicorn/prefer-iterator-to-array, unicorn/prefer-direct-iteration
   return [...candidates.entries()]
     .map(([word, { firstIndex, frequency }]) => ({
       word,
