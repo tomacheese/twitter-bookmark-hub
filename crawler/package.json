@@ -32,7 +32,7 @@
     "@types/node-cron": "3.0.11",
     "@types/tough-cookie": "4.0.5",
     "@types/ws": "8.18.1",
-    "eslint": "10.6.0",
+    "eslint": "10.7.0",
     "prettier": "3.9.5",
     "run-z": "2.1.0",
     "typescript": "6.0.3"
