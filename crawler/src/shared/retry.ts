@@ -74,7 +74,7 @@ export async function withRetry<T>(
       // レートリミット (429/403): リトライ回数を消費せずに待機してから再試行する
       // Twitter は 429 だけでなく 403 もレートリミットとして返すことがある
       // maxRateLimitRetries を超えた場合はエラーをスローして無限ループを防ぐ
-      if ((status === 429 || status === 403) && response) {
+      if (response && (status === 429 || status === 403)) {
         if (rateLimitRetries >= maxRateLimitRetries) {
           logger.error(
             `${operationName}: Rate limit retries exceeded (${maxRateLimitRetries}). Giving up.`
