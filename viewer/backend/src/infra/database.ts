@@ -302,7 +302,7 @@ export function getBookmarks(
     )
     bindValues.push(effectiveCategoryId)
   }
-  if (params.tag && tagsTableExists) {
+  if (tagsTableExists && params.tag) {
     conditions.push(
       'EXISTS (SELECT 1 FROM tweet_tags tt JOIN tags tg ON tt.tag_id = tg.id WHERE tt.tweet_id = t.tweet_id AND tg.name = ?)'
     )
