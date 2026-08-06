@@ -14,7 +14,7 @@
     "fix:prettier": "prettier --write src"
   },
   "dependencies": {
-    "@book000/node-utils": "1.25.26",
+    "@book000/node-utils": "1.25.29",
     "@hono/node-server": "2.0.12",
     "@the-convocation/twitter-scraper": "0.22.3",
     "@twitter-bookmark-hub/shared": "workspace:*",

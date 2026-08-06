@@ -11,8 +11,8 @@ importers:
   analyzer:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.26
-        version: 1.25.26(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
+        specifier: 1.25.29
+        version: 1.25.29(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
       '@hono/node-server':
         specifier: 2.0.12
         version: 2.0.12(hono@4.12.33)
@@ -60,8 +60,8 @@ importers:
   crawler:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.26
-        version: 1.25.26(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
+        specifier: 1.25.29
+        version: 1.25.29(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
       '@hono/node-server':
         specifier: 2.0.12
         version: 2.0.12(hono@4.12.33)
@@ -136,8 +136,8 @@ importers:
   viewer/backend:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.26
-        version: 1.25.26(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
+        specifier: 1.25.29
+        version: 1.25.29(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
       '@hono/node-server':
         specifier: 2.0.12
         version: 2.0.12(hono@4.12.33)
@@ -759,8 +759,8 @@ packages:
     peerDependencies:
       eslint: 10.8.0
 
-  '@book000/node-utils@1.25.26':
-    resolution: {integrity: sha512-Qic4kHjLxoGT56+jpXH8mqGxd3g371lOtYBz9gwNi5Gkqz+iNELeyWZQFa0RwI90OVrik/RnW/DhCHc5XARPCg==}
+  '@book000/node-utils@1.25.29':
+    resolution: {integrity: sha512-1QiNmVfwvCT/R78GZt7iI0qGJZms8GJT2ZA3cP9r9ncxo56u5cgods8pk0WNvnj+84BZBfBzBhtW7nG0n+rZmg==}
 
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
@@ -4296,7 +4296,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@book000/node-utils@1.25.26(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))':
+  '@book000/node-utils@1.25.29(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))':
     dependencies:
       '@sentry/node': 10.68.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
       cycle: 1.0.3
