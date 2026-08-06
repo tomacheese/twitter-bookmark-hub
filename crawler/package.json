@@ -20,7 +20,7 @@
     "@twitter-bookmark-hub/shared": "workspace:*",
     "better-sqlite3": "13.0.2",
     "cycletls": "2.0.5",
-    "hono": "4.12.34",
+    "hono": "4.13.0",
     "node-cron": "4.6.0",
     "tsx": "4.23.5",
     "twitter-openapi-typescript": "0.0.56"
