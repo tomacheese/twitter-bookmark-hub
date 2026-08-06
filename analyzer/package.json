@@ -21,7 +21,7 @@
     "better-sqlite3": "13.0.2",
     "hono": "4.12.34",
     "stopword": "3.1.5",
-    "tsx": "4.23.4"
+    "tsx": "4.23.5"
   },
   "devDependencies": {
     "@book000/eslint-config": "1.16.28",
