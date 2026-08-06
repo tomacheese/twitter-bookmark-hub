@@ -15,7 +15,7 @@ importers:
         version: 1.25.26(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
       '@hono/node-server':
         specifier: 2.0.12
-        version: 2.0.12(hono@4.12.33)
+        version: 2.0.12(hono@4.12.34)
       '@patdx/kuromoji':
         specifier: 1.0.4
         version: 1.0.4
@@ -26,8 +26,8 @@ importers:
         specifier: 13.0.2
         version: 13.0.2
       hono:
-        specifier: 4.12.33
-        version: 4.12.33
+        specifier: 4.12.34
+        version: 4.12.34
       stopword:
         specifier: 3.1.5
         version: 3.1.5
@@ -64,7 +64,7 @@ importers:
         version: 1.25.26(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
       '@hono/node-server':
         specifier: 2.0.12
-        version: 2.0.12(hono@4.12.33)
+        version: 2.0.12(hono@4.12.34)
       '@the-convocation/twitter-scraper':
         specifier: 0.22.3
         version: 0.22.3(cycletls@2.0.5)
@@ -78,8 +78,8 @@ importers:
         specifier: 2.0.5
         version: 2.0.5
       hono:
-        specifier: 4.12.33
-        version: 4.12.33
+        specifier: 4.12.34
+        version: 4.12.34
       node-cron:
         specifier: 4.6.0
         version: 4.6.0
@@ -140,7 +140,7 @@ importers:
         version: 1.25.26(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
       '@hono/node-server':
         specifier: 2.0.12
-        version: 2.0.12(hono@4.12.33)
+        version: 2.0.12(hono@4.12.34)
       '@twitter-bookmark-hub/shared':
         specifier: workspace:*
         version: link:../../shared
@@ -148,8 +148,8 @@ importers:
         specifier: 13.0.2
         version: 13.0.2
       hono:
-        specifier: 4.12.33
-        version: 4.12.33
+        specifier: 4.12.34
+        version: 4.12.34
       tsx:
         specifier: 4.23.4
         version: 4.23.4
@@ -2274,10 +2274,6 @@ packages:
     resolution: {integrity: sha512-7ACyT3wmyp3I61S4fG682L0VA2RGD9otkqGJIwNUMF1SWUombIIk+af1unuDYgMm082aHYwD+mzJvv9Iu8dsgg==}
     engines: {node: '>=18'}
 
-  globals@17.8.0:
-    resolution: {integrity: sha512-Zz/LMDZScFmkakeL2cTHzf+PbWKdpU3uclqkZT7TjDG58j5WPt0PpA+n9uPI24fZtlw07q0OtEi84K+umsRzqQ==}
-    engines: {node: '>=18'}
-
   globals@17.9.0:
     resolution: {integrity: sha512-m/MvAW61QVU5VDNF1Vj8axt016h8w7L5TU1e9zlab7XIttAT2YAlCwl75K1fOqvMM9apmD7lbCIRhpfkhmxhCg==}
     engines: {node: '>=18'}
@@ -2326,8 +2322,8 @@ packages:
   headers-polyfill@3.3.0:
     resolution: {integrity: sha512-5e57etwBpNcDc0b6KCVWEh/Ro063OxPvzVimUdM0/tsYM/T7Hfy3kknIGj78SFTOhNd8AZY41U8mOHoO4LzmIQ==}
 
-  hono@4.12.33:
-    resolution: {integrity: sha512-+SwvkaiJtxsiPjhy9LivY/1m7UsNqCJetM1BrZl9A5DkQhlbHQDU730mMiDPWjnoCYOM8Chf3WrCJw27kNTPFQ==}
+  hono@4.12.34:
+    resolution: {integrity: sha512-GqXJqY/xJkJmuloTrnV1ZEXG3fqte+VjkUqoRNZXcrUidiUOP4fMSIHHY4tsqZBK++kVyWmt/AAfSUuy57/eSA==}
     engines: {node: '>=16.9.0'}
 
   html-escaper@3.0.3:
@@ -4451,9 +4447,9 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@hono/node-server@2.0.12(hono@4.12.33)':
+  '@hono/node-server@2.0.12(hono@4.12.34)':
     dependencies:
-      hono: 4.12.33
+      hono: 4.12.34
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -5897,8 +5893,6 @@ snapshots:
 
   globals@15.15.0: {}
 
-  globals@17.8.0: {}
-
   globals@17.9.0: {}
 
   globalthis@1.0.4:
@@ -5936,7 +5930,7 @@ snapshots:
 
   headers-polyfill@3.3.0: {}
 
-  hono@4.12.33: {}
+  hono@4.12.34: {}
 
   html-escaper@3.0.3: {}
 
