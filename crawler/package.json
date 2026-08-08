@@ -22,7 +22,7 @@
     "cycletls": "2.0.5",
     "hono": "4.13.0",
     "node-cron": "4.6.0",
-    "tsx": "4.23.5",
+    "tsx": "4.23.6",
     "twitter-openapi-typescript": "0.0.56"
   },
   "devDependencies": {
