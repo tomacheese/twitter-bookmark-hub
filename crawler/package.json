@@ -18,7 +18,7 @@
     "@hono/node-server": "2.1.0",
     "@the-convocation/twitter-scraper": "0.22.3",
     "@twitter-bookmark-hub/shared": "workspace:*",
-    "better-sqlite3": "13.0.2",
+    "better-sqlite3": "13.0.3",
     "cycletls": "2.0.5",
     "hono": "4.13.0",
     "node-cron": "4.6.0",
