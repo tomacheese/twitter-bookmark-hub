@@ -37,8 +37,8 @@ importers:
         version: 4.23.11
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.34
-        version: 1.16.34(eslint@10.8.1)(typescript@6.0.3)
+        specifier: 1.16.35
+        version: 1.16.35(eslint@10.8.1)(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -92,8 +92,8 @@ importers:
         version: 0.0.56
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.34
-        version: 1.16.34(eslint@10.8.1)(typescript@6.0.3)
+        specifier: 1.16.35
+        version: 1.16.35(eslint@10.8.1)(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -156,8 +156,8 @@ importers:
         version: 4.23.11
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.34
-        version: 1.16.34(eslint@10.8.1)(typescript@6.0.3)
+        specifier: 1.16.35
+        version: 1.16.35(eslint@10.8.1)(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -190,8 +190,8 @@ importers:
         version: 3.5.41(typescript@6.0.3)
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.34
-        version: 1.16.34(eslint@10.8.1)(typescript@6.0.3)
+        specifier: 1.16.35
+        version: 1.16.35(eslint@10.8.1)(typescript@6.0.3)
       '@types/node':
         specifier: 25.9.5
         version: 25.9.5
@@ -755,8 +755,8 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
-  '@book000/eslint-config@1.16.34':
-    resolution: {integrity: sha512-wQKnuxn1V7ZW7W8AciNxDbkLUfcQaUKpYkofDN87pI54qWjDZNOckqy1NqFNdqvU5oszXEDOG4VibqRRKqylSg==}
+  '@book000/eslint-config@1.16.35':
+    resolution: {integrity: sha512-Y9awlbAewcUiq5incZu9zz70eq0SQoKEkpGCH0aUMbNAZBUtGTaAResw8K8tvmOBbAodBPd5FYH4VIAS36h5HQ==}
     peerDependencies:
       eslint: 10.8.1
 
@@ -4262,7 +4262,7 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@book000/eslint-config@1.16.34(eslint@10.8.1)(typescript@6.0.3)':
+  '@book000/eslint-config@1.16.35(eslint@10.8.1)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/parser': 8.66.0(eslint@10.8.1)(typescript@6.0.3)
       eslint: 10.8.1
