@@ -25,8 +25,7 @@ RUN --mount=type=cache,id=pnpm-analyzer,target=/pnpm/store pnpm install --offlin
 
 COPY analyzer/ ./analyzer/
 
-# pnpm v11 以降では inject-workspace-packages がロックファイルに記録されなくなったため --legacy フラグが必要
-RUN pnpm --filter twitter-bookmark-hub-analyzer deploy --legacy /deploy
+RUN pnpm --filter twitter-bookmark-hub-analyzer deploy /deploy
 
 # ---- Stage 2: ランタイム ----
 FROM node:24-alpine AS runner
@@ -42,5 +41,8 @@ ENV DATA_DIR=/data \
     ANALYZER_PORT=3002
 
 COPY --from=builder /deploy .
+
+# 最終イメージで workspace 依存が解決できることをビルド時に検証
+RUN node_modules/.bin/tsx -e "import('@twitter-bookmark-hub/shared').then(() => console.log('shared import ok'))"
 
 CMD ["node_modules/.bin/tsx", "src/main.ts"]

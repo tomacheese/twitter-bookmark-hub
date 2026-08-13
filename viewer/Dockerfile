@@ -78,8 +78,7 @@ COPY viewer/backend/ ./viewer/backend/
 COPY --from=frontend-builder /app/viewer/frontend/dist ./viewer/backend/public
 
 # devDependencies を除いた本番環境用スタンドアローンパッケージを作成する
-# pnpm v11 以降では inject-workspace-packages がロックファイルに記録されなくなったため --legacy フラグが必要
-RUN pnpm --filter twitter-bookmark-hub-backend deploy --legacy /deploy
+RUN pnpm --filter twitter-bookmark-hub-backend deploy /deploy
 
 # ---- Stage 3: ランタイム ----
 FROM node:24-alpine AS runner
@@ -99,5 +98,8 @@ ENV DATA_DIR=/data \
 
 # backend-builder ステージで作成したスタンドアローンパッケージをコピー
 COPY --from=backend-builder /deploy .
+
+# 最終イメージで workspace 依存が解決できることをビルド時に検証
+RUN node_modules/.bin/tsx -e "import('@twitter-bookmark-hub/shared').then(() => console.log('shared import ok'))"
 
 CMD ["node_modules/.bin/tsx", "src/main.ts"]

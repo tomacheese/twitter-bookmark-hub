@@ -4,6 +4,7 @@ packages:
   - viewer/backend
   - viewer/frontend
   - analyzer
+injectWorkspacePackages: true
 allowBuilds:
   better-sqlite3: true
   esbuild: true
