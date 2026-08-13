@@ -19,7 +19,7 @@
     "@twitter-bookmark-hub/shared": "workspace:*",
     "better-sqlite3": "13.0.3",
     "hono": "4.13.1",
-    "tsx": "4.23.11"
+    "tsx": "4.23.12"
   },
   "devDependencies": {
     "@book000/eslint-config": "1.16.35",
