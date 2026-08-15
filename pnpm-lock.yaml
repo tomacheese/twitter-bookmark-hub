@@ -37,8 +37,8 @@ importers:
         version: 4.23.12
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.37
-        version: 1.16.37(eslint@10.8.1)(typescript@6.0.3)
+        specifier: 1.16.38
+        version: 1.16.38(eslint@10.8.1)(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -92,8 +92,8 @@ importers:
         version: 0.0.56
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.37
-        version: 1.16.37(eslint@10.8.1)(typescript@6.0.3)
+        specifier: 1.16.38
+        version: 1.16.38(eslint@10.8.1)(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -156,8 +156,8 @@ importers:
         version: 4.23.12
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.37
-        version: 1.16.37(eslint@10.8.1)(typescript@6.0.3)
+        specifier: 1.16.38
+        version: 1.16.38(eslint@10.8.1)(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -190,8 +190,8 @@ importers:
         version: 3.5.41(typescript@6.0.3)
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.37
-        version: 1.16.37(eslint@10.8.1)(typescript@6.0.3)
+        specifier: 1.16.38
+        version: 1.16.38(eslint@10.8.1)(typescript@6.0.3)
       '@types/node':
         specifier: 25.9.5
         version: 25.9.5
@@ -755,8 +755,8 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
-  '@book000/eslint-config@1.16.37':
-    resolution: {integrity: sha512-7ETNfp4zHk9fOwyRY3gnAzADsP7pDdzFz7zxsAtAS8l5t75U9hF906+BsSQW3wfJGqpCRM1kKgxIRlkcMoZbng==}
+  '@book000/eslint-config@1.16.38':
+    resolution: {integrity: sha512-Ze0STlfQYESfaW7WArEtyNP7GZwjmmizs2ceB72USagby/B8VA50kJyVuzUSgXf7cz6QMyr+929v+By9kKsABQ==}
     peerDependencies:
       eslint: 10.8.1
 
@@ -2255,6 +2255,10 @@ packages:
 
   globals@17.10.0:
     resolution: {integrity: sha512-V0kztuWST2k8A/VbxAY8+L+7+Rgo3fyA24IHRLrZp7HOzJjV0gHSaZUjK9lpP/IrBSNite2tZ1prhRkinRu1CA==}
+    engines: {node: '>=18'}
+
+  globals@17.11.0:
+    resolution: {integrity: sha512-Z2I8hM+PbJDXQDq3Icgpzv+mPdwr68iZUU9d5WW4FuXfDUQfkZaZuvjMv42/5crNyw154+9+VWXbYrUgDXbxNw==}
     engines: {node: '>=18'}
 
   globalthis@1.0.4:
@@ -4262,13 +4266,13 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@book000/eslint-config@1.16.37(eslint@10.8.1)(typescript@6.0.3)':
+  '@book000/eslint-config@1.16.38(eslint@10.8.1)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/parser': 8.67.0(eslint@10.8.1)(typescript@6.0.3)
       eslint: 10.8.1
       eslint-config-prettier: 10.1.8(eslint@10.8.1)
       eslint-plugin-unicorn: 73.0.0(eslint@10.8.1)
-      globals: 17.10.0
+      globals: 17.11.0
       neostandard: 0.13.0(eslint@10.8.1)(typescript@6.0.3)
       typescript-eslint: 8.67.0(eslint@10.8.1)(typescript@6.0.3)
     transitivePeerDependencies:
@@ -5838,6 +5842,8 @@ snapshots:
   globals@15.15.0: {}
 
   globals@17.10.0: {}
+
+  globals@17.11.0: {}
 
   globalthis@1.0.4:
     dependencies:
