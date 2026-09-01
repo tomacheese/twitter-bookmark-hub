@@ -5,6 +5,7 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "start": "tsx src/main.ts",
+    "test": "DATA_DIR=$(mktemp -d) tsx --test src/**/*.test.ts",
     "lint": "run-z lint:prettier,lint:eslint,lint:tsc",
     "lint:eslint": "eslint . -c eslint.config.mjs",
     "lint:prettier": "prettier --check src",

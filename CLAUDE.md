@@ -247,7 +247,7 @@ config.json (アカウント設定)
   ├── scheduler.ts  ← cron (CRAWL_SCHEDULE)
   ├── server.ts     ← GET /health, POST/GET /crawl(/status), POST/DELETE /bookmarks
   └── core/crawler.ts
-      ├── infra/auth.ts        ← Cookie 取得 (env → ファイルキャッシュ → ライブログイン)
+      ├── infra/auth.ts        ← Cookie 取得 (env → ファイルキャッシュ → 設定済み issuer → ライブログイン)
       ├── infra/bookmarks-api.ts ← twitter-openapi-typescript + CycleTLS
       ├── infra/database.ts    → data/db.sqlite (WAL モード)
       └── (ANALYZER_URL 設定時) → analyzer /analyze・/analyze/prune-noise を呼び出し
@@ -305,7 +305,8 @@ SQLite。11 テーブル構成（うち `tags` / `tweet_tags` / `categories` / `
 Cookie の取得順序 (優先度順):
 1. 環境変数 `TWITTER_AUTH_TOKEN_{USERNAME}` / `TWITTER_CT0_{USERNAME}`
 2. `$DATA_DIR/cookies-{username}.json` のキャッシュ (有効期限 7 日)
-3. twitter-scraper + CycleTLS によるライブログイン
+3. `TWITTER_COOKIE_ISSUER_URL` で設定された Cookie issuer
+4. twitter-scraper + CycleTLS によるライブログイン
 
 ログインリトライ戦略 (失敗時にローテーション):
 1. メールアドレス + xpff OFF
@@ -314,7 +315,7 @@ Cookie の取得順序 (優先度順):
 
 エラー別待機:
 - HTTP 503: 指数バックオフ (最大 30 秒)
-- HTTP 399 (不審なアクティビティ): 120 秒待機
+- HTTP 399 (不審なアクティビティ): 即時停止し、同一アカウントの認証情報ログインをプロセス内で 5 分間抑止
 - DenyLoginSubtask: 3-5 秒待機、次の戦略に切替
 
 ### infra/cycletls.ts — TLS フィンガープリント偽装
@@ -428,6 +429,7 @@ Chrome 120 on Windows 10 の JA3 TLS フィンガープリントを使用。`cyc
 | `PROXY_PASSWORD` | - | プロキシ認証パスワード |
 | `TWITTER_AUTH_TOKEN_{USERNAME}` | - | アカウント個別の auth_token Cookie (ログイン省略) |
 | `TWITTER_CT0_{USERNAME}` | - | アカウント個別の ct0 Cookie (ログイン省略) |
+| `TWITTER_COOKIE_ISSUER_URL` | - | Cookie issuer の URL。認証情報とセッション Cookie を扱うため、信頼できる内部/プライベートネットワークのエンドポイントだけを指定し、公開してはならない |
 | `ANALYZER_URL` | - | analyzer サービスの URL。設定時、クロール完了後に自動分析 (`/analyze`) と IDF ノイズプルーニング (`/analyze/prune-noise`) を実行する |
 
 ### viewer/backend
