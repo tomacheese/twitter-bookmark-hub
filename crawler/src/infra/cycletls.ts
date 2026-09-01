@@ -14,6 +14,30 @@ export async function getCycleTLSInstance(): Promise<CycleTLSClient> {
   return cycleTLSInstancePromise
 }
 
+/** トランスポートエラー診断メッセージに含める本文の最大文字数 */
+const TRANSPORT_ERROR_DIAGNOSTIC_MAX_LENGTH = 500
+
+/**
+ * CycleTLS が接続失敗・ボディ読み取り失敗などのトランスポートエラー時に
+ * 返す疑似レスポンス形状かどうかを判定する。
+ * cycletls@2.0.5 の実装はこの場合 Promise を reject せず、
+ * ヘッダーなし・data に Go 側のエラーメッセージ文字列を入れて resolve する。
+ * この形状を正規の HTTP レスポンスとして扱うと、呼び出し元の .json() が
+ * Go のエラーメッセージを JSON としてパースしようとし、誤った SyntaxError を投げてしまう。
+ *
+ * @param response CycleTLS のレスポンスオブジェクト
+ * @returns トランスポートエラー形状なら true
+ */
+export function isCycleTLSTransportError(response: {
+  headers: Record<string, unknown>
+  data: unknown
+}): boolean {
+  return (
+    Object.keys(response.headers).length === 0 &&
+    typeof response.data === 'string'
+  )
+}
+
 /**
  * CycleTLS 経由で HTTP リクエストを送信する fetch 互換関数。
  * TLS フィンガープリント (JA3) を Chrome に偽装して Twitter のボット検出を回避する。
@@ -111,6 +135,16 @@ export async function cycleTLSFetch(
     options,
     method.toLowerCase() as 'head' | 'get' | 'post' | 'put' | 'delete' | 'patch'
   )
+
+  if (isCycleTLSTransportError(response)) {
+    const diagnostic =
+      typeof response.data === 'string'
+        ? response.data.slice(0, TRANSPORT_ERROR_DIAGNOSTIC_MAX_LENGTH)
+        : ''
+    throw new Error(
+      `CycleTLS transport error (status=${response.status}): ${diagnostic}`
+    )
+  }
 
   const responseHeaders = new Headers()
   for (const [key, value] of Object.entries(response.headers)) {
