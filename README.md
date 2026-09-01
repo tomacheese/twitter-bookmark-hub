@@ -82,6 +82,7 @@ docker compose --profile analyzer up -d
 | `PROXY_SERVER` | - | プロキシサーバー |
 | `PROXY_USERNAME` | - | プロキシ認証ユーザー名 |
 | `PROXY_PASSWORD` | - | プロキシ認証パスワード |
+| `TWITTER_COOKIE_ISSUER_URL` | - | Cookie issuer の URL。パスワード・OTP を送信しセッション Cookie を受け取るため、信頼できる内部/プライベートネットワークのエンドポイントだけを指定し、公開してはならない |
 | `ANALYZER_URL` | - | analyzer サービスの URL（設定時にクロール後に自動分析を実行する） |
 
 ### viewer

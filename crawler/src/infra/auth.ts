@@ -15,6 +15,15 @@ const logger = Logger.configure('auth')
 /** Cookie の有効期間 (日) */
 const COOKIE_EXPIRY_DAYS = 7
 
+/** Cookie issuer の応答待機時間 (ミリ秒) */
+const COOKIE_ISSUER_TIMEOUT_MS = 300_000
+
+/** 399 発生後に同じアカウントの認証情報ログインを止める時間 (ミリ秒) */
+const LOGIN_399_COOLDOWN_MS = 5 * 60 * 1000
+
+/** アカウントごとの 399 ログイン抑止期限 */
+const login399Cooldowns = new Map<string, number>()
+
 /**
  * 環境変数からアカウント別 Cookie を取得する。
  * TWITTER_AUTH_TOKEN_{USERNAME} / TWITTER_CT0_{USERNAME} を参照する。
@@ -105,6 +114,83 @@ export function saveCookies(
 }
 
 /**
+ * 設定済みの Cookie issuer から Cookie を取得する。issuer の失敗時は null を返す。
+ * @param account アカウント情報
+ * @returns Cookie または null
+ */
+async function getCookiesFromIssuer(
+  account: AccountConfig
+): Promise<{ authToken: string; ct0: string } | null> {
+  const issuerUrl = process.env.TWITTER_COOKIE_ISSUER_URL
+  if (!issuerUrl) {
+    return null
+  }
+
+  try {
+    const response = await fetch(`${issuerUrl.replace(/\/$/, '')}/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        username: account.username,
+        password: account.password,
+        ...(account.otp_secret && { otp_secret: account.otp_secret }),
+      }),
+      signal: AbortSignal.timeout(COOKIE_ISSUER_TIMEOUT_MS),
+    })
+    if (!response.ok) {
+      logger.warn(`[${account.username}] Cookie issuer request failed.`)
+      return null
+    }
+
+    const data: unknown = await response.json()
+    if (
+      typeof data !== 'object' ||
+      data === null ||
+      typeof (data as Record<string, unknown>).auth_token !== 'string' ||
+      typeof (data as Record<string, unknown>).ct0 !== 'string'
+    ) {
+      logger.warn(
+        `[${account.username}] Cookie issuer returned invalid cookies.`
+      )
+      return null
+    }
+
+    const cookies = data as { auth_token: string; ct0: string }
+    return { authToken: cookies.auth_token, ct0: cookies.ct0 }
+  } catch {
+    logger.warn(`[${account.username}] Cookie issuer request failed.`)
+    return null
+  }
+}
+
+/**
+ * アカウントの認証情報ログインが 399 のクールダウン中かを返す。
+ * @param username アカウントのユーザー名
+ * @returns クールダウン中か
+ */
+function isLogin399CooldownActive(username: string): boolean {
+  const expiresAt = login399Cooldowns.get(username)
+  if (!expiresAt) {
+    return false
+  }
+  if (expiresAt > Date.now()) {
+    return true
+  }
+  login399Cooldowns.delete(username)
+  return false
+}
+
+/**
+ * エラーが X の 399 を示すかを返す。
+ * @param error 発生したエラー
+ * @returns 399 エラーか
+ */
+function isXError399(error: unknown): boolean {
+  const status = (error as { response?: { status?: unknown } }).response?.status
+  return status === 399 || /\b399\b/.test(String(error))
+}
+
+/**
  * Scraper インスタンスを生成する。
  * 試行ごとにブラウザ指紋をランダム化してフィンガープリントによる拒否を回避する。
  *
@@ -154,7 +240,7 @@ const LOGIN_STRATEGIES: readonly LoginStrategy[] = [
 /**
  * ログイン処理を複数の戦略でリトライする。
  * - 503 エラー: 指数バックオフ
- * - 399 エラー: 120 秒待機
+ * - 399 エラー: 同じ呼び出しではリトライせず、アカウントを一時的に抑止
  * - DenyLoginSubtask: 識別子・xpff を戦略に従って切り替えてリトライ
  *
  * @param account アカウント情報
@@ -183,6 +269,20 @@ export async function loginWithRetry(
       )
       return scraper
     } catch (error: unknown) {
+      const is399 = isXError399(error)
+      if (is399) {
+        login399Cooldowns.set(
+          account.username,
+          Date.now() + LOGIN_399_COOLDOWN_MS
+        )
+        logger.warn(
+          `[${account.username}] X error 399. Credential login is temporarily suppressed.`
+        )
+        throw new Error(
+          `[${account.username}] X login was rejected with error 399.`
+        )
+      }
+
       if (attempt >= maxAttempts) {
         throw error
       }
@@ -190,7 +290,6 @@ export async function loginWithRetry(
       const message = error instanceof Error ? error.message : String(error)
       const is503 =
         message.includes('503') || message.includes('Service Unavailable')
-      const is399 = /\b399\b/.test(message)
       const isDeny = message.includes('DenyLoginSubtask')
 
       if (is503) {
@@ -199,11 +298,6 @@ export async function loginWithRetry(
           `[${account.username}] 503 error. Retrying in ${delay / 1000}s...`
         )
         await sleep(delay)
-      } else if (is399) {
-        logger.warn(
-          `[${account.username}] Error 399 (suspicious activity detected). Retrying in 120s...`
-        )
-        await sleep(120_000)
       } else if (isDeny) {
         const delay = 3000 + Math.floor(Math.random() * 2000)
         logger.warn(
@@ -225,7 +319,8 @@ export async function loginWithRetry(
  * Cookie を取得する。以下の優先順で取得する:
  * 1. 環境変数 TWITTER_AUTH_TOKEN / TWITTER_CT0
  * 2. Cookie キャッシュファイル
- * 3. twitter-scraper でログイン
+ * 3. 設定済み Cookie issuer
+ * 4. twitter-scraper でログイン
  *
  * @param account アカウント情報
  * @returns auth_token と ct0
@@ -247,6 +342,20 @@ export async function getAuthCookies(
   if (cached) {
     logger.info(`[${account.username}] Using cached cookies.`)
     return { authToken: cached.auth_token, ct0: cached.ct0 }
+  }
+
+  // 設定済み Cookie issuer から取得
+  const fromIssuer = await getCookiesFromIssuer(account)
+  if (fromIssuer) {
+    saveCookies(account.username, fromIssuer.authToken, fromIssuer.ct0)
+    logger.info(`[${account.username}] Cookie issuer succeeded. Cookies saved.`)
+    return fromIssuer
+  }
+
+  if (isLogin399CooldownActive(account.username)) {
+    throw new Error(
+      `[${account.username}] Credential login is temporarily unavailable due to a recent X error 399 cooldown.`
+    )
   }
 
   // twitter-scraper でログイン
