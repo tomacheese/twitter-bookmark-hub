@@ -14,7 +14,7 @@
     "fix:prettier": "prettier --write src"
   },
   "dependencies": {
-    "@book000/node-utils": "1.25.79",
+    "@book000/node-utils": "1.25.80",
     "@hono/node-server": "2.1.1",
     "@twitter-bookmark-hub/shared": "workspace:*",
     "better-sqlite3": "13.0.3",
