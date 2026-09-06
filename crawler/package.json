@@ -2,7 +2,7 @@
   "name": "twitter-bookmark-hub-crawler",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@12.3.0",
+  "packageManager": "pnpm@12.3.1",
   "scripts": {
     "start": "tsx src/main.ts",
     "test": "DATA_DIR=$(mktemp -d) tsx --test src/**/*.test.ts",
