@@ -113,8 +113,8 @@ importers:
   analyzer:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.90
-        version: 1.25.90(@opentelemetry/core@2.11.0)
+        specifier: 1.25.91
+        version: 1.25.91(@opentelemetry/core@2.11.0)
       '@hono/node-server':
         specifier: 2.1.1
         version: 2.1.1(hono@4.13.7)
@@ -162,8 +162,8 @@ importers:
   crawler:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.90
-        version: 1.25.90(@opentelemetry/core@2.11.0)
+        specifier: 1.25.91
+        version: 1.25.91(@opentelemetry/core@2.11.0)
       '@hono/node-server':
         specifier: 2.1.1
         version: 2.1.1(hono@4.13.7)
@@ -238,8 +238,8 @@ importers:
   viewer/backend:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.90
-        version: 1.25.90(@opentelemetry/core@2.11.0)
+        specifier: 1.25.91
+        version: 1.25.91(@opentelemetry/core@2.11.0)
       '@hono/node-server':
         specifier: 2.1.1
         version: 2.1.1(hono@4.13.7)
@@ -850,8 +850,8 @@ packages:
     peerDependencies:
       eslint: 10.9.1
 
-  '@book000/node-utils@1.25.90':
-    resolution: {integrity: sha512-DmZ7DPZUfRfxXJUnAluyPcJJOakbz+J8X4a84kYCFoPqvfhnGCFoxJkCXj/tHfuS169W6W1Hk8pmZicw66MPWw==}
+  '@book000/node-utils@1.25.91':
+    resolution: {integrity: sha512-iH2g/wgxf7kiNNL1gyIjriJi1jb3PprZp7f8f/ZjpvgGNlGBp3BvMLgRKW6hxP7mBZSoupJerz56HsSreAC+xA==}
 
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
@@ -4336,7 +4336,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@book000/node-utils@1.25.90(@opentelemetry/core@2.11.0)':
+  '@book000/node-utils@1.25.91(@opentelemetry/core@2.11.0)':
     dependencies:
       '@sentry/node': 10.73.0(@opentelemetry/core@2.11.0)
       cycle: 1.0.3
