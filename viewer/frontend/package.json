@@ -22,7 +22,7 @@
     "@book000/eslint-config": "1.16.65",
     "@types/node": "25.9.6",
     "@typescript-eslint/parser": "8.70.0",
-    "@vitejs/plugin-vue": "6.0.8",
+    "@vitejs/plugin-vue": "6.0.9",
     "eslint": "10.10.0",
     "eslint-plugin-vue": "10.11.0",
     "globals": "17.12.0",
