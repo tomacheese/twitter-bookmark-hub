@@ -22,17 +22,18 @@ import { cycleTLSFetch } from './cycletls'
 function extractUrlEntities(entities: {
   urls?: { url: string; expandedUrl?: string; displayUrl: string }[]
 }): UrlEntity[] {
-  if (!entities.urls) return []
   return entities.urls
-    .filter(
-      (u): u is { url: string; expandedUrl: string; displayUrl: string } =>
-        Boolean(u.url && u.expandedUrl)
-    )
-    .map((u) => ({
-      url: u.url,
-      expandedUrl: u.expandedUrl,
-      displayUrl: u.displayUrl,
-    }))
+    ? entities.urls
+        .filter(
+          (u): u is { url: string; expandedUrl: string; displayUrl: string } =>
+            Boolean(u.url && u.expandedUrl)
+        )
+        .map((u) => ({
+          url: u.url,
+          expandedUrl: u.expandedUrl,
+          displayUrl: u.displayUrl,
+        }))
+    : []
 }
 
 /**
@@ -108,14 +109,14 @@ function extractGrokTranslation(tweet: TweetApiUtilsData['tweet']): {
 
   const data = grok.data
   // 翻訳テキストが空の場合はスキップ
-  if (!data.translation) return empty
-
-  return {
-    translatedText: data.translation,
-    sourceLanguage: data.sourceLanguage ?? null,
-    destinationLanguage: data.destinationLanguage ?? null,
-    translatedUrlEntities: extractUrlEntities(data.entities ?? {}),
-  }
+  return data.translation
+    ? {
+        translatedText: data.translation,
+        sourceLanguage: data.sourceLanguage ?? null,
+        destinationLanguage: data.destinationLanguage ?? null,
+        translatedUrlEntities: extractUrlEntities(data.entities ?? {}),
+      }
+    : empty
 }
 
 /**

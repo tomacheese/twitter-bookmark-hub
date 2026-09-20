@@ -86,12 +86,13 @@ function onHashChange() {
   currentView.value = newView
   // analyzer が無効なら settings URL でも実際にはメイン画面を表示している
   const isShowingMain = newView === 'main' || !analyzerEnabled.value
-  if (isShowingMain) {
-    const tag = parseTagFromHash()
-    if (selectedTag.value !== tag) {
-      // watchEffect がフィルタ変更を検知してリストをリセット・再取得する
-      selectedTag.value = tag
-    }
+  if (!isShowingMain) {
+    return
+  }
+  const tag = parseTagFromHash()
+  if (selectedTag.value !== tag) {
+    // watchEffect がフィルタ変更を検知してリストをリセット・再取得する
+    selectedTag.value = tag
   }
 }
 

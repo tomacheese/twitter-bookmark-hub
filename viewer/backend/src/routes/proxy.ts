@@ -21,15 +21,13 @@ const proxyHandler = async (c: Context) => {
     : ''
   const url = `${analyzerUrl}${path}${search}`
 
+  const hasBody = c.req.method !== 'GET' && c.req.method !== 'DELETE'
   const init: RequestInit = {
     method: c.req.method,
     headers: { 'Content-Type': 'application/json' },
     // analyzer が応答しない場合に長時間ぶら下がらないよう 10 秒でタイムアウトする
     signal: AbortSignal.timeout(10_000),
-  }
-
-  if (c.req.method !== 'GET' && c.req.method !== 'DELETE') {
-    init.body = await c.req.text()
+    ...(hasBody && { body: await c.req.text() }),
   }
 
   try {
@@ -43,10 +41,9 @@ const proxyHandler = async (c: Context) => {
       headers: { 'Content-Type': contentType },
     })
   } catch (error) {
-    if (error instanceof Error && error.name === 'TimeoutError') {
-      return c.json({ error: 'Analyzer service timed out' }, 504)
-    }
-    return c.json({ error: 'Analyzer service unavailable' }, 502)
+    return error instanceof Error && error.name === 'TimeoutError'
+      ? c.json({ error: 'Analyzer service timed out' }, 504)
+      : c.json({ error: 'Analyzer service unavailable' }, 502)
   }
 }
 

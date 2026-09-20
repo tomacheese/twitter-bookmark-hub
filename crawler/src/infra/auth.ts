@@ -38,10 +38,7 @@ export function getCookiesFromEnv(
   const envSuffix = username.toUpperCase()
   const authToken = process.env[`TWITTER_AUTH_TOKEN_${envSuffix}`]
   const ct0 = process.env[`TWITTER_CT0_${envSuffix}`]
-  if (authToken && ct0) {
-    return { authToken, ct0 }
-  }
-  return null
+  return authToken && ct0 ? { authToken, ct0 } : null
 }
 
 /**

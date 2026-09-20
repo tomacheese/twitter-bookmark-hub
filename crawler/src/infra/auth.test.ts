@@ -230,10 +230,9 @@ void test('503 errors still retry', async () => {
   let loginCalls = 0
   setLogin(() => {
     loginCalls++
-    if (loginCalls === 1) {
-      return Promise.reject(new Error('503 Service Unavailable'))
-    }
-    return Promise.resolve()
+    return loginCalls === 1
+      ? Promise.reject(new Error('503 Service Unavailable'))
+      : Promise.resolve()
   })
   useImmediateTimers()
 
@@ -247,10 +246,9 @@ void test('DenyLoginSubtask errors still retry', async () => {
   let loginCalls = 0
   setLogin(() => {
     loginCalls++
-    if (loginCalls === 1) {
-      return Promise.reject(new Error('DenyLoginSubtask'))
-    }
-    return Promise.resolve()
+    return loginCalls === 1
+      ? Promise.reject(new Error('DenyLoginSubtask'))
+      : Promise.resolve()
   })
   useImmediateTimers()
 

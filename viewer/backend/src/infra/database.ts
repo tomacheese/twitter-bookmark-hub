@@ -93,11 +93,12 @@ function parseMediaItems(raw: string | null): MediaItem[] {
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw) as unknown[]
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (item): item is MediaItem =>
-        item !== null && typeof item === 'object' && 'thumbUrl' in item
-    )
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (item): item is MediaItem =>
+            item !== null && typeof item === 'object' && 'thumbUrl' in item
+        )
+      : []
   } catch {
     return []
   }
@@ -113,11 +114,12 @@ function parseUrlEntities(raw: string | null): UrlEntity[] {
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw) as unknown[]
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (item): item is UrlEntity =>
-        item !== null && typeof item === 'object' && 'url' in item
-    )
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (item): item is UrlEntity =>
+            item !== null && typeof item === 'object' && 'url' in item
+        )
+      : []
   } catch {
     return []
   }
@@ -133,8 +135,9 @@ function parseTags(raw: string | null): string[] {
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw) as unknown[]
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((item): item is string => typeof item === 'string')
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string')
+      : []
   } catch {
     return []
   }
@@ -152,15 +155,16 @@ function parseCategories(
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw) as unknown[]
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (item): item is { id: number; name: string; color: string } =>
-        item !== null &&
-        typeof item === 'object' &&
-        'id' in item &&
-        'name' in item &&
-        'color' in item
-    )
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (item): item is { id: number; name: string; color: string } =>
+            item !== null &&
+            typeof item === 'object' &&
+            'id' in item &&
+            'name' in item &&
+            'color' in item
+        )
+      : []
   } catch {
     return []
   }

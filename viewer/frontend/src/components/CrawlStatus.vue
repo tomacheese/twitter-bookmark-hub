@@ -36,8 +36,7 @@ const ERROR_TYPE_LABELS: Record<string, string> = {
  * @returns 表示用ラベル
  */
 function errorTypeLabel(errorType: CrawlAccountResult['errorType']): string {
-  if (!errorType) return ''
-  return ERROR_TYPE_LABELS[errorType] ?? '❓ 不明なエラー'
+  return errorType ? (ERROR_TYPE_LABELS[errorType] ?? '❓ 不明なエラー') : ''
 }
 
 /**
@@ -52,8 +51,9 @@ function relativeTime(dateString: string): string {
 
   if (diff < 60) return `${diff} 秒前`
   if (diff < 3600) return `${Math.floor(diff / 60)} 分前`
-  if (diff < 86_400) return `${Math.floor(diff / 3600)} 時間前`
-  return `${Math.floor(diff / 86_400)} 日前`
+  return diff < 86_400
+    ? `${Math.floor(diff / 3600)} 時間前`
+    : `${Math.floor(diff / 86_400)} 日前`
 }
 </script>
 

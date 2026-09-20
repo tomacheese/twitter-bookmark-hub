@@ -37,10 +37,9 @@ export function crawlRoute(db: Database.Database): Hono {
         : { message: await res.text() }
       return c.json(data, res.status as ContentfulStatusCode)
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        return c.json({ error: 'Crawler service timed out.' }, 504)
-      }
-      return c.json({ error: 'Crawler service is unavailable.' }, 502)
+      return error instanceof Error && error.name === 'AbortError'
+        ? c.json({ error: 'Crawler service timed out.' }, 504)
+        : c.json({ error: 'Crawler service is unavailable.' }, 502)
     } finally {
       clearTimeout(timer)
     }
