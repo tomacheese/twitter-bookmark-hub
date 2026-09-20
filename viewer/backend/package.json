@@ -27,7 +27,7 @@
     "@types/node": "24.13.5",
     "@types/ws": "8.18.1",
     "eslint": "10.10.0",
-    "prettier": "3.9.7",
+    "prettier": "3.9.8",
     "run-z": "2.1.0",
     "typescript": "6.0.3"
   }
