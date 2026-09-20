@@ -153,9 +153,7 @@ function classifyError(
   // 注意: 403 はトークン期限切れでも発生するが、応答ボディを解析しない限り判別不可
   if (status === 429 || status === 403) return 'rate_limit'
   // その他の HTTP エラー
-  if (status !== undefined) return 'api'
-
-  return 'unknown'
+  return status === undefined ? 'unknown' : 'api'
 }
 
 /**
@@ -267,30 +265,31 @@ export async function runCrawl(db: Database.Database): Promise<void> {
               continue
             }
             const entry = extractBookmarkEntry(tweetResult)
-            if (entry) {
-              upsertTweetEntry(db, entry)
-              upsertBookmark(
-                db,
-                entry.tweetId,
-                account.username,
-                crawledAt,
-                globalPosition
-              )
-              crawledTweetIds.add(entry.tweetId)
-              // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
-              // 引用ツイート本文・カードタイトルも結合してタグ精度を高める
-              const tweetId = entry.tweetId
-              const analyzeText = [
-                entry.fullText,
-                entry.quotedTweet?.fullText,
-                entry.cardInfo?.title,
-              ]
-                .filter(Boolean)
-                .join('\n')
-              analyzeQueue.push(() => analyzeAndSave(db, tweetId, analyzeText))
-              globalPosition++
-              addedThisPage++
+            if (!entry) {
+              continue
             }
+            upsertTweetEntry(db, entry)
+            upsertBookmark(
+              db,
+              entry.tweetId,
+              account.username,
+              crawledAt,
+              globalPosition
+            )
+            crawledTweetIds.add(entry.tweetId)
+            // 即座に起動せず thunk として退積し、後で並列数制限付きで実行する
+            // 引用ツイート本文・カードタイトルも結合してタグ精度を高める
+            const tweetId = entry.tweetId
+            const analyzeText = [
+              entry.fullText,
+              entry.quotedTweet?.fullText,
+              entry.cardInfo?.title,
+            ]
+              .filter(Boolean)
+              .join('\n')
+            analyzeQueue.push(() => analyzeAndSave(db, tweetId, analyzeText))
+            globalPosition++
+            addedThisPage++
           }
 
           // ページ内の全ツイートの分析を並列で待つ（同時実行数を ANALYZER_CONCURRENCY に制限）

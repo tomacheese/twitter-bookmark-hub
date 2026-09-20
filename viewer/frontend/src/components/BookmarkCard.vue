@@ -35,13 +35,12 @@ const avatarHue = computed(
 const initial = computed(() => properties.item.userName.charAt(0).toUpperCase())
 
 const quotedAvatarHue = computed(() => {
-  if (!properties.item.quotedTweet) return 0
-  return (
-    [...properties.item.quotedTweet.screenName].reduce(
-      (accumulator, c) => accumulator + (c.codePointAt(0) ?? 0),
-      0
-    ) % 360
-  )
+  return properties.item.quotedTweet
+    ? [...properties.item.quotedTweet.screenName].reduce(
+        (accumulator, c) => accumulator + (c.codePointAt(0) ?? 0),
+        0
+      ) % 360
+    : 0
 })
 
 // ---- タイムスタンプ ----------------------------------------------------------
@@ -73,8 +72,7 @@ function formatRelativeTime(dateString: string): string {
   const sameYear = date.getFullYear() === now.getFullYear()
   const m = date.getMonth() + 1
   const d = date.getDate()
-  if (sameYear) return `${m}月${d}日`
-  return `${date.getFullYear()}年${m}月${d}日`
+  return sameYear ? `${m}月${d}日` : `${date.getFullYear()}年${m}月${d}日`
 }
 
 /**
@@ -248,25 +246,20 @@ watch(
   }
 )
 
-const textSegments = computed(() => {
-  if (mainViewMode.value === 'translated' && properties.item.translatedText) {
-    return parseTextSegments(
-      properties.item.translatedText,
-      properties.item.translatedUrlEntities
-    )
-  }
-  return parseTextSegments(
-    properties.item.fullText,
-    properties.item.urlEntities
-  )
-})
+const textSegments = computed(() =>
+  mainViewMode.value === 'translated' && properties.item.translatedText
+    ? parseTextSegments(
+        properties.item.translatedText,
+        properties.item.translatedUrlEntities
+      )
+    : parseTextSegments(properties.item.fullText, properties.item.urlEntities)
+)
 const quotedTextSegments = computed(() => {
   const qt = properties.item.quotedTweet
   if (!qt) return []
-  if (quotedViewMode.value === 'translated' && qt.translatedText) {
-    return parseTextSegments(qt.translatedText, qt.translatedUrlEntities)
-  }
-  return parseTextSegments(qt.fullText, qt.urlEntities)
+  return quotedViewMode.value === 'translated' && qt.translatedText
+    ? parseTextSegments(qt.translatedText, qt.translatedUrlEntities)
+    : parseTextSegments(qt.fullText, qt.urlEntities)
 })
 
 /** 言語コードを日本語ラベルに変換する。未知のコードはそのまま返す。 */
@@ -295,8 +288,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
  * @returns 日本語ラベル（未知のコードはそのまま返す）
  */
 function formatLanguage(code: string | null): string {
-  if (!code) return '他言語'
-  return LANGUAGE_LABELS[code] ?? code
+  return code ? (LANGUAGE_LABELS[code] ?? code) : '他言語'
 }
 
 // ---- YouTube 埋め込み -------------------------------------------------------
@@ -358,8 +350,7 @@ const mediaGridClass = computed(() => {
   ).length
   if (count === 1) return 'media-grid-1'
   if (count === 2) return 'media-grid-2'
-  if (count === 3) return 'media-grid-3'
-  return 'media-grid-4'
+  return count === 3 ? 'media-grid-3' : 'media-grid-4'
 })
 
 /**

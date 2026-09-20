@@ -86,12 +86,13 @@ async function handleCreate() {
     keywords: newKeywords.value,
   })
   // エラーがなければフォームをリセットして閉じる
-  if (!error.value) {
-    newName.value = ''
-    newColor.value = '#3B82F6'
-    newKeywords.value = []
-    showCreateForm.value = false
+  if (error.value) {
+    return
   }
+  newName.value = ''
+  newColor.value = '#3B82F6'
+  newKeywords.value = []
+  showCreateForm.value = false
 }
 
 /**

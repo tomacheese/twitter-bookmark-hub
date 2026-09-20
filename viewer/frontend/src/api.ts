@@ -98,8 +98,9 @@ export async function fetchBookmarks(params: {
   if (params.tag) query.set('tag', params.tag)
 
   const res = await fetch(`${BASE}/bookmarks?${query.toString()}`)
-  if (!res.ok) return throwResponseError(res, 'Failed to fetch bookmarks')
-  return res.json() as Promise<BookmarksResponse>
+  return res.ok
+    ? (res.json() as Promise<BookmarksResponse>)
+    : throwResponseError(res, 'Failed to fetch bookmarks')
 }
 
 /**
@@ -108,8 +109,9 @@ export async function fetchBookmarks(params: {
  */
 export async function fetchAccounts(): Promise<AccountInfo[]> {
   const res = await fetch(`${BASE}/accounts`)
-  if (!res.ok) return throwResponseError(res, 'Failed to fetch accounts')
-  return res.json() as Promise<AccountInfo[]>
+  return res.ok
+    ? (res.json() as Promise<AccountInfo[]>)
+    : throwResponseError(res, 'Failed to fetch accounts')
 }
 
 /**
@@ -118,8 +120,9 @@ export async function fetchAccounts(): Promise<AccountInfo[]> {
  */
 export async function fetchCrawlStatus(): Promise<CrawlJobStatus | null> {
   const res = await fetch(`${BASE}/crawl/status`)
-  if (!res.ok) return throwResponseError(res, 'Failed to fetch crawl status')
-  return res.json() as Promise<CrawlJobStatus | null>
+  return res.ok
+    ? (res.json() as Promise<CrawlJobStatus | null>)
+    : throwResponseError(res, 'Failed to fetch crawl status')
 }
 
 /**
@@ -128,8 +131,9 @@ export async function fetchCrawlStatus(): Promise<CrawlJobStatus | null> {
  */
 export async function triggerCrawl(): Promise<{ message: string }> {
   const res = await fetch(`${BASE}/crawl/trigger`, { method: 'POST' })
-  if (!res.ok) return throwResponseError(res, 'Failed to trigger crawl')
-  return res.json() as Promise<{ message: string }>
+  return res.ok
+    ? (res.json() as Promise<{ message: string }>)
+    : throwResponseError(res, 'Failed to trigger crawl')
 }
 
 /**
@@ -138,8 +142,9 @@ export async function triggerCrawl(): Promise<{ message: string }> {
  */
 export async function fetchFeatures(): Promise<FeaturesResponse> {
   const res = await fetch(`${BASE}/features`)
-  if (!res.ok) return throwResponseError(res, 'Failed to fetch features')
-  return res.json() as Promise<FeaturesResponse>
+  return res.ok
+    ? (res.json() as Promise<FeaturesResponse>)
+    : throwResponseError(res, 'Failed to fetch features')
 }
 
 /**
@@ -148,8 +153,9 @@ export async function fetchFeatures(): Promise<FeaturesResponse> {
  */
 export async function fetchCategories(): Promise<CategoryItem[]> {
   const res = await fetch(`${BASE}/categories`)
-  if (!res.ok) return throwResponseError(res, 'Failed to fetch categories')
-  return res.json() as Promise<CategoryItem[]>
+  return res.ok
+    ? (res.json() as Promise<CategoryItem[]>)
+    : throwResponseError(res, 'Failed to fetch categories')
 }
 
 /**
@@ -167,8 +173,9 @@ export async function createCategory(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  if (!res.ok) return throwResponseError(res, 'Failed to create category')
-  return res.json() as Promise<CategoryItem>
+  return res.ok
+    ? (res.json() as Promise<CategoryItem>)
+    : throwResponseError(res, 'Failed to create category')
 }
 
 /**
@@ -186,8 +193,9 @@ export async function updateCategory(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  if (!res.ok) return throwResponseError(res, 'Failed to update category')
-  return res.json() as Promise<CategoryItem>
+  return res.ok
+    ? (res.json() as Promise<CategoryItem>)
+    : throwResponseError(res, 'Failed to update category')
 }
 
 /**
@@ -223,6 +231,7 @@ export async function deleteBookmark(
  */
 export async function fetchTags(limit = 50): Promise<TagItem[]> {
   const res = await fetch(`${BASE}/tags?limit=${limit}`)
-  if (!res.ok) return throwResponseError(res, 'Failed to fetch tags')
-  return res.json() as Promise<TagItem[]>
+  return res.ok
+    ? (res.json() as Promise<TagItem[]>)
+    : throwResponseError(res, 'Failed to fetch tags')
 }

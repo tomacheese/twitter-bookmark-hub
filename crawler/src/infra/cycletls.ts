@@ -125,9 +125,7 @@ export async function cycleTLSFetch(
     userAgent:
       headers['user-agent'] ??
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-  }
-  if (proxy !== undefined) {
-    options.proxy = proxy
+    ...(proxy !== undefined && { proxy }),
   }
 
   const response = await instance(
@@ -162,10 +160,9 @@ export async function cycleTLSFetch(
   const responseBody = (() => {
     if (response.data == null) return ''
     if (typeof response.data === 'string') return response.data
-    if (Buffer.isBuffer(response.data)) {
-      return response.data.toString('utf8')
-    }
-    return JSON.stringify(response.data)
+    return Buffer.isBuffer(response.data)
+      ? response.data.toString('utf8')
+      : JSON.stringify(response.data)
   })()
 
   return new Response(responseBody, {

@@ -102,10 +102,9 @@ export function categoriesRoute(db: Database.Database): Hono {
     }
     const categories = getCategories(db)
     const updated = categories.find((cat) => cat.id === id)
-    if (!updated) {
-      return c.json({ error: 'Category not found' }, 404)
-    }
-    return c.json(updated)
+    return updated
+      ? c.json(updated)
+      : c.json({ error: 'Category not found' }, 404)
   })
 
   /** DELETE /categories/:id - カテゴリを削除する */

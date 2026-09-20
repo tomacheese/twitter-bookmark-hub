@@ -27,13 +27,15 @@ export function startScheduler(db: Database.Database): void {
   })
 
   // 起動時に即クロール実行 (デフォルト有効)
-  if (process.env.CRAWL_ON_STARTUP !== 'false') {
-    logger.info('Running initial crawl on startup...')
-    runCrawl(db).catch((error: unknown) => {
-      logger.error(
-        'Initial crawl failed unexpectedly:',
-        error instanceof Error ? error : new Error(String(error))
-      )
-    })
+  if (process.env.CRAWL_ON_STARTUP === 'false') {
+    return
   }
+
+  logger.info('Running initial crawl on startup...')
+  runCrawl(db).catch((error: unknown) => {
+    logger.error(
+      'Initial crawl failed unexpectedly:',
+      error instanceof Error ? error : new Error(String(error))
+    )
+  })
 }
