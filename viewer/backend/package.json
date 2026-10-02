@@ -25,7 +25,7 @@
     "@book000/eslint-config": "1.16.79",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.0",
-    "@types/ws": "8.18.1",
+    "@types/ws": "8.18.2",
     "eslint": "10.11.0",
     "prettier": "3.9.9",
     "run-z": "2.1.0",
