@@ -173,8 +173,8 @@ importers:
         specifier: 1.25.133
         version: 1.25.133(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.63.5)
       '@hono/node-server':
-        specifier: 2.1.1
-        version: 2.1.1(hono@4.13.11)
+        specifier: 2.1.3
+        version: 2.1.3(hono@4.13.11)
       '@patdx/kuromoji':
         specifier: 1.0.4
         version: 1.0.4
@@ -222,8 +222,8 @@ importers:
         specifier: 1.25.133
         version: 1.25.133(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.63.5)
       '@hono/node-server':
-        specifier: 2.1.1
-        version: 2.1.1(hono@4.13.11)
+        specifier: 2.1.3
+        version: 2.1.3(hono@4.13.11)
       '@the-convocation/twitter-scraper':
         specifier: 0.22.3
         version: 0.22.3(cycletls@2.0.5)(supports-color@8.1.1)
@@ -298,8 +298,8 @@ importers:
         specifier: 1.25.133
         version: 1.25.133(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.63.5)
       '@hono/node-server':
-        specifier: 2.1.1
-        version: 2.1.1(hono@4.13.11)
+        specifier: 2.1.3
+        version: 2.1.3(hono@4.13.11)
       '@twitter-bookmark-hub/shared':
         specifier: workspace:*
         version: link:../../shared
@@ -1117,8 +1117,8 @@ packages:
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@hono/node-server@2.1.1':
-    resolution: {integrity: sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==}
+  '@hono/node-server@2.1.3':
+    resolution: {integrity: sha512-TA//nWMqPhbfdfneACk6t5a9eqbS9lABEPyKn0/xZTah3H3U2XaVg85rJFl0/Fyit0I552YDHgXGVSf3GwqbUw==}
     engines: {node: '>=20'}
     peerDependencies:
       hono: ^4
@@ -4688,7 +4688,7 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@hono/node-server@2.1.1(hono@4.13.11)':
+  '@hono/node-server@2.1.3(hono@4.13.11)':
     dependencies:
       hono: 4.13.11
 
