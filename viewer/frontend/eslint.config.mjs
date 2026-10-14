@@ -18,6 +18,10 @@ export default [
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      // defineConfig() の呼び出しを default export することは Vite 設定の標準的な書き方
+      'unicorn/no-top-level-side-effects': 'off',
+    },
   },
   {
     // .vue ファイルに vue-eslint-parser を明示的に適用する
