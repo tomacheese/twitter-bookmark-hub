@@ -195,8 +195,8 @@ importers:
         version: 4.23.15
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.98
-        version: 1.16.98(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
+        specifier: 1.16.100
+        version: 1.16.100(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -250,8 +250,8 @@ importers:
         version: 0.0.56
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.98
-        version: 1.16.98(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
+        specifier: 1.16.100
+        version: 1.16.100(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -314,8 +314,8 @@ importers:
         version: 4.23.15
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.98
-        version: 1.16.98(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
+        specifier: 1.16.100
+        version: 1.16.100(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
@@ -348,8 +348,8 @@ importers:
         version: 3.5.44(typescript@6.0.3)
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.98
-        version: 1.16.98(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
+        specifier: 1.16.100
+        version: 1.16.100(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
       '@types/node':
         specifier: 25.9.9
         version: 25.9.9
@@ -902,8 +902,8 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
-  '@book000/eslint-config@1.16.98':
-    resolution: {integrity: sha512-4AxpUume/5Tj+31e3HqJxQKjcTuc6mTNXSk0u6NKoVgFDIrZdqubF3LAEgxJtuD2YNvZPb3WTuVdmUjbrkJwpA==}
+  '@book000/eslint-config@1.16.100':
+    resolution: {integrity: sha512-6z4+P5FEReLPhdZo9vnFK9xSn/Pp6F8zUpbbhs29frazUVv0Kl5dtc1TOfcbPxIg6FCzWbNcXMspuCT+pQ0nGA==}
     peerDependencies:
       eslint: 10.12.0
 
@@ -4486,7 +4486,7 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@book000/eslint-config@1.16.98(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)':
+  '@book000/eslint-config@1.16.100(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/parser': 8.71.2(eslint@10.12.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
       eslint: 10.12.0(supports-color@8.1.1)
