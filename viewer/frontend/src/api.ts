@@ -24,6 +24,36 @@ export type {
 
 /** API のベース URL */
 const BASE = '/api'
+const ACCESS_RECOVERY_KEY = 'access-recovery-at'
+const ACCESS_RECOVERY_INTERVAL_MS = 60_000
+
+/**
+ * API 通信で Cloudflare Access の認証リダイレクトを検出する。
+ * 別オリジンのログインページへ fetch が追従して CORS エラーになることを防ぐ。
+ * @param path - 同一オリジンの API パス
+ * @param init - fetch オプション
+ * @returns API レスポンス
+ */
+async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  if (!path.startsWith(`${BASE}/`)) {
+    throw new Error('API requests must use the same-origin API path')
+  }
+  const res = await fetch(path, { ...init, redirect: 'manual' })
+
+  if (res.type === 'opaqueredirect') {
+    const previousRecovery = Number(
+      sessionStorage.getItem(ACCESS_RECOVERY_KEY) ?? 0
+    )
+    const now = Date.now()
+    if (now - previousRecovery >= ACCESS_RECOVERY_INTERVAL_MS) {
+      sessionStorage.setItem(ACCESS_RECOVERY_KEY, String(now))
+      location.replace(`/?_access_refresh=${now}${location.hash}`)
+    }
+    throw new Error('Cloudflare Access authentication is required')
+  }
+
+  return res
+}
 
 /**
  * 非 2xx レスポンスのエラー詳細を取得してエラーをスローする。
@@ -97,7 +127,7 @@ export async function fetchBookmarks(params: {
   if (params.category != null) query.set('category', String(params.category))
   if (params.tag) query.set('tag', params.tag)
 
-  const res = await fetch(`${BASE}/bookmarks?${query.toString()}`)
+  const res = await apiFetch(`${BASE}/bookmarks?${query.toString()}`)
   return res.ok
     ? (res.json() as Promise<BookmarksResponse>)
     : throwResponseError(res, 'Failed to fetch bookmarks')
@@ -108,7 +138,7 @@ export async function fetchBookmarks(params: {
  * @returns アカウント情報の配列
  */
 export async function fetchAccounts(): Promise<AccountInfo[]> {
-  const res = await fetch(`${BASE}/accounts`)
+  const res = await apiFetch(`${BASE}/accounts`)
   return res.ok
     ? (res.json() as Promise<AccountInfo[]>)
     : throwResponseError(res, 'Failed to fetch accounts')
@@ -119,7 +149,7 @@ export async function fetchAccounts(): Promise<AccountInfo[]> {
  * @returns クロールジョブステータス（存在しない場合は null）
  */
 export async function fetchCrawlStatus(): Promise<CrawlJobStatus | null> {
-  const res = await fetch(`${BASE}/crawl/status`)
+  const res = await apiFetch(`${BASE}/crawl/status`)
   return res.ok
     ? (res.json() as Promise<CrawlJobStatus | null>)
     : throwResponseError(res, 'Failed to fetch crawl status')
@@ -130,7 +160,7 @@ export async function fetchCrawlStatus(): Promise<CrawlJobStatus | null> {
  * @returns レスポンスオブジェクト
  */
 export async function triggerCrawl(): Promise<{ message: string }> {
-  const res = await fetch(`${BASE}/crawl/trigger`, { method: 'POST' })
+  const res = await apiFetch(`${BASE}/crawl/trigger`, { method: 'POST' })
   return res.ok
     ? (res.json() as Promise<{ message: string }>)
     : throwResponseError(res, 'Failed to trigger crawl')
@@ -141,7 +171,7 @@ export async function triggerCrawl(): Promise<{ message: string }> {
  * @returns 機能フラグ
  */
 export async function fetchFeatures(): Promise<FeaturesResponse> {
-  const res = await fetch(`${BASE}/features`)
+  const res = await apiFetch(`${BASE}/features`)
   return res.ok
     ? (res.json() as Promise<FeaturesResponse>)
     : throwResponseError(res, 'Failed to fetch features')
@@ -152,7 +182,7 @@ export async function fetchFeatures(): Promise<FeaturesResponse> {
  * @returns カテゴリアイテムの配列
  */
 export async function fetchCategories(): Promise<CategoryItem[]> {
-  const res = await fetch(`${BASE}/categories`)
+  const res = await apiFetch(`${BASE}/categories`)
   return res.ok
     ? (res.json() as Promise<CategoryItem[]>)
     : throwResponseError(res, 'Failed to fetch categories')
@@ -168,7 +198,7 @@ export async function createCategory(data: {
   color: string
   keywords: string[]
 }): Promise<CategoryItem> {
-  const res = await fetch(`${BASE}/categories`, {
+  const res = await apiFetch(`${BASE}/categories`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -188,7 +218,7 @@ export async function updateCategory(
   id: number,
   data: { name: string; color: string; keywords: string[] }
 ): Promise<CategoryItem> {
-  const res = await fetch(`${BASE}/categories/${id}`, {
+  const res = await apiFetch(`${BASE}/categories/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -203,7 +233,7 @@ export async function updateCategory(
  * @param id - カテゴリ ID
  */
 export async function deleteCategory(id: number): Promise<void> {
-  const res = await fetch(`${BASE}/categories/${id}`, { method: 'DELETE' })
+  const res = await apiFetch(`${BASE}/categories/${id}`, { method: 'DELETE' })
   if (!res.ok) return throwResponseError(res, 'Failed to delete category')
 }
 
@@ -217,7 +247,7 @@ export async function deleteBookmark(
   account: string
 ): Promise<void> {
   const query = new URLSearchParams({ account })
-  const res = await fetch(
+  const res = await apiFetch(
     `${BASE}/bookmarks/${encodeURIComponent(tweetId)}?${query.toString()}`,
     { method: 'DELETE' }
   )
@@ -230,7 +260,7 @@ export async function deleteBookmark(
  * @returns タグアイテムの配列
  */
 export async function fetchTags(limit = 50): Promise<TagItem[]> {
-  const res = await fetch(`${BASE}/tags?limit=${limit}`)
+  const res = await apiFetch(`${BASE}/tags?limit=${limit}`)
   return res.ok
     ? (res.json() as Promise<TagItem[]>)
     : throwResponseError(res, 'Failed to fetch tags')
