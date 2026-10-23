@@ -170,8 +170,8 @@ importers:
   analyzer:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.170
-        version: 1.25.170(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)
+        specifier: 1.25.171
+        version: 1.25.171(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)
       '@hono/node-server':
         specifier: 2.1.5
         version: 2.1.5(hono@4.13.13)
@@ -219,8 +219,8 @@ importers:
   crawler:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.170
-        version: 1.25.170(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)
+        specifier: 1.25.171
+        version: 1.25.171(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)
       '@hono/node-server':
         specifier: 2.1.5
         version: 2.1.5(hono@4.13.13)
@@ -295,8 +295,8 @@ importers:
   viewer/backend:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.25.170
-        version: 1.25.170(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)
+        specifier: 1.25.171
+        version: 1.25.171(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)
       '@hono/node-server':
         specifier: 2.1.5
         version: 2.1.5(hono@4.13.13)
@@ -907,8 +907,8 @@ packages:
     peerDependencies:
       eslint: 10.13.0
 
-  '@book000/node-utils@1.25.170':
-    resolution: {integrity: sha512-8DbZ3gi/WDf2Z/TZLiQubuqhPkXC1Zpd9Fjv8d8qHOJ1wIgIlD43Mco2Cbj5h8uv6WOoY1Je1dXTWt5FBTmaGA==}
+  '@book000/node-utils@1.25.171':
+    resolution: {integrity: sha512-KozIBOUUCVQj3AGZL5+kJO+0Hal1KLA8wVT2aoLMBWFRj1Kgslzn/YQMRF7XFBE6GUD0hqBe5q4P7nmc46HAfQ==}
 
   '@cacheable/memory@2.2.0':
     resolution: {integrity: sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ==}
@@ -4482,7 +4482,7 @@ snapshots:
       - ts-declaration-location
       - typescript
 
-  '@book000/node-utils@1.25.170(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)':
+  '@book000/node-utils@1.25.171(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)':
     dependencies:
       '@sentry/node': 11.8.0(@babel/core@7.29.7(supports-color@8.1.1))(rollup@4.64.9)
       cycle: 1.0.3
