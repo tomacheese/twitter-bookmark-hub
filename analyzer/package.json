@@ -24,7 +24,7 @@
     "tsx": "4.23.15"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.16.104",
+    "@book000/eslint-config": "1.16.105",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.2",
     "eslint": "10.13.0",
