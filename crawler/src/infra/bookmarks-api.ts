@@ -131,7 +131,7 @@ export function extractBookmarkEntry(
   const tweet = tweetResult.tweet
   const user = tweetResult.user
   const legacy = tweet.legacy
-  // User.legacy は optional（twitter-openapi-typescript 0.1.3 以降）
+  // User.legacy は optional
   const userLegacy = user.legacy
 
   const tweetId = legacy?.idStr ?? tweet.restId
@@ -169,7 +169,7 @@ export function extractBookmarkEntry(
     // TweetApiUtilsData.tweet は Tweet 型（非 optional）のため optional chain 不要
     const qtLegacy = qt.tweet.legacy
     const qtUser = qt.user
-    // User.legacy は optional（twitter-openapi-typescript 0.1.3 以降）
+    // User.legacy は optional
     const qtUserLegacy = qtUser.legacy
 
     // Twitter API 変更により screenName/name は qtUser.core に移動した（qtUserLegacy をフォールバックとして保持）
