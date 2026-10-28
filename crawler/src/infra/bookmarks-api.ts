@@ -131,7 +131,7 @@ export function extractBookmarkEntry(
   const tweet = tweetResult.tweet
   const user = tweetResult.user
   const legacy = tweet.legacy
-  // User.legacy は必須フィールドのため optional chain 不要
+  // User.legacy は optional（twitter-openapi-typescript 0.1.3 以降）
   const userLegacy = user.legacy
 
   const tweetId = legacy?.idStr ?? tweet.restId
@@ -139,8 +139,8 @@ export function extractBookmarkEntry(
   const userId = user.restId
   const fullText = legacy?.fullText
   // Twitter API 変更により screenName/name は user.core に移動した（user.legacy をフォールバックとして保持）
-  const screenName = user.core?.screenName ?? userLegacy.screenName
-  const username = user.core?.name ?? userLegacy.name
+  const screenName = user.core?.screenName ?? userLegacy?.screenName
+  const username = user.core?.name ?? userLegacy?.name
   // Twitter API は "Wed Sep 24 11:28:06 +0000 2025" 形式で返すため ISO 8601 に変換する
   const createdAt = legacy?.createdAt
     ? new Date(legacy.createdAt).toISOString()
@@ -169,12 +169,12 @@ export function extractBookmarkEntry(
     // TweetApiUtilsData.tweet は Tweet 型（非 optional）のため optional chain 不要
     const qtLegacy = qt.tweet.legacy
     const qtUser = qt.user
-    // User.legacy は必須フィールドのため optional chain 不要
+    // User.legacy は optional（twitter-openapi-typescript 0.1.3 以降）
     const qtUserLegacy = qtUser.legacy
 
     // Twitter API 変更により screenName/name は qtUser.core に移動した（qtUserLegacy をフォールバックとして保持）
-    const qtScreenName = qtUser.core?.screenName ?? qtUserLegacy.screenName
-    const qtUsername = qtUser.core?.name ?? qtUserLegacy.name
+    const qtScreenName = qtUser.core?.screenName ?? qtUserLegacy?.screenName
+    const qtUsername = qtUser.core?.name ?? qtUserLegacy?.name
     if (qtLegacy && qtScreenName && qtUsername) {
       const qtGrok = extractGrokTranslation(qt.tweet)
       quotedTweet = {
@@ -185,7 +185,7 @@ export function extractBookmarkEntry(
         screenName: qtScreenName,
         userName: qtUsername,
         profileImageUrl:
-          qtUser.avatar?.imageUrl ?? qtUserLegacy.profileImageUrlHttps ?? null,
+          qtUser.avatar?.imageUrl ?? qtUserLegacy?.profileImageUrlHttps ?? null,
         mediaItems: extractMediaItems(qtLegacy),
         urlEntities: extractUrlEntities(qtLegacy.entities ?? {}),
         translatedText: qtGrok.translatedText,
@@ -272,7 +272,7 @@ export function extractBookmarkEntry(
     screenName,
     userName: username,
     profileImageUrl:
-      user.avatar?.imageUrl ?? userLegacy.profileImageUrlHttps ?? null,
+      user.avatar?.imageUrl ?? userLegacy?.profileImageUrlHttps ?? null,
     createdAt,
     mediaItems,
     urlEntities,
