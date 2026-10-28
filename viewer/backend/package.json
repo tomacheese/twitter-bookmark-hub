@@ -24,7 +24,7 @@
   "devDependencies": {
     "@book000/eslint-config": "1.16.106",
     "@types/better-sqlite3": "9.6.0",
-    "@types/node": "24.19.2",
+    "@types/node": "26.6.5",
     "@types/ws": "8.18.2",
     "eslint": "10.13.0",
     "prettier": "3.9.10",
