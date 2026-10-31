@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@book000/eslint-config": "1.16.111",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "@typescript-eslint/parser": "8.72.1",
     "@vitejs/plugin-vue": "6.0.10",
     "eslint": "10.13.0",
