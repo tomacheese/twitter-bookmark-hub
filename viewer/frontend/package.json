@@ -19,7 +19,7 @@
     "vue": "3.5.44"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.16.111",
+    "@book000/eslint-config": "1.16.112",
     "@types/node": "26.6.6",
     "@typescript-eslint/parser": "8.72.1",
     "@vitejs/plugin-vue": "6.0.10",
