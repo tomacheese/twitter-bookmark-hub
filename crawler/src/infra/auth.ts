@@ -187,6 +187,22 @@ function isXError399(error: unknown): boolean {
   return status === 399 || /\b399\b/.test(String(error))
 }
 
+/** 一時的な X 側の認証フローエラーとして扱うエラーコード (131/366/503) */
+const TRANSIENT_X_AUTH_CODE = /\((?:131|366|503)\)/
+
+/**
+ * X のログインフローで発生する一時的なエラー (131/366/503) か判定する。
+ * twitter-scraper は "Authentication error (366): ..." 形式のメッセージで投げる。
+ *
+ * @param error 発生したエラー
+ * @returns 一時的な X 認証エラーか
+ */
+export function isTransientXAuthError(error: unknown): boolean {
+  return TRANSIENT_X_AUTH_CODE.test(
+    error instanceof Error ? error.message : String(error)
+  )
+}
+
 /**
  * Scraper インスタンスを生成する。
  * 試行ごとにブラウザ指紋をランダム化してフィンガープリントによる拒否を回避する。
