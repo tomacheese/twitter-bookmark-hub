@@ -8,9 +8,9 @@ ENV PATH="$PNPM_HOME:$PATH"
 # ネイティブモジュールのコンパイルに必要なツールをインストール
 # @twitter-bookmark-hub/shared が workspace:* 参照のためルート workspace 全体をフェッチする際に
 # better-sqlite3 など他パッケージの install スクリプトが実行されるため必要
-# corepack は Node.js 24 に同梱済みのため npm install 不要
+# Node.js 25 以降は corepack が同梱されないため npm でインストールする
 RUN apk add --no-cache python3 make g++ gcompat libc6-compat && \
-    corepack enable
+    npm install -g corepack && corepack enable
 
 WORKDIR /app
 
@@ -47,9 +47,9 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # ネイティブモジュール（better-sqlite3）のコンパイルに必要なツールをインストール
-# corepack は Node.js 24 に同梱済みのため npm install 不要
+# Node.js 25 以降は corepack が同梱されないため npm でインストールする
 RUN apk add --no-cache python3 make g++ gcompat libc6-compat && \
-    corepack enable
+    npm install -g corepack && corepack enable
 
 WORKDIR /app
 
