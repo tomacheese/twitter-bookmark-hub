@@ -7,6 +7,7 @@ import test from 'node:test'
 import { Scraper } from '@the-convocation/twitter-scraper'
 import {
   getAuthCookies,
+  isTransientXAuthError,
   loadCachedCookies,
   loginWithRetry,
   saveCookies,
@@ -276,4 +277,26 @@ void test('issuer and 399 logging do not expose supplied secrets', async () => {
   assert.equal(output.includes('test-password'), false)
   assert.equal(output.includes('test-otp-secret'), false)
   assert.equal(output.includes(issuerSecret), false)
+})
+
+void test('isTransientXAuthError matches 131/366/503 only', () => {
+  assert.equal(
+    isTransientXAuthError(
+      new Error(
+        'Authentication error (366): flow name login is currently not accessible'
+      )
+    ),
+    true
+  )
+  assert.equal(
+    isTransientXAuthError(
+      new Error('Authentication error (131): Internal error')
+    ),
+    true
+  )
+  assert.equal(
+    isTransientXAuthError(new Error('Authentication error (399)')),
+    false
+  )
+  assert.equal(isTransientXAuthError(new Error('Invalid password')), false)
 })

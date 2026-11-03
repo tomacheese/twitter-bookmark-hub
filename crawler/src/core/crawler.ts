@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import { loadConfig } from '../shared/config'
 import { withRetry } from '../shared/retry'
-import { getAuthCookies } from '../infra/auth'
+import { getAuthCookies, isTransientXAuthError } from '../infra/auth'
 import {
   extractBookmarkEntry,
   getBookmarksClient,
@@ -185,6 +185,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
     updateCrawlJob(db, jobId, 'running', { accountsTotal: accounts.length })
     let successCount = 0
+    let transientAuthFailures = 0
 
     for (const account of accounts) {
       logger.info(`===== Account: ${account.username} =====`)
@@ -201,10 +202,19 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           new RegExp(String.raw`^\[${account.username}\]\s*`),
           ''
         )
-        logger.error(
-          `[${account.username}] Auth failed. Continuing to next account:`,
-          error instanceof Error ? error : new Error(String(error))
-        )
+        if (isTransientXAuthError(error)) {
+          // logger.warn も GlitchTip に送信されるため info で記録する。
+          // 全アカウント失敗時のみループ後に集約して error 報告する。
+          transientAuthFailures++
+          logger.info(
+            `[${account.username}] Auth failed (transient X error). Continuing to next account: ${message}`
+          )
+        } else {
+          logger.error(
+            `[${account.username}] Auth failed. Continuing to next account:`,
+            error instanceof Error ? error : new Error(String(error))
+          )
+        }
         saveCrawlAccountResult(
           db,
           jobId,
@@ -395,6 +405,12 @@ export async function runCrawl(db: Database.Database): Promise<void> {
           totalForAccount
         )
       }
+    }
+
+    if (transientAuthFailures === accounts.length) {
+      logger.error(
+        'All accounts failed to authenticate with transient X errors.'
+      )
     }
 
     updateCrawlJob(db, jobId, 'success', {
