@@ -6,7 +6,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 # better-sqlite3 のネイティブモジュールコンパイルに必要
 RUN apk add --no-cache python3 make g++ gcompat libc6-compat && \
-    corepack enable
+    npm install -g corepack && corepack enable
 
 WORKDIR /app
 
