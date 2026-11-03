@@ -1,5 +1,5 @@
 # ---- Stage 1: ネイティブモジュールのビルドとデプロイパッケージの作成 ----
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 
 # pnpm のホームディレクトリを設定し PATH に追加する
 ENV PNPM_HOME="/pnpm"
@@ -39,7 +39,7 @@ COPY crawler/ ./crawler/
 RUN pnpm --filter twitter-bookmark-hub-crawler deploy /deploy
 
 # ---- Stage 2: ランタイム ----
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 
 # タイムゾーンの設定とネイティブモジュールの実行に必要なライブラリをインストール
 RUN apk add --no-cache tzdata gcompat libc6-compat && \

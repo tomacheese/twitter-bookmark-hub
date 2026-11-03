@@ -1,5 +1,5 @@
 # ---- Stage 1: フロントエンドのビルド ----
-FROM node:24-alpine AS frontend-builder
+FROM node:26-alpine AS frontend-builder
 
 # pnpm のホームディレクトリを設定し PATH に追加する
 ENV PNPM_HOME="/pnpm"
@@ -40,7 +40,7 @@ COPY viewer/frontend/ ./viewer/frontend/
 RUN pnpm --filter twitter-bookmark-hub-frontend build
 
 # ---- Stage 2: ネイティブモジュールのビルドとデプロイパッケージの作成 ----
-FROM node:24-alpine AS backend-builder
+FROM node:26-alpine AS backend-builder
 
 # pnpm のホームディレクトリを設定し PATH に追加する
 ENV PNPM_HOME="/pnpm"
@@ -81,7 +81,7 @@ COPY --from=frontend-builder /app/viewer/frontend/dist ./viewer/backend/public
 RUN pnpm --filter twitter-bookmark-hub-backend deploy /deploy
 
 # ---- Stage 3: ランタイム ----
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 
 # タイムゾーンの設定とネイティブモジュールの実行に必要なライブラリをインストール
 RUN apk add --no-cache tzdata gcompat libc6-compat && \
