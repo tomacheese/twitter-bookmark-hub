@@ -170,8 +170,8 @@ importers:
   analyzer:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.26.4
-        version: 1.26.4(rollup@4.67.2)
+        specifier: 1.26.6
+        version: 1.26.6(rollup@4.67.2)
       '@hono/node-server':
         specifier: 2.1.6
         version: 2.1.6(hono@4.13.16)
@@ -219,8 +219,8 @@ importers:
   crawler:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.26.4
-        version: 1.26.4(rollup@4.67.2)
+        specifier: 1.26.6
+        version: 1.26.6(rollup@4.67.2)
       '@hono/node-server':
         specifier: 2.1.6
         version: 2.1.6(hono@4.13.16)
@@ -295,8 +295,8 @@ importers:
   viewer/backend:
     dependencies:
       '@book000/node-utils':
-        specifier: 1.26.4
-        version: 1.26.4(rollup@4.67.2)
+        specifier: 1.26.6
+        version: 1.26.6(rollup@4.67.2)
       '@hono/node-server':
         specifier: 2.1.6
         version: 2.1.6(hono@4.13.16)
@@ -910,8 +910,8 @@ packages:
     peerDependencies:
       eslint: 10.14.0
 
-  '@book000/node-utils@1.26.4':
-    resolution: {integrity: sha512-DE6rdUboDmANKZin3aZMgN9VWbGkC6yVwGAmjzg7msPADvbGL6NUg+P4AGVaHyuZIRCl8H/laxJ9eIkTPuFP4A==}
+  '@book000/node-utils@1.26.6':
+    resolution: {integrity: sha512-Z2cBDgDJk83MhSLHavyczcn8w6+j020HWzXqcSMsCjXX+bxAZoW2LOSxMvf8EelHg17Yo8COL9SNdqQvIVyvvg==}
 
   '@cacheable/memory@2.2.0':
     resolution: {integrity: sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ==}
@@ -4504,7 +4504,7 @@ snapshots:
       - ts-declaration-location
       - typescript
 
-  '@book000/node-utils@1.26.4(rollup@4.67.2)':
+  '@book000/node-utils@1.26.6(rollup@4.67.2)':
     dependencies:
       '@sentry/node': 11.10.0(rollup@4.67.2)
       cycle: 1.0.3
