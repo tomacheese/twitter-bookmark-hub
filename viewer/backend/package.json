@@ -17,7 +17,7 @@
     "@book000/node-utils": "1.26.27",
     "@hono/node-server": "2.1.8",
     "@twitter-bookmark-hub/shared": "workspace:*",
-    "better-sqlite3": "13.1.1",
+    "better-sqlite3": "13.2.0",
     "hono": "4.13.18",
     "tsx": "4.23.15"
   },
