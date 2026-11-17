@@ -178,10 +178,12 @@ export async function runCrawl(db: Database.Database): Promise<void> {
   }
 
   running = true
-  const jobId = createCrawlJob(db)
-  logger.info(`Crawl job #${jobId} started.`)
+  let jobId: number | undefined
 
   try {
+    jobId = createCrawlJob(db)
+    logger.info(`Crawl job #${jobId} started.`)
+
     // クロール実行のたびに設定ファイルを再読み込みする。
     // これにより、config.json を編集してもサービス再起動なしに次回クロールへ反映される（ホットリロード）。
     const config = loadConfig()
@@ -432,14 +434,21 @@ export async function runCrawl(db: Database.Database): Promise<void> {
     await pruneNoiseTagsViaAnalyzer(0.25)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    updateCrawlJob(db, jobId, 'error', {
-      finishedAt: new Date().toISOString(),
-      errorMessage: message,
-    })
-    logger.error(
-      `Crawl job #${jobId} failed:`,
-      error instanceof Error ? error : new Error(String(error))
-    )
+    if (jobId === undefined) {
+      logger.error(
+        'Failed to create crawl job:',
+        error instanceof Error ? error : new Error(message)
+      )
+    } else {
+      updateCrawlJob(db, jobId, 'error', {
+        finishedAt: new Date().toISOString(),
+        errorMessage: message,
+      })
+      logger.error(
+        `Crawl job #${jobId} failed:`,
+        error instanceof Error ? error : new Error(message)
+      )
+    }
   } finally {
     running = false
   }
