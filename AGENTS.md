@@ -136,7 +136,7 @@ pnpm lint       # ESLint + Prettier チェック + TypeScript 型チェック
 pnpm fix        # 自動修正 (ESLint --fix + Prettier --write)
 ```
 
-テストは `crawler` のみ（`cd crawler && pnpm test`）。テストスクリプトは `DATA_DIR` を一時ディレクトリに設定して `tsx --test` を実行する（`DATA_DIR=$(mktemp -d) tsx --test ...`）。
+テストは `crawler` と `viewer/backend` で実行する（それぞれのディレクトリで `pnpm test`）。`crawler` のテストスクリプトは `DATA_DIR` を一時ディレクトリに設定して `tsx --test` を実行する（`DATA_DIR=$(mktemp -d) tsx --test ...`）。
 
 CI は [CI](#ci) を参照。**PR 前に必ず全パッケージで lint をパスさせること。**
 
@@ -513,4 +513,4 @@ Docker Compose は `.env` を crawler コンテナの env file として読み�
 
 ## CI
 
-GitHub Actions の `nodejs-ci.yml` が PR・push 時に `crawler`、`viewer/backend`、`viewer/frontend`、`analyzer` で共通テンプレートの Node CI を実行する。各パッケージの `lint` スクリプトに加え、`test` スクリプトを持つパッケージ (現状は `crawler`) ではテストも実行される。ローカルで lint が通らない場合は `pnpm fix` で自動修正してから再確認する。
+GitHub Actions の `nodejs-ci.yml` が PR・push 時に `crawler`、`viewer/backend`、`viewer/frontend`、`analyzer` で共通テンプレートの Node CI を実行する。各パッケージの `lint` スクリプトに加え、`test` スクリプトを持つパッケージ（現状は `crawler` と `viewer/backend`）ではテストも実行される。ローカルで lint が通らない場合は `pnpm fix` で自動修正してから再確認する。
