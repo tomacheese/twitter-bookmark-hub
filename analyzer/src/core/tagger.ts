@@ -230,9 +230,7 @@ function isUsedAsAdverbialTeki(
 ): boolean {
   let j = index + 1
   while (j < tokens.length && isSpaceToken(tokens[j])) j++
-  if (j >= tokens.length) return false
-  // 直後が「的」
-  if (tokens[j].surface_form !== '的') return false
+  if (j >= tokens.length || tokens[j].surface_form !== '的') return false
   // 「的」の次が「に」(助詞)
   let k = j + 1
   while (k < tokens.length && isSpaceToken(tokens[k])) k++
@@ -487,8 +485,8 @@ export function extractNouns(
   >()
 
   for (const [i, token] of tokens.entries()) {
-    if (token.pos !== '名詞') continue
-    if (!NOUN_DETAIL_ALLOWLIST.has(token.pos_detail_1)) continue
+    if (token.pos !== '名詞' || !NOUN_DETAIL_ALLOWLIST.has(token.pos_detail_1))
+      continue
 
     // 基本形を優先して使用（辞書形がなければ表層形）
     const word =
@@ -497,10 +495,8 @@ export function extractNouns(
         : token.surface_form
 
     // 1 文字の単語は除外（ノイズが多い）
-    if (word.length <= 1) continue
-
     // 文字（英数字・仮名・漢字）を含まない記号のみトークンは除外（"://" 等）
-    if (!/[a-zA-Z0-9\u3040-\u9FFF]/.test(word)) continue
+    if (word.length <= 1 || !/[a-zA-Z0-9\u3040-\u9FFF]/.test(word)) continue
 
     // 英語トークン（ASCII のみ）は stopword ライブラリで stop word 判定
     if (/^[a-zA-Z]+$/.test(word) && ENGLISH_STOP_WORDS.has(word.toLowerCase()))
