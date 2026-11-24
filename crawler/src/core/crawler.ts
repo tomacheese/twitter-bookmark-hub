@@ -278,6 +278,8 @@ export async function runCrawl(
 
           const tweets = response.data.data
           let addedThisPage = 0
+          let promotedThisPage = 0
+          let unextractableThisPage = 0
           // ページ内の analyzer 呼び出しをまとめて並列実行する
           // ANALYZER_URL が設定されている場合は analyze 対象を収集する（thunk にして後から制限付き並列実行）
           const analyzeQueue: (() => Promise<void>)[] = []
@@ -285,10 +287,12 @@ export async function runCrawl(
           for (const tweetResult of tweets) {
             // プロモーション (広告) ツイートは除外
             if (tweetResult.promotedMetadata) {
+              promotedThisPage++
               continue
             }
             const entry = extractBookmarkEntry(tweetResult)
             if (!entry) {
+              unextractableThisPage++
               continue
             }
             upsertTweetEntry(db, entry)
@@ -323,16 +327,28 @@ export async function runCrawl(
           }
 
           totalForAccount += addedThisPage
+          const nextCursor = response.data.cursor.bottom?.value
+          const cursorState = nextCursor
+            ? seenCursors.has(nextCursor)
+              ? 'repeated'
+              : 'advanced'
+            : 'none'
           logger.info(
-            `[${account.username}] Page ${page} done. ${addedThisPage} added. Total: ${totalForAccount}`
+            `[${account.username}] Page ${page} done. ${addedThisPage} added. Total: ${totalForAccount} (entries: ${tweets.length}, promoted: ${promotedThisPage}, unextractable: ${unextractableThisPage}, next cursor: ${cursorState})`
           )
 
-          const nextCursor = response.data.cursor.bottom?.value
           if (!nextCursor) {
             logger.info(`[${account.username}] All bookmarks fetched.`)
             break
           }
           if (seenCursors.has(nextCursor)) {
+            // cursor が前進しないページから先は取得できない。
+            // 実ブックマークが無ければ失われるデータは無く、終端ページとして扱う。
+            // 抽出失敗のエントリがある場合は取りこぼしの可能性があるため終端扱いにしない。
+            if (addedThisPage === 0 && unextractableThisPage === 0) {
+              logger.info(`[${account.username}] All bookmarks fetched.`)
+              break
+            }
             throw new Error('Repeated bookmark pagination cursor')
           }
           if (page >= MAX_PAGES) {
