@@ -163,15 +163,20 @@ export function getCrawlJobCompletionStatus(
   return successCount === 0 ? 'error' : 'success'
 }
 
+const defaultDependencies = { getAuthCookies, getBookmarksClient, loadConfig }
+
 /**
  * 全アカウントのブックマークをクロールしてデータベースに保存する。
  * クロール完了後、Twitter 側で削除済みのブックマークを DB から自動削除する。
- * MAX_PAGES 到達・クロール結果が空で既存ブックマークがある場合は
+ * ページ取得が未完了の場合やクロール結果が空で既存ブックマークがある場合は
  * 誤削除防止のため差分削除をスキップする。
  *
  * @param db Database インスタンス
  */
-export async function runCrawl(db: Database.Database): Promise<void> {
+export async function runCrawl(
+  db: Database.Database,
+  dependencies = defaultDependencies
+): Promise<void> {
   if (running) {
     logger.warn('Crawl is already running. Skipping.')
     return
@@ -186,7 +191,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
 
     // クロール実行のたびに設定ファイルを再読み込みする。
     // これにより、config.json を編集してもサービス再起動なしに次回クロールへ反映される（ホットリロード）。
-    const config = loadConfig()
+    const config = dependencies.loadConfig()
     const accounts = config.twitter.accounts
     if (!Array.isArray(accounts) || accounts.length === 0) {
       throw new Error('No accounts found in config.json.')
@@ -202,7 +207,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       // 認証エラーを個別に捕捉して error_type = 'auth' として記録する
       let authCookies: { authToken: string; ct0: string }
       try {
-        authCookies = await getAuthCookies(account)
+        authCookies = await dependencies.getAuthCookies(account)
       } catch (error) {
         // エラーメッセージ先頭の "[username] " プレフィックスを除去して UI 表示用に簡潔にする
         const rawMessage =
@@ -240,7 +245,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
       // totalForAccount は catch ブロックからも参照するため外側で宣言する
       let totalForAccount = 0
       try {
-        const client = await getBookmarksClient(
+        const client = await dependencies.getBookmarksClient(
           authToken,
           ct0,
           config.twitter.clientLanguage
@@ -254,8 +259,7 @@ export async function runCrawl(db: Database.Database): Promise<void> {
         const crawledAt = new Date().toISOString()
         // クロールで取得した tweet_id の集合（差分削除に使用）
         const crawledTweetIds = new Set<string>()
-        // MAX_PAGES に達した場合は差分削除を行わないためのフラグ
-        let reachedMaxPages = false
+        const seenCursors = new Set<string>()
 
         while (true) {
           page++
@@ -323,57 +327,43 @@ export async function runCrawl(db: Database.Database): Promise<void> {
             `[${account.username}] Page ${page} done. ${addedThisPage} added. Total: ${totalForAccount}`
           )
 
-          // 次ページのカーソルを取得
-          // プロモーション (広告) を除いた実ツイート数が 0 の場合は全件取得済みとみなす。
-          // addedThisPage だけでなく processableTweetsCount で判定することで、
-          // プロモーションのみのページで誤って早期終了するのを防ぐ。
-          const processableTweetsCount = tweets.filter(
-            (t) => !t.promotedMetadata
-          ).length
           const nextCursor = response.data.cursor.bottom?.value
-          if (!nextCursor || processableTweetsCount === 0) {
+          if (!nextCursor) {
             logger.info(`[${account.username}] All bookmarks fetched.`)
             break
           }
-          if (page >= MAX_PAGES) {
-            logger.warn(
-              `[${account.username}] Reached MAX_PAGES (${MAX_PAGES}). Stopping to prevent infinite loop.`
-            )
-            reachedMaxPages = true
-            break
+          if (seenCursors.has(nextCursor)) {
+            throw new Error('Repeated bookmark pagination cursor')
           }
+          if (page >= MAX_PAGES) {
+            throw new Error(
+              `Reached MAX_PAGES (${MAX_PAGES}) before pagination completed`
+            )
+          }
+          seenCursors.add(nextCursor)
           cursor = nextCursor
         }
 
-        // MAX_PAGES に達した場合は全件取得できていないため差分削除を行わない
-        if (reachedMaxPages) {
+        // DB 上の tweet_id のうち今回のクロールで取得できなかったものを削除する
+        const existingIds = getBookmarkTweetIds(db, account.username)
+        if (crawledTweetIds.size === 0 && existingIds.length > 0) {
+          // クロール結果が空かつ DB にブックマークが存在する場合は
+          // Twitter API の一時的エラーによる誤削除を防ぐためスキップする
           logger.warn(
-            `[${account.username}] Skipping stale bookmark deletion because MAX_PAGES was reached.`
+            `[${account.username}] Skipping stale bookmark deletion: no bookmarks fetched but ${existingIds.length} exist in DB.`
           )
         } else {
-          // DB 上の tweet_id のうち今回のクロールで取得できなかったものを削除する
-          const existingIds = getBookmarkTweetIds(db, account.username)
-          if (crawledTweetIds.size === 0 && existingIds.length > 0) {
-            // クロール結果が空かつ DB にブックマークが存在する場合は
-            // Twitter API の一時的エラーによる誤削除を防ぐためスキップする
-            logger.warn(
-              `[${account.username}] Skipping stale bookmark deletion: no bookmarks fetched but ${existingIds.length} exist in DB.`
+          const staleIds = existingIds.filter((id) => !crawledTweetIds.has(id))
+          if (staleIds.length > 0) {
+            logger.info(
+              `[${account.username}] Deleting ${staleIds.length} stale bookmark(s) not found in crawl results.`
             )
-          } else {
-            const staleIds = existingIds.filter(
-              (id) => !crawledTweetIds.has(id)
-            )
-            if (staleIds.length > 0) {
-              logger.info(
-                `[${account.username}] Deleting ${staleIds.length} stale bookmark(s) not found in crawl results.`
-              )
-              // 部分削除によるデータ不整合を防ぐためトランザクション内で一括削除する
-              db.transaction(() => {
-                for (const tweetId of staleIds) {
-                  deleteBookmark(db, tweetId, account.username)
-                }
-              })()
-            }
+            // 部分削除によるデータ不整合を防ぐためトランザクション内で一括削除する
+            db.transaction(() => {
+              for (const tweetId of staleIds) {
+                deleteBookmark(db, tweetId, account.username)
+              }
+            })()
           }
         }
 
