@@ -32,7 +32,9 @@ const proxyHandler = async (c: Context) => {
 
   try {
     const upstream = await fetch(url, init)
-    const body = await upstream.text()
+    const body = [204, 205, 304].includes(upstream.status)
+      ? null
+      : await upstream.text()
     // upstream の Content-Type を引き継ぐ
     const contentType =
       upstream.headers.get('content-type') ?? 'application/json'
