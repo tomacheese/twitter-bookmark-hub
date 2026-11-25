@@ -183,7 +183,7 @@ importers:
         version: 1.26.41(rollup@4.68.3)
       '@hono/node-server':
         specifier: 2.1.11
-        version: 2.1.11(hono@4.13.19)
+        version: 2.1.11(hono@4.13.20)
       '@patdx/kuromoji':
         specifier: 1.0.4
         version: 1.0.4
@@ -194,8 +194,8 @@ importers:
         specifier: 13.2.0
         version: 13.2.0
       hono:
-        specifier: 4.13.19
-        version: 4.13.19
+        specifier: 4.13.20
+        version: 4.13.20
       stopword:
         specifier: 3.1.5
         version: 3.1.5
@@ -232,7 +232,7 @@ importers:
         version: 1.26.41(rollup@4.68.3)
       '@hono/node-server':
         specifier: 2.1.11
-        version: 2.1.11(hono@4.13.19)
+        version: 2.1.11(hono@4.13.20)
       '@the-convocation/twitter-scraper':
         specifier: 0.22.3
         version: 0.22.3(cycletls@2.0.5)
@@ -246,8 +246,8 @@ importers:
         specifier: 2.0.5
         version: 2.0.5
       hono:
-        specifier: 4.13.19
-        version: 4.13.19
+        specifier: 4.13.20
+        version: 4.13.20
       node-cron:
         specifier: 4.6.0
         version: 4.6.0
@@ -308,7 +308,7 @@ importers:
         version: 1.26.41(rollup@4.68.3)
       '@hono/node-server':
         specifier: 2.1.11
-        version: 2.1.11(hono@4.13.19)
+        version: 2.1.11(hono@4.13.20)
       '@twitter-bookmark-hub/shared':
         specifier: workspace:*
         version: link:../../shared
@@ -316,8 +316,8 @@ importers:
         specifier: 13.2.0
         version: 13.2.0
       hono:
-        specifier: 4.13.19
-        version: 4.13.19
+        specifier: 4.13.20
+        version: 4.13.20
       tsx:
         specifier: 4.23.15
         version: 4.23.15
@@ -2626,8 +2626,8 @@ packages:
   headers-polyfill@3.3.0:
     resolution: {integrity: sha512-5e57etwBpNcDc0b6KCVWEh/Ro063OxPvzVimUdM0/tsYM/T7Hfy3kknIGj78SFTOhNd8AZY41U8mOHoO4LzmIQ==}
 
-  hono@4.13.19:
-    resolution: {integrity: sha512-KmXvQAXwcAHV+muzbIwoJ23niEB5nMoDVr9WcRkU8mvjUECm/1+7v4Jgp7P7a+H6MLFrh+vXrGonGrGS+RQfkA==}
+  hono@4.13.20:
+    resolution: {integrity: sha512-xo6gecEJQ+CjTtOUUbcLHE8CdRKMeF4qITe+DT+OhFnSUmZR/ZBa9XavAfiGh4HlukmlaHFdaK4dz5tkTYFNmA==}
     engines: {node: '>=16.9.0'}
 
   hookified@1.15.1:
@@ -4754,9 +4754,9 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@hono/node-server@2.1.11(hono@4.13.19)':
+  '@hono/node-server@2.1.11(hono@4.13.20)':
     dependencies:
-      hono: 4.13.19
+      hono: 4.13.20
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -6274,7 +6274,7 @@ snapshots:
 
   headers-polyfill@3.3.0: {}
 
-  hono@4.13.19: {}
+  hono@4.13.20: {}
 
   hookified@1.15.1: {}
 
