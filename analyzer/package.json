@@ -19,7 +19,7 @@
     "@patdx/kuromoji": "1.0.4",
     "@twitter-bookmark-hub/shared": "workspace:*",
     "better-sqlite3": "13.2.0",
-    "hono": "4.13.20",
+    "hono": "4.13.21",
     "stopword": "3.1.5",
     "tsx": "4.23.15"
   },
